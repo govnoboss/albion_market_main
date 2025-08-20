@@ -30,7 +30,7 @@ except FileNotFoundError as e:
     messagebox.showerror("Ошибка Tesseract", f"Пожалуйста, убедитесь, что Tesseract установлен и путь к нему указан верно.\n{e}")
     sys.exit()
 
-# Disable pyautogui failsafe for better control hi
+# Disable pyautogui failsafe for better control
 pyautogui.FAILSAFE = False
 
 # Create screenshots directory
