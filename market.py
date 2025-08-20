@@ -17,6 +17,7 @@ import json
 from datetime import datetime
 import cv2
 import numpy as np
+
 # Set up logging
 logging.basicConfig(filename='log.txt', level=logging.INFO, format='%(asctime)s - %(message)s')
 
@@ -41,7 +42,6 @@ class MarketBotGUI:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Albion Online Buyer Script v2.0")
-
         self.root.resizable(False, False)
         
         # Make window always on top initially
@@ -144,6 +144,32 @@ class MarketBotGUI:
                                                command=self.start_capture_quantity_input)
         self.capture_quantity_btn.grid(row=4, column=4, padx=5)
         
+        # Buy Order coordinates
+        ttk.Label(coords_frame, text="Buy Order X:").grid(row=5, column=0, sticky=tk.W)
+        self.buy_order_x_entry = ttk.Entry(coords_frame, width=10)
+        self.buy_order_x_entry.grid(row=5, column=1, padx=5)
+        
+        ttk.Label(coords_frame, text="Buy Order Y:").grid(row=5, column=2, sticky=tk.W, padx=(10,0))
+        self.buy_order_y_entry = ttk.Entry(coords_frame, width=10)
+        self.buy_order_y_entry.grid(row=5, column=3, padx=5)
+        
+        self.capture_buy_order_btn = ttk.Button(coords_frame, text="Захватить заказ на покупку", 
+                                                command=self.start_capture_buy_order)
+        self.capture_buy_order_btn.grid(row=5, column=4, padx=5)
+        
+        # Price per unit coordinates
+        ttk.Label(coords_frame, text="Цена за штуку X:").grid(row=6, column=0, sticky=tk.W)
+        self.price_per_unit_x_entry = ttk.Entry(coords_frame, width=10)
+        self.price_per_unit_x_entry.grid(row=6, column=1, padx=5)
+        
+        ttk.Label(coords_frame, text="Цена за штуку Y:").grid(row=6, column=2, sticky=tk.W, padx=(10,0))
+        self.price_per_unit_y_entry = ttk.Entry(coords_frame, width=10)
+        self.price_per_unit_y_entry.grid(row=6, column=3, padx=5)
+        
+        self.capture_price_per_unit_btn = ttk.Button(coords_frame, text="Захватить цену за штуку", 
+                                                     command=self.start_capture_price_per_unit)
+        self.capture_price_per_unit_btn.grid(row=6, column=4, padx=5)
+        
         # Price region frame
         price_region_frame = ttk.LabelFrame(main_frame, text="Область цены", padding="5")
         price_region_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
@@ -210,6 +236,11 @@ class MarketBotGUI:
         self.start_row_entry.grid(row=2, column=1, padx=5)
         self.start_row_entry.insert(0, "1")
         
+        ttk.Label(settings_frame, text="Доп. превышение (%):").grid(row=3, column=0, sticky=tk.W)
+        self.budget_overrun_entry = ttk.Entry(settings_frame, width=15)
+        self.budget_overrun_entry.grid(row=3, column=1, padx=5)
+        self.budget_overrun_entry.insert(0, "1")
+        
         # Status frame
         status_frame = ttk.Frame(main_frame)
         status_frame.grid(row=4, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
@@ -229,26 +260,37 @@ class MarketBotGUI:
         control_frame = ttk.Frame(main_frame)
         control_frame.grid(row=5, column=0, columnspan=2, pady=10)
         
-        self.start_btn = ttk.Button(control_frame, text="Запустить бота", 
-                                   command=self.start_script)
-        self.start_btn.grid(row=0, column=0, padx=5)
+        self.manual_btn = ttk.Button(control_frame, text="Ручная закупка", 
+                                     command=self.start_manual)
+        self.manual_btn.grid(row=0, column=0, padx=5)
+        
+        self.order_btn = ttk.Button(control_frame, text="Закупка ордерами", 
+                                    command=self.start_order)
+        self.order_btn.grid(row=0, column=1, padx=5)
         
         self.save_btn = ttk.Button(control_frame, text="Сохранить настройки", 
                                  command=self.save_settings)
-        self.save_btn.grid(row=0, column=1, padx=5)
+        self.save_btn.grid(row=0, column=2, padx=5)
         
         self.stop_btn = ttk.Button(control_frame, text="Экстренная остановка (F2)", 
                                  command=self.emergency_stop, state='disabled')
-        self.stop_btn.grid(row=0, column=2, padx=5)
+        self.stop_btn.grid(row=0, column=3, padx=5)
         
         # Instructions
-        instructions_text = "1. Захватите все координаты\n2. Установите бюджет\n3. Убедитесь что файл table.xlsx существует\n\nГорячие клавиши:\nF2 - Экстренная остановка\nF3 - Пропустить текущий предмет\nF4 - Пауза/Возобновление\n\nЗахватите область количества и координаты ввода кол-ва"
+        instructions_text = ("1. Захватите все координаты\n"
+                           "2. Установите бюджет и допустимое превышение (%)\n"
+                           "3. Убедитесь, что файл table.xlsx существует\n\n"
+                           "Горячие клавиши:\n"
+                           "F2 - Экстренная остановка\n"
+                           "F3 - Пропустить текущий предмет\n"
+                           "F4 - Пауза/Возобновление\n\n"
+                           "Захватите область количества и координаты ввода кол-ва")
         instructions = ttk.Label(main_frame, text=instructions_text, foreground="gray")
         instructions.grid(row=6, column=0, columnspan=2, pady=10)
         
-    def update_current_item_info(self, name="", value="", ocr_price="", bought="", store="", limit_price=""):
+    def update_current_item_info(self, name="", value="", ocr_price="", bought="", store="", limit_price="",budget="", total_spent=""):
         """Update the current item label with provided info"""
-        text = f"Текущий предмет: {name}\nЦена на Черном Рынке: {value}\nТекущая цена: {ocr_price}\nМаксимально допустимая: {limit_price}\nКуплено/Всего: {bought}/{store}"
+        text = f"Текущий предмет: {name}\nЦена на Черном Рынке: {value}\nТекущая цена: {ocr_price} из максимума {limit_price}\nКуплено: {bought} из {store}\n Потрачено: {total_spent} из {budget}"
         self.current_item_label.config(text=text)
         self.root.update_idletasks()
         
@@ -271,6 +313,12 @@ class MarketBotGUI:
         
     def start_capture_quantity_input(self):
         self.start_coordinate_capture('quantity_input')
+        
+    def start_capture_buy_order(self):
+        self.start_coordinate_capture('buy_order')
+        
+    def start_capture_price_per_unit(self):
+        self.start_coordinate_capture('price_per_unit')
         
     def start_capture_region(self):
         if self.capturing:
@@ -362,6 +410,10 @@ class MarketBotGUI:
             btn = self.capture_clear_btn
         elif capture_type == 'quantity_input':
             btn = self.capture_quantity_btn
+        elif capture_type == 'buy_order':
+            btn = self.capture_buy_order_btn
+        elif capture_type == 'price_per_unit':
+            btn = self.capture_price_per_unit_btn
         
         if btn:
             btn.config(text="Отмена", command=self.cancel_capture)
@@ -393,6 +445,16 @@ class MarketBotGUI:
                     self.quantity_x_entry.insert(0, str(x))
                     self.quantity_y_entry.delete(0, tk.END)
                     self.quantity_y_entry.insert(0, str(y))
+                elif capture_type == 'buy_order':
+                    self.buy_order_x_entry.delete(0, tk.END)
+                    self.buy_order_x_entry.insert(0, str(x))
+                    self.buy_order_y_entry.delete(0, tk.END)
+                    self.buy_order_y_entry.insert(0, str(y))
+                elif capture_type == 'price_per_unit':
+                    self.price_per_unit_x_entry.delete(0, tk.END)
+                    self.price_per_unit_x_entry.insert(0, str(x))
+                    self.price_per_unit_y_entry.delete(0, tk.END)
+                    self.price_per_unit_y_entry.insert(0, str(y))
                 
                 self.finish_capture(f"Координаты {capture_type} захвачены: ({x}, {y})")
                 return False
@@ -415,9 +477,11 @@ class MarketBotGUI:
         self.capture_buy_btn.config(text="Захватить покупку", command=self.start_capture_buy)
         self.capture_confirm_btn.config(text="Захватить подтвер.", command=self.start_capture_confirm)
         self.capture_clear_btn.config(text="Захватить очистку", command=self.start_capture_clear)
+        self.capture_quantity_btn.config(text="Захватить ввод кол-ва", command=self.start_capture_quantity_input)
+        self.capture_buy_order_btn.config(text="Захватить заказ на покупку", command=self.start_capture_buy_order)
+        self.capture_price_per_unit_btn.config(text="Захватить цену за штуку", command=self.start_capture_price_per_unit)
         self.capture_region_btn.config(text="Захватить область", command=self.start_capture_region)
         self.capture_quantity_region_btn.config(text="Захватить область количества", command=self.start_capture_quantity_region)
-        self.capture_quantity_btn.config(text="Захватить ввод кол-ва", command=self.start_capture_quantity_input)
         
     def validate_inputs(self):
         """Проверка введенных данных"""
@@ -432,6 +496,10 @@ class MarketBotGUI:
             int(self.confirm_y_entry.get())
             int(self.quantity_x_entry.get())
             int(self.quantity_y_entry.get())
+            int(self.buy_order_x_entry.get())
+            int(self.buy_order_y_entry.get())
+            int(self.price_per_unit_x_entry.get())
+            int(self.price_per_unit_y_entry.get())
             
             left = int(self.left_entry.get())
             top = int(self.top_entry.get())
@@ -446,7 +514,8 @@ class MarketBotGUI:
             budget = int(self.budget_entry.get())
             delay = float(self.delay_entry.get())
             start_row = int(self.start_row_entry.get())
-
+            budget_overrun = float(self.budget_overrun_entry.get())
+            
             if width <= 0 or height <= 0 or width_q <= 0 or height_q <= 0:
                 raise ValueError("Ширина и высота должны быть положительными")
             if budget <= 0:
@@ -455,6 +524,8 @@ class MarketBotGUI:
                 raise ValueError("Задержка не может быть отрицательной")
             if start_row < 1:
                 raise ValueError("Начальная строка должна быть не меньше 1")
+            if budget_overrun < 0:
+                raise ValueError("Допустимое превышение бюджета не может быть отрицательным")
                 
             excel_file_path = Path(__file__).parent / 'table.xlsx'
             if not excel_file_path.exists():
@@ -482,6 +553,10 @@ class MarketBotGUI:
             'confirm_y': self.confirm_y_entry.get(),
             'quantity_x': self.quantity_x_entry.get(),
             'quantity_y': self.quantity_y_entry.get(),
+            'buy_order_x': self.buy_order_x_entry.get(),
+            'buy_order_y': self.buy_order_y_entry.get(),
+            'price_per_unit_x': self.price_per_unit_x_entry.get(),
+            'price_per_unit_y': self.price_per_unit_y_entry.get(),
             'left': self.left_entry.get(),
             'top': self.top_entry.get(),
             'width': self.width_entry.get(),
@@ -492,7 +567,8 @@ class MarketBotGUI:
             'height_q': self.height_q_entry.get(),
             'budget': self.budget_entry.get(),
             'delay': self.delay_entry.get(),
-            'start_row': self.start_row_entry.get()
+            'start_row': self.start_row_entry.get(),
+            'budget_overrun': self.budget_overrun_entry.get()
         }
         
         try:
@@ -519,6 +595,10 @@ class MarketBotGUI:
                 self.confirm_y_entry.insert(0, settings.get('confirm_y', ''))
                 self.quantity_x_entry.insert(0, settings.get('quantity_x', ''))
                 self.quantity_y_entry.insert(0, settings.get('quantity_y', ''))
+                self.buy_order_x_entry.insert(0, settings.get('buy_order_x', ''))
+                self.buy_order_y_entry.insert(0, settings.get('buy_order_y', ''))
+                self.price_per_unit_x_entry.insert(0, settings.get('price_per_unit_x', ''))
+                self.price_per_unit_y_entry.insert(0, settings.get('price_per_unit_y', ''))
                 self.left_entry.insert(0, settings.get('left', ''))
                 self.top_entry.insert(0, settings.get('top', ''))
                 self.width_entry.insert(0, settings.get('width', ''))
@@ -532,6 +612,8 @@ class MarketBotGUI:
                 self.delay_entry.insert(0, settings.get('delay', '0.5'))
                 self.start_row_entry.delete(0, tk.END)
                 self.start_row_entry.insert(0, settings.get('start_row', '1'))
+                self.budget_overrun_entry.delete(0, tk.END)
+                self.budget_overrun_entry.insert(0, settings.get('budget_overrun', '1'))
         except Exception as e:
             logging.warning(f"Не удалось загрузить настройки: {str(e)}")
             
@@ -543,7 +625,8 @@ class MarketBotGUI:
             self.paused = False
         self.update_status("Остановлено пользователем (F2)")
         self.update_current_item_info()  # Clear current item info
-        self.start_btn.config(state='normal')
+        self.manual_btn.config(state='normal')
+        self.order_btn.config(state='normal')
         self.stop_btn.config(state='disabled')
         self.progress.stop()
         try:
@@ -574,7 +657,7 @@ class MarketBotGUI:
             self.log_entries.append(f"[{datetime.now()}] {msg}")
             logging.info(msg)
 
-    def start_script(self):
+    def start_manual(self):
         if self.script_running:
             return
             
@@ -604,27 +687,95 @@ class MarketBotGUI:
         width_q = int(self.width_q_entry.get())
         height_q = int(self.height_q_entry.get())
         budget = int(self.budget_entry.get())
+        budget_overrun = float(self.budget_overrun_entry.get())
         delay = float(self.delay_entry.get())
         start_row = int(self.start_row_entry.get())
-
-        self.start_btn.config(state='disabled')
+        
+        self.manual_btn.config(state='disabled')
+        self.order_btn.config(state='disabled')
         self.stop_btn.config(state='normal')
         self.progress.start()
         
-        self.countdown_and_run(search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
-                              quantity_x, quantity_y, left, top, width, height, left_q, top_q, width_q, height_q, budget, delay, start_row)
-                              
-    def countdown_and_run(self, search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
-                         quantity_x, quantity_y, left, top, width, height, left_q, top_q, width_q, height_q, budget, delay, start_row):
+        self.countdown_and_run_manual(search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
+                                      quantity_x, quantity_y, left, top, width, height, left_q, top_q, width_q, height_q, 
+                                      budget, budget_overrun, delay, start_row)
+        
+    def countdown_and_run_manual(self, search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
+                                 quantity_x, quantity_y, left, top, width, height, left_q, top_q, width_q, height_q, 
+                                 budget, budget_overrun, delay, start_row):
         def countdown():
             try:
                 for i in range(5, 0, -1):
-                    self.update_status(f"Запуск через {i} секунд...")
+                    self.update_status(f"Запуск ручной закупки через {i} секунд...")
                     time.sleep(1)
                 
                 self.script_running = True
-                self.run_script(search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
-                               quantity_x, quantity_y, left, top, width, height, left_q, top_q, width_q, height_q, budget, delay, start_row)
+                self.run_script_manual(search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
+                                       quantity_x, quantity_y, left, top, width, height, left_q, top_q, width_q, height_q, 
+                                       budget, budget_overrun, delay, start_row)
+            except Exception as e:
+                self.emergency_stop()
+                messagebox.showerror("Ошибка", f"Ошибка при запуске скрипта: {e}")
+        
+        self.script_thread = threading.Thread(target=countdown, daemon=True)
+        self.script_thread.start()
+
+    def start_order(self):
+        if self.script_running:
+            return
+            
+        if not self.validate_inputs():
+            return
+        
+        keyboard.add_hotkey('f2', self.emergency_stop)
+        keyboard.add_hotkey('f3', self.skip_current_item)
+        keyboard.add_hotkey('f4', self.toggle_pause)
+            
+        search_x = int(self.search_x_entry.get())
+        search_y = int(self.search_y_entry.get())
+        clear_x = int(self.clear_x_entry.get())
+        clear_y = int(self.clear_y_entry.get())
+        buy_x = int(self.buy_x_entry.get())
+        buy_y = int(self.buy_y_entry.get())
+        confirm_x = int(self.confirm_x_entry.get())
+        confirm_y = int(self.confirm_y_entry.get())
+        quantity_x = int(self.quantity_x_entry.get())
+        quantity_y = int(self.quantity_y_entry.get())
+        buy_order_x = int(self.buy_order_x_entry.get())
+        buy_order_y = int(self.buy_order_y_entry.get())
+        price_per_unit_x = int(self.price_per_unit_x_entry.get())
+        price_per_unit_y = int(self.price_per_unit_y_entry.get())
+        left = int(self.left_entry.get())
+        top = int(self.top_entry.get())
+        width = int(self.width_entry.get())
+        height = int(self.height_entry.get())
+        budget = int(self.budget_entry.get())
+        budget_overrun = float(self.budget_overrun_entry.get())
+        delay = float(self.delay_entry.get())
+        start_row = int(self.start_row_entry.get())
+        
+        self.manual_btn.config(state='disabled')
+        self.order_btn.config(state='disabled')
+        self.stop_btn.config(state='normal')
+        self.progress.start()
+        
+        self.countdown_and_run_order(search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
+                                     quantity_x, quantity_y, buy_order_x, buy_order_y, price_per_unit_x, price_per_unit_y, 
+                                     left, top, width, height, budget, budget_overrun, delay, start_row)
+        
+    def countdown_and_run_order(self, search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
+                                quantity_x, quantity_y, buy_order_x, buy_order_y, price_per_unit_x, price_per_unit_y, 
+                                left, top, width, height, budget, budget_overrun, delay, start_row):
+        def countdown():
+            try:
+                for i in range(5, 0, -1):
+                    self.update_status(f"Запуск закупки ордерами через {i} секунд...")
+                    time.sleep(1)
+                
+                self.script_running = True
+                self.run_script_order(search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
+                                      quantity_x, quantity_y, buy_order_x, buy_order_y, price_per_unit_x, price_per_unit_y, 
+                                      left, top, width, height, budget, budget_overrun, delay, start_row)
             except Exception as e:
                 self.emergency_stop()
                 messagebox.showerror("Ошибка", f"Ошибка при запуске скрипта: {e}")
@@ -635,7 +786,7 @@ class MarketBotGUI:
     def check_and_click_ok(self):
         try:
             ok_button_location = pyautogui.locateCenterOnScreen(
-                'C:\\Users\\User\\Downloads\\market\\ok_button.png', 
+                str(Path(__file__).parent / 'ok_button.png'), 
                 confidence=0.8, 
                 grayscale=True,
                 region=(0, 0, pyautogui.size().width, pyautogui.size().height)
@@ -652,8 +803,29 @@ class MarketBotGUI:
             return False
         return False
         
-    def run_script(self, search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
-                   quantity_x, quantity_y, left, top, width, height, left_q, top_q, width_q, height_q, budget, delay, start_row):
+    def check_and_click_yes(self):
+        try:
+            yes_button_location = pyautogui.locateCenterOnScreen(
+                str(Path(__file__).parent / 'yes_button.png'), 
+                confidence=0.8, 
+                grayscale=True,
+                region=(0, 0, pyautogui.size().width, pyautogui.size().height)
+            )
+            
+            if yes_button_location is not None:
+                self.update_status("Найдено подтверждение. Нажимаю Да...")
+                logging.info(f"[{datetime.now()}] Найдено подтверждение. Нажимаю Да.")
+                pyautogui.click(yes_button_location)
+                time.sleep(0.5)
+                return True
+        except pyautogui.PyAutoGUIException as e:
+            logging.warning(f"Ошибка при поиске кнопки Да: {e}")
+            return False
+        return False
+        
+    def run_script_manual(self, search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
+                          quantity_x, quantity_y, left, top, width, height, left_q, top_q, width_q, height_q, 
+                          budget, budget_overrun, delay, start_row):
         self.log_entries = []
         try:
             self.update_status("Загрузка данных из Excel...")
@@ -666,7 +838,8 @@ class MarketBotGUI:
             total_items = len(df) - start_row + 1
             if total_items <= 0:
                 raise ValueError("Начальная строка больше количества строк в таблице")
-            
+            max_budget = budget * (1 + budget_overrun / 100)
+            min_budget_threshold = 10000
             for index, row in df.iloc[start_row-1:].iterrows():
                 self.pause_event.wait()
                 
@@ -703,9 +876,10 @@ class MarketBotGUI:
                     logging.info(msg)
                     self.log_entries.append(f"[{datetime.now()}] Предупреждение: {msg}")
                     continue
+
                 limit_price = int(value * present)
                 # Update current item info at start of processing
-                self.update_current_item_info(name=name, value=value, ocr_price="N/A", bought=0, store=store, limit_price=limit_price)
+                self.update_current_item_info(name=name, value=value, ocr_price="N/A", bought=0, store=store, limit_price=limit_price, budget=budget, total_spent=0)
 
                 pyautogui.moveTo(clear_x, clear_y, duration=random.uniform(0.1, 0.2))
                 pyautogui.click()
@@ -741,7 +915,7 @@ class MarketBotGUI:
                         self.log_entries.append(f"[{datetime.now()}] {msg}")
 
                         # Update current item info with OCR price
-                        self.update_current_item_info(name=name, value=value, ocr_price=ocr_price, bought=bought, store=store, limit_price=limit_price)
+                        self.update_current_item_info(name=name, value=value, ocr_price=ocr_price, bought=bought, store=store, limit_price=limit_price, budget=budget, total_spent=total_spent)
 
                     except (ValueError, pytesseract.TesseractError) as e:
                         failed_ocr_attempts += 1
@@ -765,7 +939,6 @@ class MarketBotGUI:
                         time.sleep(delay)
                         continue
 
-                    limit_price = int(value * present)
                     if ocr_price > limit_price:
                         msg = f"Цена {ocr_price} не выгодна для {name} (лимит: {limit_price})"
                         print(msg)
@@ -773,20 +946,15 @@ class MarketBotGUI:
                         self.log_entries.append(f"[{datetime.now()}] {msg}")
                         break
                         
-                    if total_spent + ocr_price > budget:  # Check for at least one
-                        msg = f"Бюджет исчерпан ({total_spent + ocr_price} > {budget})."
+                    if total_spent + ocr_price > max_budget:  # Check for at least one
+                        msg = f"Бюджет превышен ({total_spent + ocr_price} > {max_budget})."
                         print(msg)
                         logging.info(msg)
-                        self.update_status("Бюджет исчерпан!")
+                        self.update_status("Бюджет превышен!")
                         self.log_entries.append(f"[{datetime.now()}] {msg}")
                         self.script_running = False
                         break
                         
-                                           
-                    pyautogui.moveTo(buy_x, buy_y, duration=random.uniform(0.1, 0.2))
-                    pyautogui.click()
-                    time.sleep(random.uniform(0.3, 0.5))  # Wait for dialog to open
-
                     try:
                         # Захват изображения
                         screenshot_q = ImageGrab.grab(bbox=(left_q, top_q, left_q + width_q, top_q + height_q))
@@ -834,14 +1002,23 @@ class MarketBotGUI:
                         
                         # Check budget for batch
                         batch_cost = ocr_price * to_buy
-                        if total_spent + batch_cost > budget:
-                            to_buy = (budget - total_spent) // ocr_price
-                            msg = f"Бюджет ограничивает покупку для {name}: to_buy скорректировано до {to_buy}"
+                        if budget - total_spent < min_budget_threshold:
+                            msg = f"Остаток бюджета ({budget - total_spent}) меньше порога ({min_budget_threshold}). Завершаем."
                             print(msg)
                             logging.info(msg)
                             self.log_entries.append(f"[{datetime.now()}] {msg}")
-                            if to_buy == 0:
-                                msg = f"Бюджет исчерпан для {name}."
+                            self.script_running = False
+                            break
+                        if total_spent + batch_cost > max_budget:
+                            to_buy = (budget - total_spent) // ocr_price
+                            batch_cost = ocr_price * to_buy
+                            if to_buy > 0 and total_spent + batch_cost <= max_budget:
+                                msg = f"Бюджет ограничивает покупку для {name}: to_buy скорректировано до {to_buy}. Завершаем после покупки."
+                                print(msg)
+                                logging.info(msg)
+                                self.log_entries.append(f"[{datetime.now()}] {msg}")
+                            else:
+                                msg = f"Бюджет исчерпан для {name} ({total_spent + batch_cost} > {max_budget})."
                                 print(msg)
                                 logging.info(msg)
                                 self.log_entries.append(f"[{datetime.now()}] {msg}")
@@ -878,9 +1055,16 @@ class MarketBotGUI:
                         print(msg)
                         logging.info(msg)
                         self.log_entries.append(f"[{datetime.now()}] {msg}")
+                        if total_spent > budget:
+                            msg = f"Бюджет превышен на {total_spent - budget} ({(total_spent/budget-1)*100:.2f}%). Завершаем."
+                            print(msg)
+                            logging.info(msg)
+                            self.log_entries.append(f"[{datetime.now()}] {msg}")
+                            self.script_running = False
+                            break
 
                         # Update current item info after purchase
-                        self.update_current_item_info(name=name, value=value, ocr_price=ocr_price, bought=bought, store=store, limit_price=limit_price)
+                        self.update_current_item_info(name=name, value=value, ocr_price=ocr_price, bought=bought, store=store, limit_price=limit_price, budget=budget, total_spent=total_spent)
                         
                     except Exception as e:
                         msg = f"Ошибка покупки: {str(e)}"
@@ -895,6 +1079,8 @@ class MarketBotGUI:
             
             if self.script_running:
                 msg = f"Скрипт завершен. Всего потрачено: {total_spent}"
+                if total_spent > budget:
+                    msg += f" (превышение на {total_spent - budget})"
                 print(msg)
                 logging.info(msg)
                 self.log_entries.append(f"[{datetime.now()}] --- Сессия завершена. Всего потрачено: {total_spent} ---")
@@ -912,7 +1098,244 @@ class MarketBotGUI:
             self.emergency_stop()
             self.progress.stop()
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            progress_log_filename = f"progress_log_{timestamp}.txt"
+            progress_log_filename = f"progress_log_manual_{timestamp}.txt"
+            
+            log_path = Path(__file__).parent / progress_log_filename
+            print(f"Попытка сохранить лог прогресса в файл: {log_path}")
+            
+            try:
+                with open(log_path, 'w', encoding='utf-8') as f:
+                    for entry in self.log_entries:
+                        f.write(entry + '\n')
+                print(f"Лог прогресса сохранен в файл: {log_path}")
+            except Exception as e:
+                print(f"Не удалось сохранить лог прогресса: {e}")
+
+    def run_script_order(self, search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
+                         quantity_x, quantity_y, buy_order_x, buy_order_y, price_per_unit_x, price_per_unit_y, 
+                         left, top, width, height, budget, budget_overrun, delay, start_row):
+        self.log_entries = []
+        try:
+            self.update_status("Загрузка данных из Excel...")
+            self.log_entries.append(f"[{datetime.now()}] --- Начать сессию ордерами с строки {start_row} ---")
+            
+            excel_file_path = Path(__file__).parent / 'table.xlsx'
+            df = pd.read_excel(excel_file_path, sheet_name=0, header=0)
+            
+            total_spent = 0
+            total_items = len(df) - start_row + 1
+            if total_items <= 0:
+                raise ValueError("Начальная строка больше количества строк в таблице")
+            max_budget = budget * (1 + budget_overrun / 100)
+            min_budget_threshold = 10000
+            for index, row in df.iloc[start_row-1:].iterrows():
+                self.pause_event.wait()
+                
+                if not self.script_running:
+                    self.log_entries.append(f"[{datetime.now()}] Сессия остановлена пользователем.")
+                    break
+                
+                if self.skip_item:
+                    msg = f"Пропускаю {row['name']} по запросу пользователя (F3)."
+                    self.update_status(msg)
+                    self.log_entries.append(f"[{datetime.now()}] {msg}")
+                    self.skip_item = False
+                    continue
+                    
+                self.progress['value'] = ((index - (start_row - 1)) / total_items) * 100
+                self.update_status(f"Обрабатывается {index - start_row + 2}/{total_items}: {row['name']}")
+                
+                name = str(row['name']).strip()
+                
+                try:
+                    value = int(row['value'])
+                    store = int(row['store'])
+                    present = float(row['present'])
+                except (ValueError, TypeError) as e:
+                    msg = f"Некорректные данные для {name}: {str(e)}. Пропускается."
+                    print(msg)
+                    logging.warning(msg)
+                    self.log_entries.append(f"[{datetime.now()}] Ошибка: {msg}")
+                    continue
+                
+                if value <= 0 or store <= 0 or present <= 0:
+                    msg = f"Пропускается {name} (некорректные значения)"
+                    print(msg)
+                    logging.info(msg)
+                    self.log_entries.append(f"[{datetime.now()}] Предупреждение: {msg}")
+                    continue
+
+                limit_price = int(value * present)
+                # Update current item info at start of processing
+                self.update_current_item_info(name=name, value=value, ocr_price="N/A", bought=0, store=store, limit_price=limit_price, budget=budget, total_spent=0)
+
+                pyautogui.moveTo(clear_x, clear_y, duration=random.uniform(0.1, 0.2))
+                pyautogui.click()
+                
+                pyautogui.moveTo(search_x, search_y, duration=random.uniform(0.1, 0.2))
+                pyautogui.click()
+                time.sleep(random.uniform(0.1, 0.2))
+                
+                for char in name:
+                    keyboard.write(char)
+                    time.sleep(random.uniform(0.01, 0.05))
+                
+                time.sleep(random.uniform(0.5, 1))
+                
+                failed_ocr_attempts = 0
+                max_failed_attempts = 5
+                
+                while self.script_running and failed_ocr_attempts < max_failed_attempts and not self.skip_item:
+                    self.pause_event.wait()
+                    
+                    if self.check_and_click_ok():
+                        continue
+                        
+                    try:
+                        screenshot = ImageGrab.grab(bbox=(left, top, left + width, top + height))
+                        ocr_text = pytesseract.image_to_string(screenshot, config='--psm 7 -c tessedit_char_whitelist=0123456789')
+                        ocr_price = int(ocr_text.strip() or 0)
+                        failed_ocr_attempts = 0
+                        msg = f"Текущая цена для {name}: {ocr_price}"
+                        print(msg)
+                        logging.info(msg)
+                        self.log_entries.append(f"[{datetime.now()}] {msg}")
+
+                        # Update current item info with OCR price
+                        self.update_current_item_info(name=name, value=value, ocr_price=ocr_price, bought=0, store=store, limit_price=limit_price, budget=budget, total_spent=total_spent)
+
+                    except (ValueError, pytesseract.TesseractError) as e:
+                        failed_ocr_attempts += 1
+                        try:
+                            ocr_text  # to reference for msg
+                        except NameError:
+                            ocr_text = ''
+                        msg = f"OCR ошибка для {name} (попытка {failed_ocr_attempts}): '{ocr_text.strip()}' - {e}"
+                        print(msg)
+                        logging.warning(msg)
+                        self.log_entries.append(f"[{datetime.now()}] Ошибка OCR: {msg}")
+                        time.sleep(delay)
+                        continue
+                    
+                    if ocr_price == 0:
+                        failed_ocr_attempts += 1
+                        msg = f"OCR вернул 0. Попытка {failed_ocr_attempts}. Пропускаю."
+                        print(msg)
+                        logging.warning(msg)
+                        self.log_entries.append(f"[{datetime.now()}] Предупреждение: {msg}")
+                        time.sleep(delay)
+                        continue
+
+                    order_limit_price = int(value * present * 0.975)
+                    if ocr_price > order_limit_price:
+                        msg = f"Цена {ocr_price} не подходит для {name} (лимит: {order_limit_price})"
+                        print(msg)
+                        logging.info(msg)
+                        self.log_entries.append(f"[{datetime.now()}] {msg}")
+                        break
+                    
+                    # Calculate tax-adjusted cost
+                    tax_rate = 1.025  # 2.5% tax
+                    max_cost = store * limit_price * tax_rate
+                    if budget - total_spent < min_budget_threshold:
+                        msg = f"Остаток бюджета ({budget - total_spent}) меньше порога ({min_budget_threshold}). Завершаем."
+                        print(msg)
+                        logging.info(msg)
+                        self.log_entries.append(f"[{datetime.now()}] {msg}")
+                        self.script_running = False
+                        break
+                    if total_spent + max_cost > max_budget:
+                        store = int((budget - total_spent) / (limit_price * tax_rate))
+                        max_cost = store * limit_price * tax_rate
+                        if store > 0 and total_spent + max_cost <= max_budget:
+                            msg = f"Бюджет ограничивает ордер для {name}: store скорректировано до {store}. Завершаем после ордера."
+                            print(msg)
+                            logging.info(msg)
+                            self.log_entries.append(f"[{datetime.now()}] {msg}")
+                        else:
+                            msg = f"Бюджет исчерпан для {name} ({total_spent + max_cost} > {max_budget})."
+                            print(msg)
+                            logging.info(msg)
+                            self.log_entries.append(f"[{datetime.now()}] {msg}")
+                            break
+                    
+                    pyautogui.moveTo(buy_x, buy_y, duration=random.uniform(0.1, 0.2))
+                    pyautogui.click()
+                    time.sleep(random.uniform(0.3, 0.5))  # Wait for dialog to open
+                    
+                    pyautogui.moveTo(buy_order_x, buy_order_y, duration=random.uniform(0.1, 0.2))
+                    pyautogui.click()
+                    time.sleep(random.uniform(0.3, 0.5))
+                    
+                    pyautogui.moveTo(quantity_x, quantity_y, duration=random.uniform(0.1, 0.2))
+                    pyautogui.click()
+                    time.sleep(random.uniform(0.1, 0.2))
+                    
+                    for char in str(store):
+                        keyboard.write(char)
+                        time.sleep(random.uniform(0.01, 0.05))
+                    time.sleep(random.uniform(0.1, 0.2))
+                    
+                    pyautogui.moveTo(price_per_unit_x, price_per_unit_y, duration=random.uniform(0.1, 0.2))
+                    pyautogui.click()
+                    time.sleep(random.uniform(0.1, 0.2))
+                    
+                    for char in str(limit_price):
+                        keyboard.write(char)
+                        time.sleep(random.uniform(0.01, 0.05))
+                    time.sleep(random.uniform(0.1, 0.2))
+                    
+                    pyautogui.moveTo(confirm_x, confirm_y, duration=random.uniform(0.1, 0.2))
+                    pyautogui.click()
+                    time.sleep(random.uniform(0.1, 0.2))
+                    
+                    self.check_and_click_yes()
+                    
+                    total_spent += store * limit_price * tax_rate  # Approximate spend, since it's reserved
+                    
+                    msg = f"Ордер размещен для {name} ({store} шт.) по {limit_price} each. Потрачено (примерно): {total_spent}"
+                    print(msg)
+                    logging.info(msg)
+                    self.log_entries.append(f"[{datetime.now()}] {msg}")
+                    if total_spent > budget:
+                        msg = f"Бюджет превышен на {total_spent - budget} ({(total_spent/budget-1)*100:.2f}%). Завершаем."
+                        print(msg)
+                        logging.info(msg)
+                        self.log_entries.append(f"[{datetime.now()}] {msg}")
+                        self.script_running = False
+                        break
+                    
+                    # Update current item info
+                    self.update_current_item_info(name=name, value=value, ocr_price=ocr_price, bought=store, store=store, limit_price=limit_price, budget=budget, total_spent=total_spent)
+                    
+                    break  # Move to next item
+                
+                self.skip_item = False
+                # Clear current item info after processing
+                self.update_current_item_info()
+            
+            if self.script_running:
+                msg = f"Скрипт завершен. Всего потрачено (примерно): {total_spent}"
+                if total_spent > budget:
+                    msg += f" (превышение на {total_spent - budget})"
+                print(msg)
+                logging.info(msg)
+                self.log_entries.append(f"[{datetime.now()}] --- Сессия завершена. Всего потрачено (примерно): {total_spent} ---")
+                self.update_status(f"Завершено! Потрачено (примерно): {total_spent}")
+                messagebox.showinfo("Завершено", msg)
+            
+        except Exception as e:
+            error_msg = f"Критическая ошибка: {str(e)}"
+            print(error_msg)
+            logging.error(error_msg)
+            self.update_status("Ошибка выполнения")
+            self.log_entries.append(f"[{datetime.now()}] Критическая ошибка: {error_msg}")
+            messagebox.showerror("Ошибка", error_msg)
+        finally:
+            self.emergency_stop()
+            self.progress.stop()
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            progress_log_filename = f"progress_log_order_{timestamp}.txt"
             
             log_path = Path(__file__).parent / progress_log_filename
             print(f"Попытка сохранить лог прогресса в файл: {log_path}")
