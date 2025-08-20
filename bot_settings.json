@@ -1,0 +1,22 @@
+{
+  "search_x": "710",
+  "search_y": "339",
+  "clear_x": "782",
+  "clear_y": "337",
+  "buy_x": "1198",
+  "buy_y": "459",
+  "confirm_x": "907",
+  "confirm_y": "678",
+  "quantity_x": "673",
+  "quantity_y": "566",
+  "left": "1034",
+  "top": "440",
+  "width": "93",
+  "height": "37",
+  "left_q": "1063",
+  "top_q": "406",
+  "width_q": "18",
+  "height_q": "17",
+  "budget": "5000000",
+  "delay": "0.3"
+}
