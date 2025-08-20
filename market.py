@@ -217,7 +217,6 @@ class MarketBotGUI:
         self.capture_quantity_region_btn = ttk.Button(quantity_region_frame, text="Захватить область количества", 
                                                       command=self.start_capture_quantity_region)
         self.capture_quantity_region_btn.grid(row=2, column=0, columnspan=4, pady=5)
-        
         # Settings frame
         settings_frame = ttk.LabelFrame(main_frame, text="Настройки", padding="5")
         settings_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
@@ -235,11 +234,6 @@ class MarketBotGUI:
         self.start_row_entry = ttk.Entry(settings_frame, width=15)
         self.start_row_entry.grid(row=2, column=1, padx=5)
         self.start_row_entry.insert(0, "1")
-        
-        ttk.Label(settings_frame, text="Доп. превышение (%):").grid(row=3, column=0, sticky=tk.W)
-        self.budget_overrun_entry = ttk.Entry(settings_frame, width=15)
-        self.budget_overrun_entry.grid(row=3, column=1, padx=5)
-        self.budget_overrun_entry.insert(0, "1")
         
         # Status frame
         status_frame = ttk.Frame(main_frame)
@@ -278,7 +272,7 @@ class MarketBotGUI:
         
         # Instructions
         instructions_text = ("1. Захватите все координаты\n"
-                           "2. Установите бюджет и допустимое превышение (%)\n"
+                           "2. Установите бюджет\n"
                            "3. Убедитесь, что файл table.xlsx существует\n\n"
                            "Горячие клавиши:\n"
                            "F2 - Экстренная остановка\n"
@@ -290,7 +284,7 @@ class MarketBotGUI:
         
     def update_current_item_info(self, name="", value="", ocr_price="", bought="", store="", limit_price="",budget="", total_spent=""):
         """Update the current item label with provided info"""
-        text = f"Текущий предмет: {name}\nЦена на Черном Рынке: {value}\nТекущая цена: {ocr_price} из максимума {limit_price}\nКуплено: {bought} из {store}\n Потрачено: {total_spent} из {budget}"
+        text = f"Текущий предмет: {name}\nЦена на Черном Рынке: {value}\nТекущая цена: {ocr_price} / {limit_price}\nКуплено: {bought} из {store}\nПотрачено: {int(float(total_spent))} из {budget}"
         self.current_item_label.config(text=text)
         self.root.update_idletasks()
         
@@ -514,7 +508,6 @@ class MarketBotGUI:
             budget = int(self.budget_entry.get())
             delay = float(self.delay_entry.get())
             start_row = int(self.start_row_entry.get())
-            budget_overrun = float(self.budget_overrun_entry.get())
             
             if width <= 0 or height <= 0 or width_q <= 0 or height_q <= 0:
                 raise ValueError("Ширина и высота должны быть положительными")
@@ -524,8 +517,6 @@ class MarketBotGUI:
                 raise ValueError("Задержка не может быть отрицательной")
             if start_row < 1:
                 raise ValueError("Начальная строка должна быть не меньше 1")
-            if budget_overrun < 0:
-                raise ValueError("Допустимое превышение бюджета не может быть отрицательным")
                 
             excel_file_path = Path(__file__).parent / 'table.xlsx'
             if not excel_file_path.exists():
@@ -568,7 +559,6 @@ class MarketBotGUI:
             'budget': self.budget_entry.get(),
             'delay': self.delay_entry.get(),
             'start_row': self.start_row_entry.get(),
-            'budget_overrun': self.budget_overrun_entry.get()
         }
         
         try:
@@ -612,8 +602,6 @@ class MarketBotGUI:
                 self.delay_entry.insert(0, settings.get('delay', '0.5'))
                 self.start_row_entry.delete(0, tk.END)
                 self.start_row_entry.insert(0, settings.get('start_row', '1'))
-                self.budget_overrun_entry.delete(0, tk.END)
-                self.budget_overrun_entry.insert(0, settings.get('budget_overrun', '1'))
         except Exception as e:
             logging.warning(f"Не удалось загрузить настройки: {str(e)}")
             
@@ -687,7 +675,6 @@ class MarketBotGUI:
         width_q = int(self.width_q_entry.get())
         height_q = int(self.height_q_entry.get())
         budget = int(self.budget_entry.get())
-        budget_overrun = float(self.budget_overrun_entry.get())
         delay = float(self.delay_entry.get())
         start_row = int(self.start_row_entry.get())
         
@@ -698,11 +685,11 @@ class MarketBotGUI:
         
         self.countdown_and_run_manual(search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
                                       quantity_x, quantity_y, left, top, width, height, left_q, top_q, width_q, height_q, 
-                                      budget, budget_overrun, delay, start_row)
+                                      budget, delay, start_row)
         
     def countdown_and_run_manual(self, search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
                                  quantity_x, quantity_y, left, top, width, height, left_q, top_q, width_q, height_q, 
-                                 budget, budget_overrun, delay, start_row):
+                                 budget, delay, start_row):
         def countdown():
             try:
                 for i in range(5, 0, -1):
@@ -712,7 +699,7 @@ class MarketBotGUI:
                 self.script_running = True
                 self.run_script_manual(search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
                                        quantity_x, quantity_y, left, top, width, height, left_q, top_q, width_q, height_q, 
-                                       budget, budget_overrun, delay, start_row)
+                                       budget, delay, start_row)
             except Exception as e:
                 self.emergency_stop()
                 messagebox.showerror("Ошибка", f"Ошибка при запуске скрипта: {e}")
@@ -750,7 +737,6 @@ class MarketBotGUI:
         width = int(self.width_entry.get())
         height = int(self.height_entry.get())
         budget = int(self.budget_entry.get())
-        budget_overrun = float(self.budget_overrun_entry.get())
         delay = float(self.delay_entry.get())
         start_row = int(self.start_row_entry.get())
         
@@ -761,11 +747,11 @@ class MarketBotGUI:
         
         self.countdown_and_run_order(search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
                                      quantity_x, quantity_y, buy_order_x, buy_order_y, price_per_unit_x, price_per_unit_y, 
-                                     left, top, width, height, budget, budget_overrun, delay, start_row)
+                                     left, top, width, height, budget, delay, start_row)
         
     def countdown_and_run_order(self, search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
                                 quantity_x, quantity_y, buy_order_x, buy_order_y, price_per_unit_x, price_per_unit_y, 
-                                left, top, width, height, budget, budget_overrun, delay, start_row):
+                                left, top, width, height, budget, delay, start_row):
         def countdown():
             try:
                 for i in range(5, 0, -1):
@@ -775,7 +761,7 @@ class MarketBotGUI:
                 self.script_running = True
                 self.run_script_order(search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
                                       quantity_x, quantity_y, buy_order_x, buy_order_y, price_per_unit_x, price_per_unit_y, 
-                                      left, top, width, height, budget, budget_overrun, delay, start_row)
+                                      left, top, width, height, budget, delay, start_row)
             except Exception as e:
                 self.emergency_stop()
                 messagebox.showerror("Ошибка", f"Ошибка при запуске скрипта: {e}")
@@ -824,8 +810,8 @@ class MarketBotGUI:
         return False
         
     def run_script_manual(self, search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
-                          quantity_x, quantity_y, left, top, width, height, left_q, top_q, width_q, height_q, 
-                          budget, budget_overrun, delay, start_row):
+                        quantity_x, quantity_y, left, top, width, height, left_q, top_q, width_q, height_q, 
+                        budget, delay, start_row):
         self.log_entries = []
         try:
             self.update_status("Загрузка данных из Excel...")
@@ -838,7 +824,6 @@ class MarketBotGUI:
             total_items = len(df) - start_row + 1
             if total_items <= 0:
                 raise ValueError("Начальная строка больше количества строк в таблице")
-            max_budget = budget * (1 + budget_overrun / 100)
             min_budget_threshold = 10000
             for index, row in df.iloc[start_row-1:].iterrows():
                 self.pause_event.wait()
@@ -879,7 +864,7 @@ class MarketBotGUI:
 
                 limit_price = int(value * present)
                 # Update current item info at start of processing
-                self.update_current_item_info(name=name, value=value, ocr_price="N/A", bought=0, store=store, limit_price=limit_price, budget=budget, total_spent=0)
+                self.update_current_item_info(name=name, value=value, ocr_price="N/A", bought=0, store=store, limit_price=limit_price, budget=budget, total_spent=total_spent)
 
                 pyautogui.moveTo(clear_x, clear_y, duration=random.uniform(0.1, 0.2))
                 pyautogui.click()
@@ -946,8 +931,8 @@ class MarketBotGUI:
                         self.log_entries.append(f"[{datetime.now()}] {msg}")
                         break
                         
-                    if total_spent + ocr_price > max_budget:  # Check for at least one
-                        msg = f"Бюджет превышен ({total_spent + ocr_price} > {max_budget})."
+                    if total_spent + ocr_price > budget:  # Check for at least one
+                        msg = f"Бюджет превышен ({total_spent + ocr_price} > {budget})."
                         print(msg)
                         logging.info(msg)
                         self.update_status("Бюджет превышен!")
@@ -956,6 +941,11 @@ class MarketBotGUI:
                         break
                         
                     try:
+                        # Click the Buy button to open the purchase dialog
+                        pyautogui.moveTo(buy_x, buy_y, duration=random.uniform(0.1, 0.2))
+                        pyautogui.click()
+                        time.sleep(random.uniform(0.3, 0.5))  # Wait for dialog to open
+                        
                         # Захват изображения
                         screenshot_q = ImageGrab.grab(bbox=(left_q, top_q, left_q + width_q, top_q + height_q))
                         
@@ -970,6 +960,7 @@ class MarketBotGUI:
                         
                         # Фильтрация результатов с минимальным confidence
                         available = []
+                        text = ""
                         for i in range(len(data['text'])):
                             if data['text'][i].strip() and int(data['conf'][i]) > -1:  # -1 означает отсутствие уверенности
                                 confidence = int(data['conf'][i])
@@ -1009,22 +1000,22 @@ class MarketBotGUI:
                             self.log_entries.append(f"[{datetime.now()}] {msg}")
                             self.script_running = False
                             break
-                        if total_spent + batch_cost > max_budget:
+                        if total_spent + batch_cost > budget:
                             to_buy = (budget - total_spent) // ocr_price
                             batch_cost = ocr_price * to_buy
-                            if to_buy > 0 and total_spent + batch_cost <= max_budget:
-                                msg = f"Бюджет ограничивает покупку для {name}: to_buy скорректировано до {to_buy}. Завершаем после покупки."
+                            if to_buy > 0:
+                                msg = f"Бюджет ограничивает покупку для {name}: to_buy скорректировано до {to_buy}"
                                 print(msg)
                                 logging.info(msg)
                                 self.log_entries.append(f"[{datetime.now()}] {msg}")
                             else:
-                                msg = f"Бюджет исчерпан для {name} ({total_spent + batch_cost} > {max_budget})."
+                                msg = f"Бюджет исчерпан для {name}."
                                 print(msg)
                                 logging.info(msg)
                                 self.log_entries.append(f"[{datetime.now()}] {msg}")
                                 self.script_running = False
                                 break
-                        
+                            
                         if to_buy == 1:
                             # Just confirm
                             pyautogui.moveTo(confirm_x, confirm_y, duration=random.uniform(0.1, 0.2))
@@ -1055,13 +1046,6 @@ class MarketBotGUI:
                         print(msg)
                         logging.info(msg)
                         self.log_entries.append(f"[{datetime.now()}] {msg}")
-                        if total_spent > budget:
-                            msg = f"Бюджет превышен на {total_spent - budget} ({(total_spent/budget-1)*100:.2f}%). Завершаем."
-                            print(msg)
-                            logging.info(msg)
-                            self.log_entries.append(f"[{datetime.now()}] {msg}")
-                            self.script_running = False
-                            break
 
                         # Update current item info after purchase
                         self.update_current_item_info(name=name, value=value, ocr_price=ocr_price, bought=bought, store=store, limit_price=limit_price, budget=budget, total_spent=total_spent)
@@ -1079,8 +1063,6 @@ class MarketBotGUI:
             
             if self.script_running:
                 msg = f"Скрипт завершен. Всего потрачено: {total_spent}"
-                if total_spent > budget:
-                    msg += f" (превышение на {total_spent - budget})"
                 print(msg)
                 logging.info(msg)
                 self.log_entries.append(f"[{datetime.now()}] --- Сессия завершена. Всего потрачено: {total_spent} ---")
@@ -1113,7 +1095,7 @@ class MarketBotGUI:
 
     def run_script_order(self, search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
                          quantity_x, quantity_y, buy_order_x, buy_order_y, price_per_unit_x, price_per_unit_y, 
-                         left, top, width, height, budget, budget_overrun, delay, start_row):
+                         left, top, width, height, budget, delay, start_row):
         self.log_entries = []
         try:
             self.update_status("Загрузка данных из Excel...")
@@ -1126,8 +1108,8 @@ class MarketBotGUI:
             total_items = len(df) - start_row + 1
             if total_items <= 0:
                 raise ValueError("Начальная строка больше количества строк в таблице")
-            max_budget = budget * (1 + budget_overrun / 100)
             min_budget_threshold = 10000
+
             for index, row in df.iloc[start_row-1:].iterrows():
                 self.pause_event.wait()
                 
@@ -1167,7 +1149,7 @@ class MarketBotGUI:
 
                 limit_price = int(value * present)
                 # Update current item info at start of processing
-                self.update_current_item_info(name=name, value=value, ocr_price="N/A", bought=0, store=store, limit_price=limit_price, budget=budget, total_spent=0)
+                self.update_current_item_info(name=name, value=value, ocr_price="N/A", bought=0, store=store, limit_price=limit_price, budget=budget, total_spent=total_spent)
 
                 pyautogui.moveTo(clear_x, clear_y, duration=random.uniform(0.1, 0.2))
                 pyautogui.click()
@@ -1244,16 +1226,16 @@ class MarketBotGUI:
                         self.log_entries.append(f"[{datetime.now()}] {msg}")
                         self.script_running = False
                         break
-                    if total_spent + max_cost > max_budget:
+                    if total_spent + max_cost > budget:
                         store = int((budget - total_spent) / (limit_price * tax_rate))
                         max_cost = store * limit_price * tax_rate
-                        if store > 0 and total_spent + max_cost <= max_budget:
-                            msg = f"Бюджет ограничивает ордер для {name}: store скорректировано до {store}. Завершаем после ордера."
+                        if store > 0:
+                            msg = f"Бюджет ограничивает ордер для {name}: store скорректировано до {store}"
                             print(msg)
                             logging.info(msg)
                             self.log_entries.append(f"[{datetime.now()}] {msg}")
                         else:
-                            msg = f"Бюджет исчерпан для {name} ({total_spent + max_cost} > {max_budget})."
+                            msg = f"Бюджет исчерпан для {name}."
                             print(msg)
                             logging.info(msg)
                             self.log_entries.append(f"[{datetime.now()}] {msg}")
@@ -1297,16 +1279,9 @@ class MarketBotGUI:
                     print(msg)
                     logging.info(msg)
                     self.log_entries.append(f"[{datetime.now()}] {msg}")
-                    if total_spent > budget:
-                        msg = f"Бюджет превышен на {total_spent - budget} ({(total_spent/budget-1)*100:.2f}%). Завершаем."
-                        print(msg)
-                        logging.info(msg)
-                        self.log_entries.append(f"[{datetime.now()}] {msg}")
-                        self.script_running = False
-                        break
                     
                     # Update current item info
-                    self.update_current_item_info(name=name, value=value, ocr_price=ocr_price, bought=store, store=store, limit_price=limit_price, budget=budget, total_spent=total_spent)
+                    self.update_current_item_info(name=name, value=value, ocr_price=ocr_price, bought=store, store=store, limit_price=limit_price)
                     
                     break  # Move to next item
                 
@@ -1316,8 +1291,6 @@ class MarketBotGUI:
             
             if self.script_running:
                 msg = f"Скрипт завершен. Всего потрачено (примерно): {total_spent}"
-                if total_spent > budget:
-                    msg += f" (превышение на {total_spent - budget})"
                 print(msg)
                 logging.info(msg)
                 self.log_entries.append(f"[{datetime.now()}] --- Сессия завершена. Всего потрачено (примерно): {total_spent} ---")
