@@ -320,3 +320,892 @@
 2025-08-21 12:34:47,610 - Рассчитано to_buy для капюшон охотника (знаток): min(доступно=2, осталось купить=58) = 2
 2025-08-21 12:34:49,091 - Ошибка при поиске кнопки OK: 
 2025-08-21 12:34:49,094 - Куплено 44/100 капюшон охотника (знаток) (2 шт.) за 1898 each. Потрачено: 83208
+2025-08-21 14:15:01,346 - Ошибка при поиске кнопки OK: 
+2025-08-21 14:15:01,716 - Текущая цена для шлем рыцаря (старейшина): 0
+2025-08-21 14:15:01,719 - OCR вернул 0. Попытка 1. Пропускаю.
+2025-08-21 14:15:02,389 - Ошибка при поиске кнопки OK: 
+2025-08-21 14:15:02,754 - Текущая цена для шлем рыцаря (старейшина): 0
+2025-08-21 14:15:02,757 - OCR вернул 0. Попытка 1. Пропускаю.
+2025-08-21 14:15:03,396 - Ошибка при поиске кнопки OK: 
+2025-08-21 14:15:03,758 - Текущая цена для шлем рыцаря (старейшина): 0
+2025-08-21 14:15:03,761 - OCR вернул 0. Попытка 1. Пропускаю.
+2025-08-21 14:15:04,423 - Ошибка при поиске кнопки OK: 
+2025-08-21 14:15:04,778 - Текущая цена для шлем рыцаря (старейшина): 0
+2025-08-21 14:15:04,785 - OCR вернул 0. Попытка 1. Пропускаю.
+2025-08-21 14:15:05,441 - Ошибка при поиске кнопки OK: 
+2025-08-21 14:15:05,811 - Текущая цена для шлем рыцаря (старейшина): 0
+2025-08-21 14:15:05,813 - OCR вернул 0. Попытка 1. Пропускаю.
+2025-08-21 14:15:06,452 - Ошибка при поиске кнопки OK: 
+2025-08-21 14:15:06,803 - Текущая цена для шлем рыцаря (старейшина): 0
+2025-08-21 14:15:06,805 - OCR вернул 0. Попытка 1. Пропускаю.
+2025-08-21 14:15:07,469 - Ошибка при поиске кнопки OK: 
+2025-08-21 14:36:42,633 - Не удалось загрузить настройки: 'MarketBotGUI' object has no attribute 'left_entry'
+2025-08-21 14:38:08,423 - Не удалось загрузить настройки: 'MarketBotGUI' object has no attribute 'left_entry'
+2025-08-21 14:38:10,156 - Unhandled exception in listener callback
+Traceback (most recent call last):
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\win32.py", line 386, in _handler
+    converted = self._convert(code, msg, lpdata)
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\win32.py", line 401, in _convert
+    raise NotImplementedError()
+NotImplementedError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\__init__.py", line 230, in inner
+    return f(self, *args, **kwargs)
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\win32.py", line 390, in _handler
+    self._handle_message(code, msg, lpdata)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\mouse\_win32.py", line 217, in _handle_message
+    self.on_click(data.pt.x, data.pt.y, button, pressed, injected)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\__init__.py", line 146, in inner
+    if f(*args) is False:
+       ~^^^^^^^
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\__init__.py", line 291, in <lambda>
+    return lambda *a: f(*a[:actual])
+                      ~^^^^^^^^^^^^^
+  File "c:\Users\Student\Documents\GitHub\albion_market_main\market.py", line 360, in on_click
+    self.left_entry.delete(0, tk.END)
+    ^^^^^^^^^^^^^^^
+AttributeError: 'MarketBotGUI' object has no attribute 'left_entry'. Did you mean: 'left_q_entry'?
+2025-08-21 14:38:51,896 - Не удалось загрузить настройки: 'MarketBotGUI' object has no attribute 'left_entry'
+2025-08-21 14:38:53,508 - Unhandled exception in listener callback
+Traceback (most recent call last):
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\win32.py", line 386, in _handler
+    converted = self._convert(code, msg, lpdata)
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\win32.py", line 401, in _convert
+    raise NotImplementedError()
+NotImplementedError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\__init__.py", line 230, in inner
+    return f(self, *args, **kwargs)
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\win32.py", line 390, in _handler
+    self._handle_message(code, msg, lpdata)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\mouse\_win32.py", line 217, in _handle_message
+    self.on_click(data.pt.x, data.pt.y, button, pressed, injected)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\__init__.py", line 146, in inner
+    if f(*args) is False:
+       ~^^^^^^^
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\__init__.py", line 291, in <lambda>
+    return lambda *a: f(*a[:actual])
+                      ~^^^^^^^^^^^^^
+  File "c:\Users\Student\Documents\GitHub\albion_market_main\market.py", line 360, in on_click
+    self.left_entry.delete(0, tk.END)
+    ^^^^^^^^^^^^^^^
+AttributeError: 'MarketBotGUI' object has no attribute 'left_entry'. Did you mean: 'left_q_entry'?
+2025-08-21 14:38:56,557 - Unhandled exception in listener callback
+Traceback (most recent call last):
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\win32.py", line 386, in _handler
+    converted = self._convert(code, msg, lpdata)
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\win32.py", line 401, in _convert
+    raise NotImplementedError()
+NotImplementedError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\__init__.py", line 230, in inner
+    return f(self, *args, **kwargs)
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\win32.py", line 390, in _handler
+    self._handle_message(code, msg, lpdata)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\mouse\_win32.py", line 217, in _handle_message
+    self.on_click(data.pt.x, data.pt.y, button, pressed, injected)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\__init__.py", line 146, in inner
+    if f(*args) is False:
+       ~^^^^^^^
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\__init__.py", line 291, in <lambda>
+    return lambda *a: f(*a[:actual])
+                      ~^^^^^^^^^^^^^
+  File "c:\Users\Student\Documents\GitHub\albion_market_main\market.py", line 360, in on_click
+    self.left_entry.delete(0, tk.END)
+    ^^^^^^^^^^^^^^^
+AttributeError: 'MarketBotGUI' object has no attribute 'left_entry'. Did you mean: 'left_q_entry'?
+2025-08-21 14:39:46,370 - Не удалось загрузить настройки: 'MarketBotGUI' object has no attribute 'left_entry'
+2025-08-21 14:40:13,906 - Не удалось загрузить настройки: 'MarketBotGUI' object has no attribute 'left_entry'
+2025-08-21 14:44:35,497 - Не удалось загрузить настройки: 'MarketBotGUI' object has no attribute 'left_entry'
+2025-08-21 14:44:37,851 - Unhandled exception in listener callback
+Traceback (most recent call last):
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\win32.py", line 386, in _handler
+    converted = self._convert(code, msg, lpdata)
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\win32.py", line 401, in _convert
+    raise NotImplementedError()
+NotImplementedError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\__init__.py", line 230, in inner
+    return f(self, *args, **kwargs)
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\win32.py", line 390, in _handler
+    self._handle_message(code, msg, lpdata)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\mouse\_win32.py", line 217, in _handle_message
+    self.on_click(data.pt.x, data.pt.y, button, pressed, injected)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\__init__.py", line 146, in inner
+    if f(*args) is False:
+       ~^^^^^^^
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\__init__.py", line 291, in <lambda>
+    return lambda *a: f(*a[:actual])
+                      ~^^^^^^^^^^^^^
+  File "c:\Users\Student\Documents\GitHub\albion_market_main\market.py", line 385, in on_click
+    self.finish_capture(f"Область цены продажи захвачена: {width}x{height}")
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\Student\Documents\GitHub\albion_market_main\market.py", line 516, in finish_capture
+    self.capture_region_btn.config(text="Захватить область", command=self.start_capture_region)
+    ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'MarketBotGUI' object has no attribute 'capture_region_btn'. Did you mean: 'capture_buy_region_btn'?
+2025-08-21 14:44:39,067 - Unhandled exception in listener callback
+Traceback (most recent call last):
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\win32.py", line 386, in _handler
+    converted = self._convert(code, msg, lpdata)
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\win32.py", line 401, in _convert
+    raise NotImplementedError()
+NotImplementedError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\__init__.py", line 230, in inner
+    return f(self, *args, **kwargs)
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\win32.py", line 390, in _handler
+    self._handle_message(code, msg, lpdata)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\mouse\_win32.py", line 217, in _handle_message
+    self.on_click(data.pt.x, data.pt.y, button, pressed, injected)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\__init__.py", line 146, in inner
+    if f(*args) is False:
+       ~^^^^^^^
+  File "C:\Users\Student\AppData\Local\Programs\Python\Python313\Lib\site-packages\pynput\_util\__init__.py", line 291, in <lambda>
+    return lambda *a: f(*a[:actual])
+                      ~^^^^^^^^^^^^^
+  File "c:\Users\Student\Documents\GitHub\albion_market_main\market.py", line 374, in on_click
+    self.finish_capture(f"Область цены покупки захвачена: {width}x{height}")
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "c:\Users\Student\Documents\GitHub\albion_market_main\market.py", line 516, in finish_capture
+    self.capture_region_btn.config(text="Захватить область", command=self.start_capture_region)
+    ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'MarketBotGUI' object has no attribute 'capture_region_btn'. Did you mean: 'capture_buy_region_btn'?
+2025-08-21 14:46:14,873 - Не удалось загрузить настройки: 'MarketBotGUI' object has no attribute 'left_entry'
+2025-08-21 14:46:47,291 - Не удалось загрузить настройки: 'MarketBotGUI' object has no attribute 'left_entry'
+2025-08-21 16:04:35,907 - Начинается сессия продаж...
+2025-08-21 16:04:35,914 - Ошибка: Журнал покупок purchase_log.csv не найден!
+2025-08-21 16:07:06,700 - Начинается сессия продаж...
+2025-08-21 16:07:06,710 - Ошибка при чтении журнала покупок: No columns to parse from file
+2025-08-21 16:07:25,003 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:25,477 - Текущая цена для шлем солдата (знаток): 1465
+2025-08-21 16:07:25,481 - Цена 1465 не выгодна для шлем солдата (знаток) (лимит: 1390)
+2025-08-21 16:07:28,086 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:28,457 - Текущая цена для шлем солдата (эксперт): 3526
+2025-08-21 16:07:29,749 - OCR количества для шлем солдата (эксперт): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем солдата (эксперт)_20250821_160729_319689.png
+2025-08-21 16:07:29,749 - Рассчитано to_buy для шлем солдата (эксперт): min(доступно=1, осталось купить=100) = 1
+2025-08-21 16:07:30,437 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:30,440 - Куплено 1/100 шлем солдата (эксперт) (1 шт.) за 3526 each. Потрачено: 3526
+2025-08-21 16:07:30,620 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:30,981 - Текущая цена для шлем солдата (эксперт): 3527
+2025-08-21 16:07:32,211 - OCR количества для шлем солдата (эксперт): '10', распознано как [('10', 95)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем солдата (эксперт)_20250821_160731_735742.png
+2025-08-21 16:07:32,211 - Рассчитано to_buy для шлем солдата (эксперт): min(доступно=10, осталось купить=99) = 10
+2025-08-21 16:07:33,775 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:33,779 - Куплено 11/100 шлем солдата (эксперт) (10 шт.) за 3527 each. Потрачено: 38796
+2025-08-21 16:07:33,958 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:34,317 - Текущая цена для шлем солдата (эксперт): 3527
+2025-08-21 16:07:35,430 - OCR количества для шлем солдата (эксперт): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем солдата (эксперт)_20250821_160735_086658.png
+2025-08-21 16:07:35,433 - Рассчитано to_buy для шлем солдата (эксперт): min(доступно=1, осталось купить=89) = 1
+2025-08-21 16:07:36,134 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:36,136 - Куплено 12/100 шлем солдата (эксперт) (1 шт.) за 3527 each. Потрачено: 42323
+2025-08-21 16:07:36,316 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:36,707 - Текущая цена для шлем солдата (эксперт): 3527
+2025-08-21 16:07:38,024 - OCR количества для шлем солдата (эксперт): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем солдата (эксперт)_20250821_160737_670221.png
+2025-08-21 16:07:38,025 - Рассчитано to_buy для шлем солдата (эксперт): min(доступно=1, осталось купить=88) = 1
+2025-08-21 16:07:38,817 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:38,819 - Куплено 13/100 шлем солдата (эксперт) (1 шт.) за 3527 each. Потрачено: 45850
+2025-08-21 16:07:38,992 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:39,403 - Текущая цена для шлем солдата (эксперт): 3529
+2025-08-21 16:07:40,590 - OCR количества для шлем солдата (эксперт): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем солдата (эксперт)_20250821_160740_256035.png
+2025-08-21 16:07:40,590 - Рассчитано to_buy для шлем солдата (эксперт): min(доступно=1, осталось купить=87) = 1
+2025-08-21 16:07:41,359 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:41,362 - Куплено 14/100 шлем солдата (эксперт) (1 шт.) за 3529 each. Потрачено: 49379
+2025-08-21 16:07:41,539 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:41,934 - Текущая цена для шлем солдата (эксперт): 3529
+2025-08-21 16:07:43,143 - OCR количества для шлем солдата (эксперт): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем солдата (эксперт)_20250821_160742_729043.png
+2025-08-21 16:07:43,145 - Рассчитано to_buy для шлем солдата (эксперт): min(доступно=1, осталось купить=86) = 1
+2025-08-21 16:07:43,872 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:43,875 - Куплено 15/100 шлем солдата (эксперт) (1 шт.) за 3529 each. Потрачено: 52908
+2025-08-21 16:07:44,044 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:44,394 - Текущая цена для шлем солдата (эксперт): 3530
+2025-08-21 16:07:45,744 - OCR количества для шлем солдата (эксперт): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем солдата (эксперт)_20250821_160745_393715.png
+2025-08-21 16:07:45,744 - Рассчитано to_buy для шлем солдата (эксперт): min(доступно=1, осталось купить=85) = 1
+2025-08-21 16:07:46,460 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:46,463 - Куплено 16/100 шлем солдата (эксперт) (1 шт.) за 3530 each. Потрачено: 56438
+2025-08-21 16:07:46,638 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:47,005 - Текущая цена для шлем солдата (эксперт): 3530
+2025-08-21 16:07:48,179 - OCR количества для шлем солдата (эксперт): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем солдата (эксперт)_20250821_160747_783593.png
+2025-08-21 16:07:48,179 - Рассчитано to_buy для шлем солдата (эксперт): min(доступно=1, осталось купить=84) = 1
+2025-08-21 16:07:48,992 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:48,994 - Куплено 17/100 шлем солдата (эксперт) (1 шт.) за 3530 each. Потрачено: 59968
+2025-08-21 16:07:49,174 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:49,612 - Текущая цена для шлем солдата (эксперт): 3530
+2025-08-21 16:07:50,822 - OCR количества для шлем солдата (эксперт): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем солдата (эксперт)_20250821_160750_489220.png
+2025-08-21 16:07:50,822 - Рассчитано to_buy для шлем солдата (эксперт): min(доступно=1, осталось купить=83) = 1
+2025-08-21 16:07:51,599 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:51,603 - Куплено 18/100 шлем солдата (эксперт) (1 шт.) за 3530 each. Потрачено: 63498
+2025-08-21 16:07:51,788 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:52,181 - Текущая цена для шлем солдата (эксперт): 3530
+2025-08-21 16:07:53,437 - OCR количества для шлем солдата (эксперт): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем солдата (эксперт)_20250821_160753_066422.png
+2025-08-21 16:07:53,437 - Рассчитано to_buy для шлем солдата (эксперт): min(доступно=1, осталось купить=82) = 1
+2025-08-21 16:07:54,195 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:54,200 - Куплено 19/100 шлем солдата (эксперт) (1 шт.) за 3530 each. Потрачено: 67028
+2025-08-21 16:07:56,736 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:07:57,124 - Текущая цена для шлем солдата (мастер): 15988
+2025-08-21 16:07:57,129 - Цена 15988 не выгодна для шлем солдата (мастер) (лимит: 15915)
+2025-08-21 16:07:59,732 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:00,118 - Текущая цена для шлем солдата (магистр): 40496
+2025-08-21 16:08:00,123 - Цена 40496 не выгодна для шлем солдата (магистр) (лимит: 36162)
+2025-08-21 16:08:03,030 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:03,406 - Текущая цена для шлем солдата (старейшина): 128978
+2025-08-21 16:08:03,412 - Цена 128978 не выгодна для шлем солдата (старейшина) (лимит: 107998)
+2025-08-21 16:08:05,962 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:06,303 - Текущая цена для шлем жранителя (знаток): 1290
+2025-08-21 16:08:07,469 - OCR количества для шлем жранителя (знаток): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем жранителя (знаток)_20250821_160807_080736.png
+2025-08-21 16:08:07,470 - Рассчитано to_buy для шлем жранителя (знаток): min(доступно=1, осталось купить=100) = 1
+2025-08-21 16:08:08,270 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:08,275 - Куплено 1/100 шлем жранителя (знаток) (1 шт.) за 1290 each. Потрачено: 68318
+2025-08-21 16:08:08,453 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:08,868 - Текущая цена для шлем жранителя (знаток): 1297
+2025-08-21 16:08:10,185 - OCR количества для шлем жранителя (знаток): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем жранителя (знаток)_20250821_160809_837065.png
+2025-08-21 16:08:10,186 - Рассчитано to_buy для шлем жранителя (знаток): min(доступно=1, осталось купить=99) = 1
+2025-08-21 16:08:10,951 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:10,960 - Куплено 2/100 шлем жранителя (знаток) (1 шт.) за 1297 each. Потрачено: 69615
+2025-08-21 16:08:11,138 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:11,548 - Текущая цена для шлем жранителя (знаток): 1297
+2025-08-21 16:08:12,762 - OCR количества для шлем жранителя (знаток): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем жранителя (знаток)_20250821_160812_390542.png
+2025-08-21 16:08:12,762 - Рассчитано to_buy для шлем жранителя (знаток): min(доступно=1, осталось купить=98) = 1
+2025-08-21 16:08:13,470 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:13,473 - Куплено 3/100 шлем жранителя (знаток) (1 шт.) за 1297 each. Потрачено: 70912
+2025-08-21 16:08:13,655 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:14,079 - Текущая цена для шлем жранителя (знаток): 1297
+2025-08-21 16:08:15,446 - OCR количества для шлем жранителя (знаток): '2', распознано как [('2', 66)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем жранителя (знаток)_20250821_160814_980504.png
+2025-08-21 16:08:15,446 - Рассчитано to_buy для шлем жранителя (знаток): min(доступно=2, осталось купить=97) = 2
+2025-08-21 16:08:16,881 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:16,885 - Куплено 5/100 шлем жранителя (знаток) (2 шт.) за 1297 each. Потрачено: 73506
+2025-08-21 16:08:17,054 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:17,415 - Текущая цена для шлем жранителя (знаток): 1297
+2025-08-21 16:08:18,633 - OCR количества для шлем жранителя (знаток): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем жранителя (знаток)_20250821_160818_294320.png
+2025-08-21 16:08:18,635 - Рассчитано to_buy для шлем жранителя (знаток): min(доступно=1, осталось купить=95) = 1
+2025-08-21 16:08:19,326 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:19,329 - Куплено 6/100 шлем жранителя (знаток) (1 шт.) за 1297 each. Потрачено: 74803
+2025-08-21 16:08:21,820 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:22,159 - Текущая цена для шлем жранителя (эксперт): 3167
+2025-08-21 16:08:23,381 - OCR количества для шлем жранителя (эксперт): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем жранителя (эксперт)_20250821_160823_030433.png
+2025-08-21 16:08:23,381 - Рассчитано to_buy для шлем жранителя (эксперт): min(доступно=1, осталось купить=100) = 1
+2025-08-21 16:08:24,227 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:24,230 - Куплено 1/100 шлем жранителя (эксперт) (1 шт.) за 3167 each. Потрачено: 77970
+2025-08-21 16:08:24,419 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:24,877 - Текущая цена для шлем жранителя (эксперт): 3167
+2025-08-21 16:08:26,120 - OCR количества для шлем жранителя (эксперт): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем жранителя (эксперт)_20250821_160825_794888.png
+2025-08-21 16:08:26,120 - Рассчитано to_buy для шлем жранителя (эксперт): min(доступно=1, осталось купить=99) = 1
+2025-08-21 16:08:26,801 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:26,809 - Куплено 2/100 шлем жранителя (эксперт) (1 шт.) за 3167 each. Потрачено: 81137
+2025-08-21 16:08:26,966 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:27,317 - Текущая цена для шлем жранителя (эксперт): 3167
+2025-08-21 16:08:28,603 - OCR количества для шлем жранителя (эксперт): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем жранителя (эксперт)_20250821_160828_104260.png
+2025-08-21 16:08:28,603 - Рассчитано to_buy для шлем жранителя (эксперт): min(доступно=1, осталось купить=98) = 1
+2025-08-21 16:08:29,443 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:29,466 - Куплено 3/100 шлем жранителя (эксперт) (1 шт.) за 3167 each. Потрачено: 84304
+2025-08-21 16:08:29,654 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:30,145 - Текущая цена для шлем жранителя (эксперт): 3167
+2025-08-21 16:08:31,467 - OCR количества для шлем жранителя (эксперт): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем жранителя (эксперт)_20250821_160830_997258.png
+2025-08-21 16:08:31,478 - Рассчитано to_buy для шлем жранителя (эксперт): min(доступно=1, осталось купить=97) = 1
+2025-08-21 16:08:32,271 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:32,284 - Куплено 4/100 шлем жранителя (эксперт) (1 шт.) за 3167 each. Потрачено: 87471
+2025-08-21 16:08:32,482 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:32,942 - Текущая цена для шлем жранителя (эксперт): 3167
+2025-08-21 16:08:34,203 - OCR количества для шлем жранителя (эксперт): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем жранителя (эксперт)_20250821_160833_884412.png
+2025-08-21 16:08:34,204 - Рассчитано to_buy для шлем жранителя (эксперт): min(доступно=1, осталось купить=96) = 1
+2025-08-21 16:08:34,872 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:34,875 - Куплено 5/100 шлем жранителя (эксперт) (1 шт.) за 3167 each. Потрачено: 90638
+2025-08-21 16:08:35,070 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:35,441 - Текущая цена для шлем жранителя (эксперт): 3168
+2025-08-21 16:08:36,587 - OCR количества для шлем жранителя (эксперт): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем жранителя (эксперт)_20250821_160836_186688.png
+2025-08-21 16:08:36,587 - Рассчитано to_buy для шлем жранителя (эксперт): min(доступно=1, осталось купить=95) = 1
+2025-08-21 16:08:37,324 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:37,331 - Куплено 6/100 шлем жранителя (эксперт) (1 шт.) за 3168 each. Потрачено: 93806
+2025-08-21 16:08:40,032 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:40,412 - Текущая цена для шлем жранителя (мастер): 15598
+2025-08-21 16:08:41,640 - OCR количества для шлем жранителя (мастер): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем жранителя (мастер)_20250821_160841_314518.png
+2025-08-21 16:08:41,640 - Рассчитано to_buy для шлем жранителя (мастер): min(доступно=1, осталось купить=70) = 1
+2025-08-21 16:08:42,349 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:42,351 - Куплено 1/70 шлем жранителя (мастер) (1 шт.) за 15598 each. Потрачено: 109404
+2025-08-21 16:08:42,521 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:42,915 - Текущая цена для шлем жранителя (мастер): 15998
+2025-08-21 16:08:44,196 - OCR количества для шлем жранителя (мастер): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем жранителя (мастер)_20250821_160843_812491.png
+2025-08-21 16:08:44,197 - Рассчитано to_buy для шлем жранителя (мастер): min(доступно=1, осталось купить=69) = 1
+2025-08-21 16:08:44,955 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:44,957 - Куплено 2/70 шлем жранителя (мастер) (1 шт.) за 15998 each. Потрачено: 125402
+2025-08-21 16:08:45,114 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:45,476 - Текущая цена для шлем жранителя (мастер): 15998
+2025-08-21 16:08:46,852 - OCR количества для шлем жранителя (мастер): '1', распознано как [('1', 82)], сохранен скриншот: c:\Users\Student\Documents\GitHub\albion_market_main\screenshots\quantity_шлем жранителя (мастер)_20250821_160846_471828.png
+2025-08-21 16:08:46,852 - Рассчитано to_buy для шлем жранителя (мастер): min(доступно=1, осталось купить=68) = 1
+2025-08-21 16:08:47,645 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:47,650 - Куплено 3/70 шлем жранителя (мастер) (1 шт.) за 15998 each. Потрачено: 141400
+2025-08-21 16:08:47,850 - Ошибка при поиске кнопки OK: 
+2025-08-21 16:08:48,226 - Текущая цена для шлем жранителя (мастер): 17475
+2025-08-21 16:08:48,233 - Цена 17475 не выгодна для шлем жранителя (мастер) (лимит: 16851)
+2025-08-21 16:10:54,128 - Начинается сессия продаж...
+2025-08-21 16:10:54,141 - Ошибка при чтении журнала покупок: 'quantity'
+2025-08-21 16:15:23,722 - Начинается сессия продаж...
+2025-08-21 16:15:59,793 - Начинается сессия продаж...
+2025-08-21 16:15:59,828 - Журнал покупок успешно загружен и обработан.
+2025-08-21 16:16:00,497 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:00,498 - Предмет не найден или не в списке покупок. Попытка 1/100
+2025-08-21 16:16:01,919 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:01,919 - Предмет не найден или не в списке покупок. Попытка 2/100
+2025-08-21 16:16:03,384 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:03,385 - Предмет не найден или не в списке покупок. Попытка 3/100
+2025-08-21 16:16:04,812 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:04,812 - Предмет не найден или не в списке покупок. Попытка 4/100
+2025-08-21 16:16:06,293 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:06,293 - Предмет не найден или не в списке покупок. Попытка 5/100
+2025-08-21 16:16:07,733 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:07,734 - Предмет не найден или не в списке покупок. Попытка 6/100
+2025-08-21 16:16:09,450 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:09,450 - Предмет не найден или не в списке покупок. Попытка 7/100
+2025-08-21 16:16:10,909 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:10,910 - Предмет не найден или не в списке покупок. Попытка 8/100
+2025-08-21 16:16:12,445 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:12,446 - Предмет не найден или не в списке покупок. Попытка 9/100
+2025-08-21 16:16:13,938 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:13,939 - Предмет не найден или не в списке покупок. Попытка 10/100
+2025-08-21 16:16:15,417 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:15,418 - Предмет не найден или не в списке покупок. Попытка 11/100
+2025-08-21 16:16:16,899 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:16,900 - Предмет не найден или не в списке покупок. Попытка 12/100
+2025-08-21 16:16:18,342 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:18,342 - Предмет не найден или не в списке покупок. Попытка 13/100
+2025-08-21 16:16:19,892 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:19,892 - Предмет не найден или не в списке покупок. Попытка 14/100
+2025-08-21 16:16:21,423 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:21,424 - Предмет не найден или не в списке покупок. Попытка 15/100
+2025-08-21 16:16:22,875 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:22,876 - Предмет не найден или не в списке покупок. Попытка 16/100
+2025-08-21 16:16:24,331 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:24,331 - Предмет не найден или не в списке покупок. Попытка 17/100
+2025-08-21 16:16:25,812 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:25,813 - Предмет не найден или не в списке покупок. Попытка 18/100
+2025-08-21 16:16:27,409 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:27,410 - Предмет не найден или не в списке покупок. Попытка 19/100
+2025-08-21 16:16:28,919 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:28,920 - Предмет не найден или не в списке покупок. Попытка 20/100
+2025-08-21 16:16:30,457 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:30,458 - Предмет не найден или не в списке покупок. Попытка 21/100
+2025-08-21 16:16:31,988 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:31,988 - Предмет не найден или не в списке покупок. Попытка 22/100
+2025-08-21 16:16:33,539 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:33,539 - Предмет не найден или не в списке покупок. Попытка 23/100
+2025-08-21 16:16:35,056 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:35,057 - Предмет не найден или не в списке покупок. Попытка 24/100
+2025-08-21 16:16:36,629 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:36,630 - Предмет не найден или не в списке покупок. Попытка 25/100
+2025-08-21 16:16:38,108 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:38,108 - Предмет не найден или не в списке покупок. Попытка 26/100
+2025-08-21 16:16:39,842 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:39,842 - Предмет не найден или не в списке покупок. Попытка 27/100
+2025-08-21 16:16:41,404 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:41,405 - Предмет не найден или не в списке покупок. Попытка 28/100
+2025-08-21 16:16:42,857 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:42,858 - Предмет не найден или не в списке покупок. Попытка 29/100
+2025-08-21 16:16:44,335 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:44,336 - Предмет не найден или не в списке покупок. Попытка 30/100
+2025-08-21 16:16:45,829 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:45,830 - Предмет не найден или не в списке покупок. Попытка 31/100
+2025-08-21 16:16:47,446 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:47,447 - Предмет не найден или не в списке покупок. Попытка 32/100
+2025-08-21 16:16:49,046 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:49,047 - Предмет не найден или не в списке покупок. Попытка 33/100
+2025-08-21 16:16:50,684 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:50,685 - Предмет не найден или не в списке покупок. Попытка 34/100
+2025-08-21 16:16:52,343 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:52,344 - Предмет не найден или не в списке покупок. Попытка 35/100
+2025-08-21 16:16:53,991 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:53,993 - Предмет не найден или не в списке покупок. Попытка 36/100
+2025-08-21 16:16:55,657 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:55,658 - Предмет не найден или не в списке покупок. Попытка 37/100
+2025-08-21 16:16:57,154 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:57,154 - Предмет не найден или не в списке покупок. Попытка 38/100
+2025-08-21 16:16:58,688 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:16:58,689 - Предмет не найден или не в списке покупок. Попытка 39/100
+2025-08-21 16:17:00,329 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:00,329 - Предмет не найден или не в списке покупок. Попытка 40/100
+2025-08-21 16:17:01,888 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:01,888 - Предмет не найден или не в списке покупок. Попытка 41/100
+2025-08-21 16:17:03,381 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:03,382 - Предмет не найден или не в списке покупок. Попытка 42/100
+2025-08-21 16:17:04,920 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:04,920 - Предмет не найден или не в списке покупок. Попытка 43/100
+2025-08-21 16:17:06,515 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:06,515 - Предмет не найден или не в списке покупок. Попытка 44/100
+2025-08-21 16:17:08,172 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:08,173 - Предмет не найден или не в списке покупок. Попытка 45/100
+2025-08-21 16:17:10,153 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:10,153 - Предмет не найден или не в списке покупок. Попытка 46/100
+2025-08-21 16:17:11,730 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:11,731 - Предмет не найден или не в списке покупок. Попытка 47/100
+2025-08-21 16:17:13,252 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:13,253 - Предмет не найден или не в списке покупок. Попытка 48/100
+2025-08-21 16:17:14,813 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:14,813 - Предмет не найден или не в списке покупок. Попытка 49/100
+2025-08-21 16:17:16,307 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:16,307 - Предмет не найден или не в списке покупок. Попытка 50/100
+2025-08-21 16:17:17,774 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:17,774 - Предмет не найден или не в списке покупок. Попытка 51/100
+2025-08-21 16:17:19,282 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:19,283 - Предмет не найден или не в списке покупок. Попытка 52/100
+2025-08-21 16:17:20,840 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:20,841 - Предмет не найден или не в списке покупок. Попытка 53/100
+2025-08-21 16:17:22,362 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:22,363 - Предмет не найден или не в списке покупок. Попытка 54/100
+2025-08-21 16:17:23,870 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:23,870 - Предмет не найден или не в списке покупок. Попытка 55/100
+2025-08-21 16:17:25,405 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:25,405 - Предмет не найден или не в списке покупок. Попытка 56/100
+2025-08-21 16:17:26,938 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:26,939 - Предмет не найден или не в списке покупок. Попытка 57/100
+2025-08-21 16:17:28,510 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:28,511 - Предмет не найден или не в списке покупок. Попытка 58/100
+2025-08-21 16:17:29,982 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:29,983 - Предмет не найден или не в списке покупок. Попытка 59/100
+2025-08-21 16:17:31,435 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:31,435 - Предмет не найден или не в списке покупок. Попытка 60/100
+2025-08-21 16:17:32,953 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:32,954 - Предмет не найден или не в списке покупок. Попытка 61/100
+2025-08-21 16:17:34,634 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:34,635 - Предмет не найден или не в списке покупок. Попытка 62/100
+2025-08-21 16:17:36,037 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:36,038 - Предмет не найден или не в списке покупок. Попытка 63/100
+2025-08-21 16:17:37,571 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:37,572 - Предмет не найден или не в списке покупок. Попытка 64/100
+2025-08-21 16:17:39,049 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:39,050 - Предмет не найден или не в списке покупок. Попытка 65/100
+2025-08-21 16:17:40,477 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:40,477 - Предмет не найден или не в списке покупок. Попытка 66/100
+2025-08-21 16:17:41,947 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:41,950 - Предмет не найден или не в списке покупок. Попытка 67/100
+2025-08-21 16:17:43,450 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:43,451 - Предмет не найден или не в списке покупок. Попытка 68/100
+2025-08-21 16:17:44,878 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:44,879 - Предмет не найден или не в списке покупок. Попытка 69/100
+2025-08-21 16:17:46,346 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:46,347 - Предмет не найден или не в списке покупок. Попытка 70/100
+2025-08-21 16:17:47,880 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:47,880 - Предмет не найден или не в списке покупок. Попытка 71/100
+2025-08-21 16:17:49,405 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:49,409 - Предмет не найден или не в списке покупок. Попытка 72/100
+2025-08-21 16:17:51,095 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:51,095 - Предмет не найден или не в списке покупок. Попытка 73/100
+2025-08-21 16:17:52,656 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:52,657 - Предмет не найден или не в списке покупок. Попытка 74/100
+2025-08-21 16:17:54,081 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:54,082 - Предмет не найден или не в списке покупок. Попытка 75/100
+2025-08-21 16:17:55,700 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:55,703 - Предмет не найден или не в списке покупок. Попытка 76/100
+2025-08-21 16:17:57,201 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:57,202 - Предмет не найден или не в списке покупок. Попытка 77/100
+2025-08-21 16:17:58,655 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:17:58,655 - Предмет не найден или не в списке покупок. Попытка 78/100
+2025-08-21 16:18:00,371 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:18:00,371 - Предмет не найден или не в списке покупок. Попытка 79/100
+2025-08-21 16:18:01,997 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:18:01,998 - Предмет не найден или не в списке покупок. Попытка 80/100
+2025-08-21 16:18:03,476 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:18:03,476 - Предмет не найден или не в списке покупок. Попытка 81/100
+2025-08-21 16:19:30,478 - Начинается сессия продаж...
+2025-08-21 16:19:30,493 - Журнал покупок успешно загружен и обработан.
+2025-08-21 16:19:31,159 - Получено имя предмета: (знаток)
+2025-08-21 16:19:31,195 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:19:31,195 - Предмет не найден или не в списке покупок. Попытка 1/100
+2025-08-21 16:19:32,573 - Получено имя предмета: (знаток)
+2025-08-21 16:19:32,605 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:19:32,606 - Предмет не найден или не в списке покупок. Попытка 2/100
+2025-08-21 16:19:34,349 - Получено имя предмета: а м
+2025-08-21 16:19:34,389 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:19:34,390 - Предмет не найден или не в списке покупок. Попытка 3/100
+2025-08-21 16:19:35,977 - Получено имя предмета: item info after processing
+-ent_item_info()
+2025-08-21 16:19:36,011 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:19:36,011 - Предмет не найден или не в списке покупок. Попытка 4/100
+2025-08-21 16:19:37,499 - Получено имя предмета: item info after processing
+-ent_item_info()
+2025-08-21 16:19:37,531 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:19:37,532 - Предмет не найден или не в списке покупок. Попытка 5/100
+2025-08-21 16:19:38,996 - Получено имя предмета: item info after processing
+-ent_item_info()
+2025-08-21 16:19:39,040 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:19:39,041 - Предмет не найден или не в списке покупок. Попытка 6/100
+2025-08-21 16:19:40,509 - Получено имя предмета: item info after processing
+-ent_item_info()
+2025-08-21 16:19:40,546 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:19:40,546 - Предмет не найден или не в списке покупок. Попытка 7/100
+2025-08-21 16:19:42,049 - Получено имя предмета: item info after processing
+-ent_item_info()
+2025-08-21 16:19:42,077 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:19:42,078 - Предмет не найден или не в списке покупок. Попытка 8/100
+2025-08-21 16:19:43,508 - Получено имя предмета: мантия ученого (знаток)
+2025-08-21 16:19:43,543 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:19:43,544 - Предмет не найден или не в списке покупок. Попытка 9/100
+2025-08-21 16:19:45,076 - Получено имя предмета: мантия ученого (знаток)
+2025-08-21 16:19:45,111 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:19:45,112 - Предмет не найден или не в списке покупок. Попытка 10/100
+2025-08-21 16:19:46,671 - Получено имя предмета: мантия ученого (знаток)
+2025-08-21 16:19:46,717 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:19:46,718 - Предмет не найден или не в списке покупок. Попытка 11/100
+2025-08-21 16:19:48,262 - Получено имя предмета: мантия ученого (знаток)
+2025-08-21 16:19:48,307 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:19:48,308 - Предмет не найден или не в списке покупок. Попытка 12/100
+2025-08-21 16:20:49,342 - Начинается сессия продаж...
+2025-08-21 16:20:49,361 - Журнал покупок успешно загружен и обработан.
+2025-08-21 16:20:50,021 - Получено имя предмета: мантия ученого (знаток)
+2025-08-21 16:20:50,061 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:20:50,061 - Предмет не найден или не в списке покупок. Попытка 1/100
+2025-08-21 16:20:51,633 - Получено имя предмета: мантия ученого (знаток)
+2025-08-21 16:20:51,684 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:20:51,684 - Предмет не найден или не в списке покупок. Попытка 2/100
+2025-08-21 16:20:53,260 - Получено имя предмета: error (msg)
+} entries. append(#"[{datetime.now
+2025-08-21 16:20:53,294 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:20:53,295 - Предмет не найден или не в списке покупок. Попытка 3/100
+2025-08-21 16:20:54,817 - Получено имя предмета: error (msg)
+{ entries. append(#"[{datetime.now
+2025-08-21 16:20:54,855 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:20:54,856 - Предмет не найден или не в списке покупок. Попытка 4/100
+2025-08-21 16:20:56,417 - Получено имя предмета: error (msg)
+{ entries. append(#"[{datetime.now
+2025-08-21 16:20:56,455 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:20:56,456 - Предмет не найден или не в списке покупок. Попытка 5/100
+2025-08-21 16:20:57,910 - Получено имя предмета: error (msg)
+{ entries. append(#"[{datetime.now
+2025-08-21 16:20:57,947 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:20:57,948 - Предмет не найден или не в списке покупок. Попытка 6/100
+2025-08-21 16:20:59,391 - Получено имя предмета: error (msg)
+{ entries. append(#"[{datetime.now
+2025-08-21 16:20:59,424 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:20:59,425 - Предмет не найден или не в списке покупок. Попытка 7/100
+2025-08-21 16:21:01,028 - Получено имя предмета: error (msg)
+{ entries. append(#"[{datetime.now
+2025-08-21 16:21:01,064 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:21:01,065 - Предмет не найден или не в списке покупок. Попытка 8/100
+2025-08-21 16:21:02,572 - Получено имя предмета: мантия ученого (знаток)
+2025-08-21 16:21:02,616 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:21:02,618 - Предмет не найден или не в списке покупок. Попытка 9/100
+2025-08-21 16:21:04,148 - Получено имя предмета: мантия ученого (знаток)
+2025-08-21 16:21:04,190 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:21:04,191 - Предмет не найден или не в списке покупок. Попытка 10/100
+2025-08-21 16:21:48,703 - Начинается сессия продаж...
+2025-08-21 16:21:48,718 - Журнал покупок успешно загружен и обработан.
+2025-08-21 16:21:49,415 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:21:49,416 - Предмет не найден или не в списке покупок. Попытка 1/100
+2025-08-21 16:21:50,882 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:21:50,883 - Предмет не найден или не в списке покупок. Попытка 2/100
+2025-08-21 16:21:52,321 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:21:52,322 - Предмет не найден или не в списке покупок. Попытка 3/100
+2025-08-21 16:21:53,763 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:21:53,763 - Предмет не найден или не в списке покупок. Попытка 4/100
+2025-08-21 16:21:55,230 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:21:55,231 - Предмет не найден или не в списке покупок. Попытка 5/100
+2025-08-21 16:21:56,867 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:21:56,868 - Предмет не найден или не в списке покупок. Попытка 6/100
+2025-08-21 16:21:58,518 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:21:58,519 - Предмет не найден или не в списке покупок. Попытка 7/100
+2025-08-21 16:22:00,237 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:22:00,238 - Предмет не найден или не в списке покупок. Попытка 8/100
+2025-08-21 16:38:46,150 - Начинается сессия продаж...
+2025-08-21 16:38:46,166 - Журнал покупок успешно загружен и обработан.
+2025-08-21 16:38:46,866 - мантия ученого (знаток) не найден в purchase_log, используем table.xlsx
+2025-08-21 16:38:48,037 - Цена продажи стака: 25512
+2025-08-21 16:38:48,872 - Ордер на продажу создан.
+2025-08-21 16:38:48,880 - Ошибка при поиске/клике на make_order.png: single positional indexer is out-of-bounds
+2025-08-21 16:38:48,954 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:38:48,955 - Предмет не найден или не в списке покупок. Попытка 1/100
+2025-08-21 16:38:50,491 - мантия ученого (знаток) не найден в purchase_log, используем table.xlsx
+2025-08-21 16:38:51,747 - Цена продажи стака: 20402
+2025-08-21 16:38:52,594 - Ордер на продажу создан.
+2025-08-21 16:38:52,601 - Ошибка при поиске/клике на make_order.png: single positional indexer is out-of-bounds
+2025-08-21 16:38:52,660 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:38:52,661 - Предмет не найден или не в списке покупок. Попытка 2/100
+2025-08-21 16:38:54,196 - мантия клирика (эксперт) не найден в purchase_log, используем table.xlsx
+2025-08-21 16:38:55,434 - Цена продажи стака: 10571
+2025-08-21 16:38:56,247 - Ордер на продажу создан.
+2025-08-21 16:38:56,260 - Ошибка при поиске/клике на make_order.png: single positional indexer is out-of-bounds
+2025-08-21 16:38:56,322 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:38:56,323 - Предмет не найден или не в списке покупок. Попытка 3/100
+2025-08-21 16:38:57,879 - Капюшон охотника (знаток) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:38:59,405 - Капюшон охотника (знаток) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:01,107 - Капюшон охотника (знаток) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:02,696 - Капюшон охотника (знаток) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:04,104 - Капюшон охотника (знаток) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:05,530 - Капюшон охотника (знаток) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:06,948 - Капюшон охотника (знаток) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:08,400 - Капюшон охотника (знаток) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:09,813 - Капюшон охотника (знаток) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:11,527 - ee EE
+‘time. sleep(random.uniform(.@1, |
+s.sleep(random.uniform(@.1, 0.2)) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:13,212 - ee EE
+‘time. sleep(random.uniform(.@1, |
+s.sleep(random.uniform(@.1, 0.2)) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:14,773 - ee EE
+‘time. sleep(random.uniform(.@1, |
+s.sleep(random.uniform(@.1, 0.2)) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:16,401 - ee EE
+‘time. sleep(random.uniform(.@1, |
+s.sleep(random.uniform(@.1, 0.2)) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:17,882 - += to_buy
+епЕ += ocr_price * to_buy отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:19,455 - += to_buy
+епЕ += ocr_price * to_buy отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:20,957 - += to_buy
+епЕ += ocr_price * to_buy отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:22,494 - yn Firm
+
+:topui.moveTo(confirm x, confirm отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:24,029 - |_зрепе + batch_cost > budget:
+uy = (budget - total_spent) // о отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:25,738 - |_зрепе + batch_cost > budget:
+uy = (budget - total_spent) // о отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:27,330 - jata[ ‘text’ ][4].strip() and int(d
+confidence = int(data[ “conf” ][i] отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:28,939 - lata[ text" ][i]-strip() and int(d
+confidence = int(data[ ‘conf*][i] отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:30,485 - '{item_name} не найден в purchase отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:32,040 - '{item_name} не найден в purchase отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:33,523 - '{item_name} не найден в purchase отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:35,022 - '{item_name} не найден в purchase отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:36,477 - итоговую цену продажи отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:37,945 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:39,490 - items_table_df[items_table_df[‘na
+
+locliteme table dfI'name'] << it, отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:41,012 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:42,592 - continue отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:44,053 - continue отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:45,526 - continue отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:47,011 - continue отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:48,463 - continue отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:49,907 - continue отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:51,353 - continue отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:52,819 - continue отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:54,359 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:55,843 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:57,296 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:39:58,912 - ‚№ Решение отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:00,442 - ‚№ Решение отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:01,962 - ‚№ Решение отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:03,457 - ‚№ Решение отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:05,274 - if hasattr(self, ” отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:07,042 - lata[ text" ][i]-strip() and int(d
+confidence = int(data[ ‘conf*][i] отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:08,743 - 1s ()
+e:
+НА удалось обновить суммарные за отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:10,498 - ‘OCR ошибка для (name> (попытка 1
+
+е)
+warning(msg) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:12,056 - msg)
+Е euamemmeucuye"* отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:13,572 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:15,155 - ггог( Критическая ошибка.
+
+stop() отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:16,647 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:18,189 - disabled”) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:19,620 - disabled”) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:21,037 - disabled”) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:22,668 - disabled”) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:24,315 - А текста: {e}") отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:26,287 - А текста: {e}") отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:28,104 - ‚ со1ипп-@, columnspan=2, sticky: отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:29,586 - | ( Albion oni отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:31,192 - self.mouse_listener = отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:32,803 - logging error(f"He у
+# —— КОНЕЦ ЗАПИСИ отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:34,496 - # Sell regions frame
+sell_region_frame = ttk. отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:35,966 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:37,600 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:39,024 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:40,588 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:42,207 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:51,777 - Начинается сессия продаж...
+2025-08-21 16:40:51,794 - Журнал покупок успешно загружен и обработан.
+2025-08-21 16:40:52,451 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:53,862 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:55,265 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:56,680 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:58,241 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:40:59,666 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:01,116 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:02,632 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:04,011 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:05,520 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:07,750 - row, store 17
+loat (row[ “present ])
+or, TypeError) as отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:09,203 - о) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:10,697 - Status(f"3anyck продажи через {i
+у отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:12,178 - | self.emergency_stop)
+|, self.toggle pause) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:13,725 - | self.emergency_stop)
+|, self.toggle pause) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:15,304 - | self.emergency_stop)
+|, self.toggle pause) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:16,808 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:18,344 - ate_current_item_info':
+-ent_item_info(**data)
+2 event wait отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:19,853 - оо ФРАЙ
+howinfo("Ycnex”, message) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:21,347 - ыггог (“Критическая ошибка”, #"Про отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:22,906 - ning = True
+> = run_selling_cycle(coords, reg отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:24,362 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:25,786 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:27,406 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:28,828 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:30,357 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:31,827 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:33,231 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:34,873 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:36,575 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:41:38,137 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:43:42,119 - Начинается сессия продаж...
+2025-08-21 16:43:42,139 - Журнал покупок успешно загружен и обработан.
+2025-08-21 16:43:43,148 - Кеубоага-ипвоок_а:
+
+‘except Exception as e: отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:43:44,780 - ") and self.mouse_listen отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:43:46,350 - listener") and self.mouse_listen отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:43:47,827 - ") and self.mouse_listen отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:45:12,810 - Начинается сессия продаж...
+2025-08-21 16:45:12,826 - Журнал покупок успешно загружен и обработан.
+2025-08-21 16:45:13,584 - ent_item_info(**data)
+se_event_wait’:
+ast) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:45:15,177 - ent_item_info(**data)
+se_event_wait’:
+ast) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:45:16,678 - ent_item_info(**data)
+se_event_wait’:
+ast) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:45:18,318 - ent_item_info(**data)
+se_event_wait’:
+ast) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:46:08,429 - Начинается сессия продаж...
+2025-08-21 16:46:08,444 - Журнал покупок успешно загружен и обработан.
+2025-08-21 16:48:42,573 - Начинается сессия продаж...
+2025-08-21 16:48:42,593 - Журнал покупок успешно загружен и обработан.
+2025-08-21 16:48:43,253 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:48:44,736 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:48:46,131 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:49:43,238 - Начинается сессия продаж...
+2025-08-21 16:49:43,253 - Журнал покупок успешно загружен и обработан.
+2025-08-21 16:49:43,968 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:49:45,360 -  отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:51:51,293 - Начинается сессия продаж...
+2025-08-21 16:51:51,309 - Журнал покупок успешно загружен и обработан.
+2025-08-21 16:51:51,933 - капюшон охотника (знаток) не найден в purchase_log, используем table.xlsx
+2025-08-21 16:51:53,305 - Цена продажи стака: 27997
+2025-08-21 16:51:54,176 - Ордер на продажу создан.
+2025-08-21 16:51:54,181 - Ошибка при поиске/клике на make_order.png: single positional indexer is out-of-bounds
+2025-08-21 16:51:54,245 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:51:54,247 - Предмет не найден или не в списке покупок. Попытка 1/100
+2025-08-21 16:51:55,789 - капюшон убийцы (знаток) не найден в purchase_log, используем table.xlsx
+2025-08-21 16:51:57,084 - Цена продажи стака: 16138
+2025-08-21 16:51:57,884 - Ордер на продажу создан.
+2025-08-21 16:51:57,894 - Ошибка при поиске/клике на make_order.png: single positional indexer is out-of-bounds
+2025-08-21 16:51:57,950 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:51:57,952 - Предмет не найден или не в списке покупок. Попытка 2/100
+2025-08-21 16:51:59,472 - Капюшон убийцы (знаток) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:52:01,078 - Капюшон убийцы (знаток) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:52:02,585 - Капюшон убийцы (знаток) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:52:04,079 - hus (знаток) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:52:05,594 - Капюшон убийцы (знаток) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:52:07,046 - новлено пользователем (F2)") отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:52:08,573 - новлено пользователем (F2)") отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:53:42,270 - Начинается сессия продаж...
+2025-08-21 16:53:42,304 - Журнал покупок успешно загружен и обработан.
+2025-08-21 16:53:43,403 - капюшон убийцы (знаток) не найден в purchase_log, используем table.xlsx
+2025-08-21 16:53:44,599 - Цена продажи стака: 10690
+2025-08-21 16:53:45,340 - Ордер на продажу создан.
+2025-08-21 16:53:45,349 - Ошибка при поиске/клике на make_order.png: single positional indexer is out-of-bounds
+2025-08-21 16:53:45,402 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:53:45,403 - Предмет не найден или не в списке покупок. Попытка 1/100
+2025-08-21 16:53:46,879 - мантия ученого (знаток) не найден в purchase_log, используем table.xlsx
+2025-08-21 16:53:48,182 - Цена продажи стака: 5106
+2025-08-21 16:53:48,998 - Ордер на продажу создан.
+2025-08-21 16:53:49,007 - Ошибка при поиске/клике на make_order.png: single positional indexer is out-of-bounds
+2025-08-21 16:53:49,060 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:53:49,061 - Предмет не найден или не в списке покупок. Попытка 2/100
+2025-08-21 16:53:50,582 - капюшон охотника (эксперт) не найден в purchase_log, используем table.xlsx
+2025-08-21 16:53:51,905 - Цена продажи стака: 23401
+2025-08-21 16:53:52,701 - Ордер на продажу создан.
+2025-08-21 16:53:52,706 - Ошибка при поиске/клике на make_order.png: single positional indexer is out-of-bounds
+2025-08-21 16:53:52,767 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:53:52,768 - Предмет не найден или не в списке покупок. Попытка 3/100
+2025-08-21 16:53:54,372 - мантия клирика (эксперт) не найден в purchase_log, используем table.xlsx
+2025-08-21 16:53:55,632 - Цена продажи стака: 20177
+2025-08-21 16:53:56,432 - Ордер на продажу создан.
+2025-08-21 16:53:56,441 - Ошибка при поиске/клике на make_order.png: single positional indexer is out-of-bounds
+2025-08-21 16:53:56,505 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:53:56,506 - Предмет не найден или не в списке покупок. Попытка 4/100
+2025-08-21 16:53:58,030 - мантия ученого (знаток) не найден в purchase_log, используем table.xlsx
+2025-08-21 16:53:59,335 - Цена продажи стака: 3704
+2025-08-21 16:54:00,169 - Ордер на продажу создан.
+2025-08-21 16:54:00,176 - Ошибка при поиске/клике на make_order.png: single positional indexer is out-of-bounds
+2025-08-21 16:54:00,231 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:54:00,238 - Предмет не найден или не в списке покупок. Попытка 5/100
+2025-08-21 16:54:01,797 - капюшон охотника (эксперт) не найден в purchase_log, используем table.xlsx
+2025-08-21 16:54:03,112 - Цена продажи стака: 6584
+2025-08-21 16:54:03,929 - Ордер на продажу создан.
+2025-08-21 16:54:03,943 - Ошибка при поиске/клике на make_order.png: single positional indexer is out-of-bounds
+2025-08-21 16:54:04,012 - Ошибка при поиске inventory_clear.png: Failed to read c:\Users\Student\Documents\GitHub\albion_market_main\buttons_image\inventory_clear.png because file is missing, has improper permissions, or is an unsupported or invalid format
+2025-08-21 16:54:04,013 - Предмет не найден или не в списке покупок. Попытка 6/100
+2025-08-21 16:54:05,504 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:06,035 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:06,563 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:07,055 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:07,535 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:07,961 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:08,434 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:08,997 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:09,549 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:10,068 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:10,411 - перо отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:54:11,821 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:12,221 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:12,684 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:13,046 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:13,396 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:13,767 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:14,172 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:14,577 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:15,056 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:15,530 - а (эксперт) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:54:16,936 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:17,310 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:17,745 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:18,263 - Обнаружен предмет: шлем солдата (эксперт)
+2025-08-21 16:54:18,698 - hres солдата (эксперт) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:54:20,078 - рт) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:54:21,454 - рт) отсутствует и в purchase_log, и в table.xlsx
+2025-08-21 16:54:22,829 - рт) отсутствует и в purchase_log, и в table.xlsx

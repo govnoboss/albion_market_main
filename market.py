@@ -17,7 +17,8 @@ import json
 from datetime import datetime
 import cv2
 import numpy as np
-
+import csv
+from seller import run_selling_cycle
 # Set up logging
 logging.basicConfig(filename='log.txt', level=logging.INFO, format='%(asctime)s - %(message)s')
 
@@ -43,6 +44,7 @@ class MarketBotGUI:
         self.root = tk.Tk()
         self.root.title("Albion Online Buyer Script v2.0")
         self.root.resizable(False, False)
+        self.sell_in_progress = False
         
         # Make window always on top initially
         self.root.attributes('-topmost', True)
@@ -170,53 +172,115 @@ class MarketBotGUI:
                                                      command=self.start_capture_price_per_unit)
         self.capture_price_per_unit_btn.grid(row=6, column=4, padx=5)
         
-        # Price region frame
-        price_region_frame = ttk.LabelFrame(main_frame, text="Область цены", padding="5")
+        # Minus coords
+        ttk.Label(coords_frame, text="Минус X:").grid(row=7, column=0, sticky=tk.W)
+        self.minus_x_entry = ttk.Entry(coords_frame, width=10)
+        self.minus_x_entry.grid(row=7, column=1, padx=5)
+        
+        ttk.Label(coords_frame, text="Минус Y:").grid(row=7, column=2, sticky=tk.W, padx=(10,0))
+        self.minus_y_entry = ttk.Entry(coords_frame, width=10)
+        self.minus_y_entry.grid(row=7, column=3, padx=5)
+        
+        self.capture_minus_btn = ttk.Button(coords_frame, text="Захватить кнопку минуса", 
+                                                     command=self.start_capture_minus)
+        self.capture_minus_btn.grid(row=7, column=4, padx=5)
+        
+        # === Price region frame ===
+        price_region_frame = ttk.LabelFrame(main_frame, text="Области цен для OCR", padding="5")
         price_region_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
-        
-        ttk.Label(price_region_frame, text="Left:").grid(row=0, column=0, sticky=tk.W)
+
+        ttk.Label(price_region_frame, text='Координаты цены покупки').grid(row=0, column=0, columnspan=2, sticky=tk.W)
+        ttk.Label(price_region_frame, text='Координаты цены продажи').grid(row=0, column=4, columnspan=2, sticky=tk.W)
+
+        #Buy region
+        ttk.Label(price_region_frame, text="Left:").grid(row=1, column=0, sticky=tk.W)
         self.left_entry = ttk.Entry(price_region_frame, width=10)
-        self.left_entry.grid(row=0, column=1, padx=5)
-        
-        ttk.Label(price_region_frame, text="Top:").grid(row=0, column=2, sticky=tk.W, padx=(10,0))
+        self.left_entry.grid(row=1, column=1, padx=5, sticky=tk.W)
+
+        ttk.Label(price_region_frame, text="Top:").grid(row=1, column=2, sticky=tk.W)
         self.top_entry = ttk.Entry(price_region_frame, width=10)
-        self.top_entry.grid(row=0, column=3, padx=5)
-        
-        ttk.Label(price_region_frame, text="Width:").grid(row=1, column=0, sticky=tk.W)
+        self.top_entry.grid(row=1, column=3, padx=5, sticky=tk.W)
+
+        ttk.Label(price_region_frame, text="Width:").grid(row=2, column=0, sticky=tk.W)
         self.width_entry = ttk.Entry(price_region_frame, width=10)
-        self.width_entry.grid(row=1, column=1, padx=5)
-        
-        ttk.Label(price_region_frame, text="Height:").grid(row=1, column=2, sticky=tk.W, padx=(10,0))
+        self.width_entry.grid(row=2, column=1, padx=5, sticky=tk.W)
+
+        ttk.Label(price_region_frame, text="Height:").grid(row=2, column=2, sticky=tk.W)
         self.height_entry = ttk.Entry(price_region_frame, width=10)
-        self.height_entry.grid(row=1, column=3, padx=5)
+        self.height_entry.grid(row=2, column=3, padx=5, sticky=tk.W)
+
+        self.capture_region_btn = ttk.Button(price_region_frame, text="Захватить область цены покупки", command=self.start_capture_region)
+        self.capture_region_btn.grid(row=3, column=0, columnspan=4, pady=5)
+
+        #Sell region
+        ttk.Label(price_region_frame, text="Left:").grid(row=1, column=4, sticky=tk.W)
+        self.sell_left_entry = ttk.Entry(price_region_frame, width=10)
+        self.sell_left_entry.grid(row=1, column=5, padx=5, sticky=tk.W)
+
+        ttk.Label(price_region_frame, text="Top:").grid(row=1, column=6, sticky=tk.W)
+        self.sell_top_entry = ttk.Entry(price_region_frame, width=10)
+        self.sell_top_entry.grid(row=1, column=7, padx=5, sticky=tk.W)
+
+        ttk.Label(price_region_frame, text="Width:").grid(row=2, column=4, sticky=tk.W)
+        self.sell_width_entry = ttk.Entry(price_region_frame, width=10)
+        self.sell_width_entry.grid(row=2, column=5, padx=5, sticky=tk.W)
+
+        ttk.Label(price_region_frame, text="Height:").grid(row=2, column=6, sticky=tk.W)
+        self.sell_height_entry = ttk.Entry(price_region_frame, width=10)
+        self.sell_height_entry.grid(row=2, column=7, padx=5, sticky=tk.W)
+
+        self.capture_sell_region_btn = ttk.Button(price_region_frame, text="Захватить область цены продажи",command=self.start_capture_sell_region)
+        self.capture_sell_region_btn.grid(row=3, column=4, columnspan=4, pady=5)
         
-        self.capture_region_btn = ttk.Button(price_region_frame, text="Захватить область", 
-                                           command=self.start_capture_region)
-        self.capture_region_btn.grid(row=2, column=0, columnspan=4, pady=5)
-        
-        # Quantity region frame
-        quantity_region_frame = ttk.LabelFrame(main_frame, text="Область количества", padding="5")
+        # OCR region frame
+        quantity_region_frame = ttk.LabelFrame(main_frame, text="Области для OCR", padding="5")
         quantity_region_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
+        ttk.Label(quantity_region_frame, text='Координаты количества предметов').grid(row=0, column=0, columnspan=2, sticky=tk.W)
+        ttk.Label(quantity_region_frame, text='Координаты названия предмета').grid(row=0, column=4, columnspan=2, sticky=tk.W)
         
-        ttk.Label(quantity_region_frame, text="Left:").grid(row=0, column=0, sticky=tk.W)
+        # Quantity items
+        ttk.Label(quantity_region_frame, text="Left:").grid(row=1, column=0, sticky=tk.W)
         self.left_q_entry = ttk.Entry(quantity_region_frame, width=10)
-        self.left_q_entry.grid(row=0, column=1, padx=5)
+        self.left_q_entry.grid(row=1, column=1, padx=5, sticky=tk.W)
         
-        ttk.Label(quantity_region_frame, text="Top:").grid(row=0, column=2, sticky=tk.W, padx=(10,0))
+        ttk.Label(quantity_region_frame, text="Top:").grid(row=1, column=2, sticky=tk.W, padx=(10,0))
         self.top_q_entry = ttk.Entry(quantity_region_frame, width=10)
-        self.top_q_entry.grid(row=0, column=3, padx=5)
+        self.top_q_entry.grid(row=1, column=3, padx=5, sticky=tk.W)
         
-        ttk.Label(quantity_region_frame, text="Width:").grid(row=1, column=0, sticky=tk.W)
+        ttk.Label(quantity_region_frame, text="Width:").grid(row=2, column=0, sticky=tk.W)
         self.width_q_entry = ttk.Entry(quantity_region_frame, width=10)
-        self.width_q_entry.grid(row=1, column=1, padx=5)
+        self.width_q_entry.grid(row=2, column=1, padx=5, sticky=tk.W)
         
-        ttk.Label(quantity_region_frame, text="Height:").grid(row=1, column=2, sticky=tk.W, padx=(10,0))
+        ttk.Label(quantity_region_frame, text="Height:").grid(row=2, column=2, sticky=tk.W, padx=(10,0))
         self.height_q_entry = ttk.Entry(quantity_region_frame, width=10)
-        self.height_q_entry.grid(row=1, column=3, padx=5)
+        self.height_q_entry.grid(row=2, column=3, padx=5, sticky=tk.W)
         
         self.capture_quantity_region_btn = ttk.Button(quantity_region_frame, text="Захватить область количества", 
                                                       command=self.start_capture_quantity_region)
-        self.capture_quantity_region_btn.grid(row=2, column=0, columnspan=4, pady=5)
+        self.capture_quantity_region_btn.grid(row=3, column=0, columnspan=4, pady=5)
+        
+        # Item name
+        
+        ttk.Label(quantity_region_frame, text="Left:").grid(row=1, column=4, sticky=tk.W)
+        self.left_item_name_entry = ttk.Entry(quantity_region_frame, width=10)
+        self.left_item_name_entry.grid(row=1, column=5, padx=5, sticky=tk.W)
+        
+        ttk.Label(quantity_region_frame, text="Top:").grid(row=1, column=6, sticky=tk.W, padx=(10,0))
+        self.top_item_name_entry = ttk.Entry(quantity_region_frame, width=10)
+        self.top_item_name_entry.grid(row=1, column=7, padx=5, sticky=tk.W)
+        
+        ttk.Label(quantity_region_frame, text="Width:").grid(row=2, column=4, sticky=tk.W)
+        self.width_item_name_entry = ttk.Entry(quantity_region_frame, width=10)
+        self.width_item_name_entry.grid(row=2, column=5, padx=5, sticky=tk.W)
+        
+        ttk.Label(quantity_region_frame, text="Height:").grid(row=2, column=6, sticky=tk.W, padx=(10,0))
+        self.height_item_name_entry = ttk.Entry(quantity_region_frame, width=10)
+        self.height_item_name_entry.grid(row=2, column=7, padx=5, sticky=tk.W)
+        
+        self.capture_item_name_region_btn = ttk.Button(quantity_region_frame, text="Захватить название предмета", 
+                                                      command=self.start_capture_item_name_region)
+        self.capture_item_name_region_btn.grid(row=3, column=4, columnspan=4, pady=5)
+        
         # Settings frame
         settings_frame = ttk.LabelFrame(main_frame, text="Настройки", padding="5")
         settings_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
@@ -225,15 +289,20 @@ class MarketBotGUI:
         self.budget_entry = ttk.Entry(settings_frame, width=15)
         self.budget_entry.grid(row=0, column=1, padx=5)
         
-        ttk.Label(settings_frame, text="Задержка (сек):").grid(row=1, column=0, sticky=tk.W)
+        ttk.Label(settings_frame, text="Задержка действий (сек):").grid(row=1, column=0, sticky=tk.W)
         self.delay_entry = ttk.Entry(settings_frame, width=15)
         self.delay_entry.grid(row=1, column=1, padx=5)
         self.delay_entry.insert(0, "0.5")
         
-        ttk.Label(settings_frame, text="Начальная строка:").grid(row=2, column=0, sticky=tk.W)
+        ttk.Label(settings_frame, text="С какой строки в таблице начать:").grid(row=2, column=0, sticky=tk.W)
         self.start_row_entry = ttk.Entry(settings_frame, width=15)
         self.start_row_entry.grid(row=2, column=1, padx=5)
         self.start_row_entry.insert(0, "1")
+        
+        ttk.Label(settings_frame, text="Общие затраты бюджета:").grid(row=3, column=0, sticky=tk.W)
+        self.cumulative_spent_entry = ttk.Entry(settings_frame, width=15)
+        self.cumulative_spent_entry.grid(row=3, column=1, padx=5)
+        self.cumulative_spent_entry.insert(0, "0")
         
         # Status frame
         status_frame = ttk.Frame(main_frame)
@@ -262,20 +331,19 @@ class MarketBotGUI:
                                     command=self.start_order)
         self.order_btn.grid(row=0, column=1, padx=5)
         
+        self.sell_btn = ttk.Button(control_frame, text="Продажа предметов", 
+                                    command=self.start_sell)
+        self.sell_btn.grid(row=0, column=2, padx=5)
+        
         self.save_btn = ttk.Button(control_frame, text="Сохранить настройки", 
                                  command=self.save_settings)
-        self.save_btn.grid(row=0, column=2, padx=5)
-        
-        self.stop_btn = ttk.Button(control_frame, text="Экстренная остановка (F2)", 
-                                 command=self.emergency_stop, state='disabled')
-        self.stop_btn.grid(row=0, column=3, padx=5)
+        self.save_btn.grid(row=0, column=3, padx=5)
         
         # Instructions
         instructions_text = ("1. Захватите все координаты\n"
                            "2. Установите бюджет\n"
                            "3. Убедитесь, что файл table.xlsx существует\n\n"
                            "Горячие клавиши:\n"
-                           "F2 - Экстренная остановка\n"
                            "F3 - Пропустить текущий предмет\n"
                            "F4 - Пауза/Возобновление\n\n"
                            "Захватите область количества и координаты ввода кол-ва")
@@ -318,13 +386,52 @@ class MarketBotGUI:
     def start_capture_price_per_unit(self):
         self.start_coordinate_capture('price_per_unit')
         
+    def start_capture_minus(self):
+        self.start_coordinate_capture('minus')
+        
+    def start_capture_sell_region(self):
+        if self.capturing:
+            return
+        self.capturing = True
+        self.capture_type = 'sell_region'
+        self.update_status("Нажмите и перетащите для выделения области цены...")
+        self.capture_region_btn.config(command=self.cancel_capture)
+        
+        def on_click(x, y, button, pressed):
+            if button == mouse.Button.left and pressed:
+                self.region_start = (x, y)
+                return True
+            elif button == mouse.Button.left and not pressed and self.region_start:
+                end_x, end_y = x, y
+                start_x, start_y = self.region_start
+                
+                left = min(start_x, end_x)
+                top = min(start_y, end_y)
+                width = abs(end_x - start_x)
+                height = abs(end_y - start_y)
+                
+                self.sell_left_entry.delete(0, tk.END)
+                self.sell_left_entry.insert(0, str(left))
+                self.sell_top_entry.delete(0, tk.END)
+                self.sell_top_entry.insert(0, str(top))
+                self.sell_width_entry.delete(0, tk.END)
+                self.sell_width_entry.insert(0, str(width))
+                self.sell_height_entry.delete(0, tk.END)
+                self.sell_height_entry.insert(0, str(height))
+                
+                self.finish_capture(f"Область цены захвачена: {width}x{height}")
+                return False
+        
+        self.mouse_listener = mouse.Listener(on_click=on_click)
+        self.mouse_listener.start()
+        
     def start_capture_region(self):
         if self.capturing:
             return
         self.capturing = True
         self.capture_type = 'price_region'
         self.update_status("Нажмите и перетащите для выделения области цены...")
-        self.capture_region_btn.config(text="Отмена", command=self.cancel_capture)
+        self.capture_region_btn.config(command=self.cancel_capture)
         
         def on_click(x, y, button, pressed):
             if button == mouse.Button.left and pressed:
@@ -360,7 +467,7 @@ class MarketBotGUI:
         self.capturing = True
         self.capture_type = 'quantity_region'
         self.update_status("Нажмите и перетащите для выделения области количества...")
-        self.capture_quantity_region_btn.config(text="Отмена", command=self.cancel_capture)
+        self.capture_quantity_region_btn.config(command=self.cancel_capture)
         
         def on_click(x, y, button, pressed):
             if button == mouse.Button.left and pressed:
@@ -390,6 +497,42 @@ class MarketBotGUI:
         self.mouse_listener = mouse.Listener(on_click=on_click)
         self.mouse_listener.start()
         
+    def start_capture_item_name_region(self):
+        if self.capturing:
+            return
+        self.capturing = True
+        self.capture_type = 'item_name_region'
+        self.update_status("Нажмите и перетащите для выделения области количества...")
+        self.capture_item_name_region_btn.config(command=self.cancel_capture)
+        
+        def on_click(x, y, button, pressed):
+            if button == mouse.Button.left and pressed:
+                self.region_start = (x, y)
+                return True
+            elif button == mouse.Button.left and not pressed and self.region_start:
+                end_x, end_y = x, y
+                start_x, start_y = self.region_start
+                
+                left = min(start_x, end_x)
+                top = min(start_y, end_y)
+                width = abs(end_x - start_x)
+                height = abs(end_y - start_y)
+                
+                self.left_item_name_entry.delete(0, tk.END)
+                self.left_item_name_entry.insert(0, str(left))
+                self.top_item_name_entry.delete(0, tk.END)
+                self.top_item_name_entry.insert(0, str(top))
+                self.width_item_name_entry.delete(0, tk.END)
+                self.width_item_name_entry.insert(0, str(width))
+                self.height_item_name_entry.delete(0, tk.END)
+                self.height_item_name_entry.insert(0, str(height))
+                
+                self.finish_capture(f"Область названия предмета захвачена: {width}x{height}")
+                return False
+        
+        self.mouse_listener = mouse.Listener(on_click=on_click)
+        self.mouse_listener.start()
+        
     def start_coordinate_capture(self, capture_type):
         if self.capturing:
             return
@@ -412,9 +555,10 @@ class MarketBotGUI:
             btn = self.capture_buy_order_btn
         elif capture_type == 'price_per_unit':
             btn = self.capture_price_per_unit_btn
-        
+        elif capture_type == 'minus':
+            btn = self.capture_minus_btn
         if btn:
-            btn.config(text="Отмена", command=self.cancel_capture)
+            btn.config(command=self.cancel_capture)
         
         def on_click(x, y, button, pressed):
             if button == mouse.Button.left and pressed:
@@ -453,7 +597,11 @@ class MarketBotGUI:
                     self.price_per_unit_x_entry.insert(0, str(x))
                     self.price_per_unit_y_entry.delete(0, tk.END)
                     self.price_per_unit_y_entry.insert(0, str(y))
-                
+                elif capture_type == 'minus':
+                    self.minus_x_entry.delete(0,tk.END)
+                    self.minus_x_entry.insert(0,str(x))
+                    self.minus_y_entry.delete(0,tk.END)
+                    self.minus_y_entry.insert(0,str(y))
                 self.finish_capture(f"Координаты {capture_type} захвачены: ({x}, {y})")
                 return False
         
@@ -478,8 +626,9 @@ class MarketBotGUI:
         self.capture_quantity_btn.config(text="Захватить ввод кол-ва", command=self.start_capture_quantity_input)
         self.capture_buy_order_btn.config(text="Захватить заказ на покупку", command=self.start_capture_buy_order)
         self.capture_price_per_unit_btn.config(text="Захватить цену за штуку", command=self.start_capture_price_per_unit)
-        self.capture_region_btn.config(text="Захватить область", command=self.start_capture_region)
+        self.capture_region_btn.config(command=self.start_capture_region)
         self.capture_quantity_region_btn.config(text="Захватить область количества", command=self.start_capture_quantity_region)
+        self.capture_item_name_region_btn.config(text="Захватить область названия предмета", command=self.start_capture_item_name_region)
         
     def validate_inputs(self):
         """Проверка введенных данных"""
@@ -498,22 +647,34 @@ class MarketBotGUI:
             int(self.buy_order_y_entry.get())
             int(self.price_per_unit_x_entry.get())
             int(self.price_per_unit_y_entry.get())
+            int(self.minus_x_entry.get())
+            int(self.minus_y_entry.get())
             
             left = int(self.left_entry.get())
             top = int(self.top_entry.get())
             width = int(self.width_entry.get())
             height = int(self.height_entry.get())
             
+            left_sell = int(self.sell_left_entry.get())
+            top_sell = int(self.sell_top_entry.get())
+            width_sell = int(self.sell_width_entry.get())
+            height_sell = int(self.sell_height_entry.get())
+            
             left_q = int(self.left_q_entry.get())
             top_q = int(self.top_q_entry.get())
             width_q = int(self.width_q_entry.get())
             height_q = int(self.height_q_entry.get())
             
+            left_item_name = int(self.left_item_name_entry.get())
+            top_item_name = int(self.top_item_name_entry.get())
+            width_item_name = int(self.width_item_name_entry.get())
+            height_item_name = int(self.height_item_name_entry.get())
+            
             budget = int(self.budget_entry.get())
             delay = float(self.delay_entry.get())
             start_row = int(self.start_row_entry.get())
             
-            if width <= 0 or height <= 0 or width_q <= 0 or height_q <= 0:
+            if width <= 0 or height <= 0 or width_q <= 0 or height_q <= 0 or width_sell <= 0 or height_sell <= 0 or width_item_name <=0 or height_item_name <=0:
                 raise ValueError("Ширина и высота должны быть положительными")
             if budget <= 0:
                 raise ValueError("Бюджет должен быть положительным")
@@ -560,6 +721,18 @@ class MarketBotGUI:
             'top_q': self.top_q_entry.get(),
             'width_q': self.width_q_entry.get(),
             'height_q': self.height_q_entry.get(),
+            'height': self.height_entry.get(),
+            'left_item_name': self.left_item_name_entry.get(),
+            'top_item_name': self.top_item_name_entry.get(),
+            'width_item_name': self.width_item_name_entry.get(),
+            'height_item_name': self.height_item_name_entry.get(),
+            'left_sell': self.sell_left_entry.get(),
+            'top_sell': self.sell_top_entry.get(),
+            'width_sell': self.sell_width_entry.get(),
+            'height_sell': self.sell_height_entry.get(),
+            'cumulative_spent': self.cumulative_spent_entry.get(),
+            'minus_x': self.minus_x_entry.get(),
+            'minus_y': self.minus_y_entry.get(),
             'budget': self.budget_entry.get(),
             'delay': self.delay_entry.get(),
             'start_row': self.start_row_entry.get(),
@@ -601,6 +774,18 @@ class MarketBotGUI:
                 self.top_q_entry.insert(0, settings.get('top_q', ''))
                 self.width_q_entry.insert(0, settings.get('width_q', ''))
                 self.height_q_entry.insert(0, settings.get('height_q', ''))
+                self.left_item_name_entry.insert(0, settings.get('left_item_name', ''))
+                self.top_item_name_entry.insert(0, settings.get('top_item_name', ''))
+                self.width_item_name_entry.insert(0, settings.get('width_item_name', ''))
+                self.height_item_name_entry.insert(0, settings.get('height_item_name', ''))
+                self.sell_left_entry.insert(0, settings.get('left_sell', ''))
+                self.sell_top_entry.insert(0, settings.get('top_sell', ''))
+                self.sell_width_entry.insert(0, settings.get('width_sell', ''))
+                self.sell_height_entry.insert(0, settings.get('height_sell', ''))
+                self.minus_x_entry.insert(0,settings.get('minus_x', ''))
+                self.minus_y_entry.insert(0,settings.get('minus_y', ''))
+                self.cumulative_spent_entry.delete(0, tk.END)
+                self.cumulative_spent_entry.insert(0, settings.get('cumulative_spent', '0'))
                 self.budget_entry.insert(0, settings.get('budget', ''))
                 self.delay_entry.delete(0, tk.END)
                 self.delay_entry.insert(0, settings.get('delay', '0.5'))
@@ -619,7 +804,7 @@ class MarketBotGUI:
         self.update_current_item_info()  # Clear current item info
         self.manual_btn.config(state='normal')
         self.order_btn.config(state='normal')
-        self.stop_btn.config(state='disabled')
+        self.sell_btn.config(state='normal')
         self.progress.stop()
         try:
             keyboard.unhook_all()
@@ -684,7 +869,6 @@ class MarketBotGUI:
         
         self.manual_btn.config(state='disabled')
         self.order_btn.config(state='disabled')
-        self.stop_btn.config(state='normal')
         self.progress.start()
         
         self.countdown_and_run_manual(search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
@@ -746,7 +930,6 @@ class MarketBotGUI:
         
         self.manual_btn.config(state='disabled')
         self.order_btn.config(state='disabled')
-        self.stop_btn.config(state='normal')
         self.progress.start()
         
         self.countdown_and_run_order(search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
@@ -1045,6 +1228,16 @@ class MarketBotGUI:
                         
                         bought += to_buy
                         total_spent += ocr_price * to_buy
+                        try:
+                            log_path = Path(__file__).parent / 'purchase_log.csv'
+                            file_exists = log_path.exists()
+                            with open(log_path, 'a', newline='', encoding='utf-8') as f:
+                                writer = csv.writer(f)
+                                if not file_exists:
+                                    writer.writerow(['item_name', 'quantity', 'price_per_unit', 'purchase_type'])
+                                writer.writerow([name, to_buy, ocr_price, 'manual'])
+                        except Exception as e:
+                            logging.error(f"Не удалось записать в purchase_log.csv: {e}")
                         
                         msg = f"Куплено {bought}/{store} {name} ({to_buy} шт.) за {ocr_price} each. Потрачено: {total_spent}"
                         print(msg)
@@ -1081,6 +1274,15 @@ class MarketBotGUI:
             self.log_entries.append(f"[{datetime.now()}] Критическая ошибка: {error_msg}")
             messagebox.showerror("Ошибка", error_msg)
         finally:
+            try:
+                current_cumulative = int(self.cumulative_spent_entry.get() or 0)
+                session_spent = int(total_spent)
+                new_cumulative = current_cumulative + total_spent
+                self.cumulative_spent_entry.delete(0, tk.END)
+                self.cumulative_spent_entry.insert(0, str(new_cumulative))
+                self.save_settings()
+            except Exception as e:
+                logging.error(f"Не удалось обновить суммарные затраты: {e}")
             self.emergency_stop()
             self.progress.stop()
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1280,8 +1482,17 @@ class MarketBotGUI:
                     
                     self.check_and_click_yes()
                     
-                    total_spent += store * limit_price * tax_rate  # Approximate spend, since it's reserved
-                    
+                    total_spent += store * limit_price * tax_rate 
+                    try:
+                        log_path = Path(__file__).parent / 'purchase_log.csv'
+                        file_exists = log_path.exists()
+                        with open(log_path, 'a', newline='', encoding='utf-8') as f:
+                            writer = csv.writer(f)
+                            if not file_exists:
+                                writer.writerow(['item_name', 'quantity', 'price_per_unit', 'purchase_type'])
+                            writer.writerow([name, store, limit_price, 'order'])
+                    except Exception as e:
+                        logging.error(f"Не удалось записать в purchase_log.csv: {e}")
                     msg = f"Ордер размещен для {name} ({store} шт.) по {limit_price} each. Потрачено (примерно): {total_spent}"
                     print(msg)
                     logging.info(msg)
@@ -1312,6 +1523,15 @@ class MarketBotGUI:
             self.log_entries.append(f"[{datetime.now()}] Критическая ошибка: {error_msg}")
             messagebox.showerror("Ошибка", error_msg)
         finally:
+            try:
+                current_cumulative = int(self.cumulative_spent_entry.get() or 0)
+                session_spent = int(total_spent)
+                new_cumulative = current_cumulative + total_spent
+                self.cumulative_spent_entry.delete(0, tk.END)
+                self.cumulative_spent_entry.insert(0, str(new_cumulative))
+                self.save_settings()
+            except Exception as e:
+                logging.error(f"Не удалось обновить суммарные затраты: {e}")
             self.emergency_stop()
             self.progress.stop()
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1331,6 +1551,64 @@ class MarketBotGUI:
             except Exception as e:
                 print(f"Не удалось сохранить лог прогресса: {e}")
 
+    def start_sell(self):
+        if self.script_running:
+            return
+        keyboard.add_hotkey('f2', self.emergency_stop)
+        keyboard.add_hotkey('f4', self.toggle_pause)
+        
+        coords = {
+            "sell_button": (int(self.buy_x_entry.get()), int(self.buy_y_entry.get())),
+            'minus_button': (int(self.minus_x_entry.get()), int(self.minus_y_entry.get()))
+        }
+
+        regions = {
+            'item_name': (int(self.left_item_name_entry.get()), int(self.top_item_name_entry.get()), int(self.width_item_name_entry.get()), int(self.height_item_name_entry.get())),
+            'sale_price':(int(self.sell_left_entry.get()), int(self.sell_top_entry.get()), int(self.sell_width_entry.get()), int(self.sell_height_entry.get())),
+        }
+        
+        total_spent = int(self.cumulative_spent_entry.get() or 0)
+        
+        self.manual_btn.config(state="disabled")
+        self.order_btn.config(state="disabled")
+        self.sell_btn.config(state="disabled")
+        self.progress.start()
+        
+        def gui_callback(action, data=None):
+            if action == 'update_status':
+                self.update_status(data)
+            elif action == 'update_current_item_info':
+                self.update_current_item_info(**data)
+            elif action == 'pause_event_wait':
+                self.pause_event.wait()
+            
+
+        def run_wrapper():
+            try:
+                for i in range(5,0,-1):
+                    self.update_status(f"Запуск продажи через {i} секунд...")
+                    time.sleep(1)
+
+                self.script_running = True
+                success, message = run_selling_cycle(coords, regions, total_spent, gui_callback)
+                
+                if success:
+                    # Сброс затрат после успешной продажи
+                    self.cumulative_spent_entry.delete(0, tk.END)
+                    self.cumulative_spent_entry.insert(0, "0")
+                    self.save_settings()
+                    messagebox.showinfo("Успех", message)
+                else:
+                    messagebox.showerror("Ошибка", message)
+                
+            except Exception as e:
+                messagebox.showerror("Критическая ошибка", f"Произошла ошибка в процессе продажи: {e}")
+            finally:
+                self.emergency_stop()     
+                
+        self.script_thread = threading.Thread(target=run_wrapper, daemon=True)
+        self.script_thread.start()           
+          
     def run(self):
         self.root.mainloop()
 

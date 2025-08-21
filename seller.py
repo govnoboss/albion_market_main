@@ -1,4 +1,3 @@
-# seller.py
 import pyautogui
 import pytesseract
 import pandas as pd
@@ -8,19 +7,13 @@ from datetime import datetime
 from pathlib import Path
 from PIL import ImageGrab
 
-# --- Вспомогательные функции ---
-
 def ocr_scan_text(region):
     """Сканирует текст в указанной области."""
     try:
         x, y, w, h = region
         screenshot = ImageGrab.grab(bbox=(x, y, x + w, y + h))
-        # Улучшение изображения для лучшего распознавания
-        gray_image = screenshot.convert('L')
-        # Увеличим изображение, чтобы текст стал четче
-        upscaled_image = gray_image.resize((w * 2, h * 2))
-        text = pytesseract.image_to_string(upscaled_image, lang='rus+eng').strip()
-        return text
+        text = pytesseract.image_to_string(screenshot, lang='rus+eng').strip()
+        return text.lower()
     except Exception as e:
         logging.error(f"Ошибка OCR текста: {e}")
         return ""
@@ -30,14 +23,11 @@ def ocr_scan_digits(region):
     try:
         x, y, w, h = region
         screenshot = ImageGrab.grab(bbox=(x, y, x + w, y + h))
-        gray_image = screenshot.convert('L')
-        text = pytesseract.image_to_string(gray_image, config='--psm 7 -c tessedit_char_whitelist=0123456789')
+        text = pytesseract.image_to_string(screenshot, config='--psm 7 -c tessedit_char_whitelist=0123456789')
         return int(text.strip()) if text.strip() else 0
     except Exception as e:
         logging.error(f"Ошибка OCR цифр: {e}")
         return 0
-
-# --- Основная функция продажи ---
 
 def run_selling_cycle(coords, regions, total_spent, gui_callback):
     """
@@ -58,7 +48,7 @@ def run_selling_cycle(coords, regions, total_spent, gui_callback):
         print(message)
 
     log_and_update("Начинается сессия продаж...")
-
+    
     # --- Шаг 1: Загрузка и обработка журнала покупок ---
     purchase_log_path = Path(__file__).parent / 'purchase_log.csv'
     if not purchase_log_path.exists():
@@ -66,6 +56,7 @@ def run_selling_cycle(coords, regions, total_spent, gui_callback):
         return False, "Журнал покупок не найден."
 
     try:
+        required_cols = {'item_name', 'quantity', 'price_per_unit'}
         purchases_df = pd.read_csv(purchase_log_path)
         # Рассчитываем средневзвешенную цену для каждого предмета
         purchases_df['total_cost'] = purchases_df['quantity'] * purchases_df['price_per_unit']
@@ -76,6 +67,9 @@ def run_selling_cycle(coords, regions, total_spent, gui_callback):
         item_costs['wapp'] = item_costs['total_cost'] / item_costs['total_quantity'] # WAPP = Weighted Average Purchase Price
         log_and_update("Журнал покупок успешно загружен и обработан.")
     except Exception as e:
+        missing = required_cols - set(purchases_df.columns)
+        if missing:
+            raise ValueError(f"В purchase_log.csv не хватает колонок: {missing}")        
         log_and_update(f"Ошибка при чтении журнала покупок: {e}")
         return False, f"Ошибка чтения purchase_log.csv: {e}"
 
@@ -96,13 +90,29 @@ def run_selling_cycle(coords, regions, total_spent, gui_callback):
         gui_callback('pause_event_wait')
 
         # Шаг 2.1: Сканируем название предмета
+        names = items_table_df['name']
         item_name = ocr_scan_text(regions['item_name'])
-        
-        # Ищем совпадение в нашем списке покупок
+            
         if item_name and not item_costs[item_costs['item_name'] == item_name].empty:
             failure_counter = 0
             log_and_update(f"Обнаружен предмет: {item_name}")
-
+            
+            item_data = item_costs[item_costs['item_name'] == item_name].iloc[0]
+            wapp = item_data['wapp'] 
+            quantity_in_stack = items_table_df[items_table_df['name'] == item_name]['store'].iloc[0]
+        else:
+            row = items_table_df.loc[items_table_df['name'] == item_name]
+            if not row.empty:
+                log_and_update(f"{item_name} не найден в purchase_log, используем table.xlsx")
+                value = row['value'].iloc[0]
+                quantity_in_stack = row['store'].iloc[0]
+                wapp = value
+            else:
+                failure_counter += 1
+                log_and_update(f"{item_name} отсутствует и в purchase_log, и в table.xlsx")
+                time.sleep(1)
+                continue
+            
             # Шаг 2.2: Клики для выставления на продажу
             pyautogui.click(coords['sell_button'], duration=0.1)
             time.sleep(0.3)
@@ -158,8 +168,6 @@ def run_selling_cycle(coords, regions, total_spent, gui_callback):
                 log_and_update("Не удалось распознать цену продажи, отмена.")
                 # Нужен клик для отмены операции, если он требуется
                 time.sleep(1)
-        else:
-            # Предмет не распознан или его нет в списке покупок
             try:
                 if pyautogui.locateOnScreen(str(Path(__file__).parent / "buttons_image" / 'inventory_clear.png'), confidence=0.8):
                     log_and_update("Инвентарь пуст. Продажа завершена.")

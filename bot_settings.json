@@ -21,7 +21,18 @@
   "top_q": "364",
   "width_q": "31",
   "height_q": "19",
-  "budget": "100000",
-  "delay": "0.5",
-  "start_row": "15"
+  "left_item_name": "666",
+  "top_item_name": "406",
+  "width_item_name": "252",
+  "height_item_name": "51",
+  "left_sell": "564",
+  "top_sell": "714",
+  "width_sell": "70",
+  "height_sell": "34",
+  "cumulative_spent": "262400",
+  "minus_x": "565",
+  "minus_y": "630",
+  "budget": "1000000",
+  "delay": "0.2",
+  "start_row": "1"
 }
