@@ -284,6 +284,10 @@ class MarketBotGUI:
         
     def update_current_item_info(self, name="", value="", ocr_price="", bought="", store="", limit_price="",budget="", total_spent=""):
         """Update the current item label with provided info"""
+        try:
+            total_spent = int(float(total_spent)) if total_spent else 0
+        except ValueError:
+            total_spent = 0
         text = f"Текущий предмет: {name}\nЦена на Черном Рынке: {value}\nТекущая цена: {ocr_price} / {limit_price}\nКуплено: {bought} из {store}\nПотрачено: {int(float(total_spent))} из {budget}"
         self.current_item_label.config(text=text)
         self.root.update_idletasks()
@@ -772,7 +776,7 @@ class MarketBotGUI:
     def check_and_click_ok(self):
         try:
             ok_button_location = pyautogui.locateCenterOnScreen(
-                str(Path(__file__).parent / 'ok_button.png'), 
+                str(Path(__file__).parent / "buttons_image" / 'ok_button.png'), 
                 confidence=0.8, 
                 grayscale=True,
                 region=(0, 0, pyautogui.size().width, pyautogui.size().height)
@@ -792,7 +796,7 @@ class MarketBotGUI:
     def check_and_click_yes(self):
         try:
             yes_button_location = pyautogui.locateCenterOnScreen(
-                str(Path(__file__).parent / 'yes_button.png'), 
+                str(Path(__file__).parent / "buttons_image" /'yes_button.png'), 
                 confidence=0.8, 
                 grayscale=True,
                 region=(0, 0, pyautogui.size().width, pyautogui.size().height)
@@ -1082,7 +1086,10 @@ class MarketBotGUI:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             progress_log_filename = f"progress_log_manual_{timestamp}.txt"
             
-            log_path = Path(__file__).parent / progress_log_filename
+            logs_dir = Path(__file__).parent / "logs"
+            logs_dir.mkdir(exist_ok=True)
+            
+            log_path = logs_dir / progress_log_filename
             print(f"Попытка сохранить лог прогресса в файл: {log_path}")
             
             try:
@@ -1310,7 +1317,10 @@ class MarketBotGUI:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             progress_log_filename = f"progress_log_order_{timestamp}.txt"
             
-            log_path = Path(__file__).parent / progress_log_filename
+            logs_dir = Path(__file__).parent / "logs"
+            logs_dir.mkdir(exist_ok=True)
+            
+            log_path = logs_dir / progress_log_filename
             print(f"Попытка сохранить лог прогресса в файл: {log_path}")
             
             try:
