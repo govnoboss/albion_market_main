@@ -960,8 +960,7 @@ class MarketBotGUI:
         try:
             ok_button_location = pyautogui.locateCenterOnScreen(
                 str(Path(__file__).parent / "buttons_image" / 'ok_button.png'), 
-                confidence=0.8, 
-                grayscale=True,
+                confidence=0.7, 
                 region=(0, 0, pyautogui.size().width, pyautogui.size().height)
             )
             
@@ -980,8 +979,7 @@ class MarketBotGUI:
         try:
             yes_button_location = pyautogui.locateCenterOnScreen(
                 str(Path(__file__).parent / "buttons_image" /'yes_button.png'), 
-                confidence=0.8, 
-                grayscale=True,
+                confidence=0.7, 
                 region=(0, 0, pyautogui.size().width, pyautogui.size().height)
             )
             
@@ -1559,7 +1557,8 @@ class MarketBotGUI:
         
         coords = {
             "sell_button": (int(self.buy_x_entry.get()), int(self.buy_y_entry.get())),
-            'minus_button': (int(self.minus_x_entry.get()), int(self.minus_y_entry.get()))
+            'minus_button': (int(self.minus_x_entry.get()), int(self.minus_y_entry.get())),
+            "confirm_button":(int(self.confirm_x_entry.get()), int(self.confirm_y_entry.get()))
         }
 
         regions = {
@@ -1581,6 +1580,8 @@ class MarketBotGUI:
                 self.update_current_item_info(**data)
             elif action == 'pause_event_wait':
                 self.pause_event.wait()
+            elif action == 'is_running':
+                return self.script_running
             
 
         def run_wrapper():
