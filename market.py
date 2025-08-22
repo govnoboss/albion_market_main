@@ -1426,7 +1426,7 @@ class MarketBotGUI:
                     self.log_entries.append(f"[{datetime.now()}] Предупреждение: {msg}")
                     continue
 
-                limit_price = int(value * present)
+                limit_price = int(value * present) 
                 # Update current item info at start of processing
                 self.update_current_item_info(name=name, value=value, ocr_price="N/A", bought=0, store=store, limit_price=limit_price, budget=budget, total_spent=total_spent)
 
@@ -1468,7 +1468,7 @@ class MarketBotGUI:
                     except (ValueError, pytesseract.TesseractError) as e:
                         failed_ocr_attempts += 1
                         try:
-                            ocr_text  # to reference for msg
+                            ocr_text 
                         except NameError:
                             ocr_text = ''
                         msg = f"OCR ошибка для {name} (попытка {failed_ocr_attempts}): '{ocr_text.strip()}' - {e}"
@@ -1522,11 +1522,11 @@ class MarketBotGUI:
                     
                     pyautogui.moveTo(buy_x, buy_y, duration=random.uniform(0.1, 0.2))
                     pyautogui.click()
-                    time.sleep(random.uniform(0.3, 0.5))  # Wait for dialog to open
+                    time.sleep(random.uniform(0.1, 0.2))  # Wait for dialog to open
                     
                     pyautogui.moveTo(buy_order_x, buy_order_y, duration=random.uniform(0.1, 0.2))
                     pyautogui.click()
-                    time.sleep(random.uniform(0.3, 0.5))
+                    time.sleep(random.uniform(0.1, 0.2))
                     
                     pyautogui.moveTo(quantity_x, quantity_y, duration=random.uniform(0.1, 0.2))
                     pyautogui.click()
