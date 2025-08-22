@@ -1,27 +1,31 @@
 import pandas as pd
+import tkinter as tk
+import numpy as np
 import pyautogui
 import time
 import keyboard
 import pytesseract
-from PIL import ImageGrab
-import tkinter as tk
-from tkinter import messagebox, ttk
 import logging
 import random
 import sys
-from pynput import mouse
 import threading
 import os
-from pathlib import Path
 import json
-from datetime import datetime
 import cv2
-import numpy as np
 import csv
+import requests
+from PIL import ImageGrab
+from tkinter import messagebox, ttk
+from pynput import mouse
+from pathlib import Path
+from datetime import datetime
 from seller import run_selling_cycle
 
 # Set up logging
 logging.basicConfig(filename='log.txt', level=logging.INFO, format='%(asctime)s - %(message)s')
+
+# URL Path to Excel
+url = "https://docs.google.com/spreadsheets/d/1D5MmKgJUaV00Owa3ILBiIg-2Jpu4ZezTkYuP1pJrSWM/export?format=xlsx&id=1D5MmKgJUaV00Owa3ILBiIg-2Jpu4ZezTkYuP1pJrSWM&gid=0"
 
 # Path to Tesseract (update if necessary)
 try:
@@ -906,6 +910,18 @@ class MarketBotGUI:
             self.log_entries.append(f"[{datetime.now()}] {msg}")
             logging.info(msg)
 
+    def update_table(self):
+        try:
+            excel_file_path = Path(__file__).parent / 'table.xlsx'
+            response = requests.get(url)
+            response.raise_for_status()
+
+            with open(excel_file_path, "wb") as f:
+                f.write(response.content)
+            print('Таблица успешно обновлена')
+        except Exception as e:
+            print('Не удалось обновить таблицу')
+
     def start_manual(self):
         if self.script_running:
             return
@@ -1688,4 +1704,5 @@ class MarketBotGUI:
 
 if __name__ == "__main__":
     app = MarketBotGUI()
+    app.update_table()
     app.run()
