@@ -1,26 +1,31 @@
 import pandas as pd
+import tkinter as tk
+import numpy as np
 import pyautogui
 import time
 import keyboard
 import pytesseract
-from PIL import ImageGrab
-import tkinter as tk
-from tkinter import messagebox, ttk
 import logging
 import random
 import sys
-from pynput import mouse
 import threading
 import os
-from pathlib import Path
 import json
-from datetime import datetime
 import cv2
-import numpy as np
 import csv
+import requests
+from PIL import ImageGrab
+from tkinter import messagebox, ttk
+from pynput import mouse
+from pathlib import Path
+from datetime import datetime
 from seller import run_selling_cycle
+
 # Set up logging
 logging.basicConfig(filename='log.txt', level=logging.INFO, format='%(asctime)s - %(message)s')
+
+# URL Path to Excel
+url = "https://docs.google.com/spreadsheets/d/1D5MmKgJUaV00Owa3ILBiIg-2Jpu4ZezTkYuP1pJrSWM/export?format=xlsx&id=1D5MmKgJUaV00Owa3ILBiIg-2Jpu4ZezTkYuP1pJrSWM&gid=0"
 
 # Path to Tesseract (update if necessary)
 try:
@@ -190,9 +195,10 @@ class MarketBotGUI:
         price_region_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
 
         ttk.Label(price_region_frame, text='Координаты цены покупки').grid(row=0, column=0, columnspan=2, sticky=tk.W)
-        ttk.Label(price_region_frame, text='Координаты цены продажи').grid(row=0, column=4, columnspan=2, sticky=tk.W)
+        ttk.Label(price_region_frame, text='Координаты общей цены продажи').grid(row=0, column=4, columnspan=2, sticky=tk.W)
+        ttk.Label(price_region_frame, text='Координаты цены предмета продажи').grid(row=0, column=8, columnspan=2, sticky=tk.W)
 
-        #Buy region
+        # Buy region
         ttk.Label(price_region_frame, text="Left:").grid(row=1, column=0, sticky=tk.W)
         self.left_entry = ttk.Entry(price_region_frame, width=10)
         self.left_entry.grid(row=1, column=1, padx=5, sticky=tk.W)
@@ -212,7 +218,7 @@ class MarketBotGUI:
         self.capture_region_btn = ttk.Button(price_region_frame, text="Захватить область цены покупки", command=self.start_capture_region)
         self.capture_region_btn.grid(row=3, column=0, columnspan=4, pady=5)
 
-        #Sell region
+        # Sell region
         ttk.Label(price_region_frame, text="Left:").grid(row=1, column=4, sticky=tk.W)
         self.sell_left_entry = ttk.Entry(price_region_frame, width=10)
         self.sell_left_entry.grid(row=1, column=5, padx=5, sticky=tk.W)
@@ -231,6 +237,26 @@ class MarketBotGUI:
 
         self.capture_sell_region_btn = ttk.Button(price_region_frame, text="Захватить область цены продажи",command=self.start_capture_sell_region)
         self.capture_sell_region_btn.grid(row=3, column=4, columnspan=4, pady=5)
+
+        # Sell item price region
+        ttk.Label(price_region_frame, text="Left:").grid(row=1, column=8, sticky=tk.W)
+        self.sell_item_price_left_entry = ttk.Entry(price_region_frame, width=10)
+        self.sell_item_price_left_entry.grid(row=1, column=9, padx=5, sticky=tk.W)
+
+        ttk.Label(price_region_frame, text="Top:").grid(row=1, column=10, sticky=tk.W)
+        self.sell_item_price_top_entry = ttk.Entry(price_region_frame, width=10)
+        self.sell_item_price_top_entry.grid(row=1, column=11, padx=5, sticky=tk.W)
+
+        ttk.Label(price_region_frame, text="Width:").grid(row=2, column=8, sticky=tk.W)
+        self.sell_item_price_width_entry = ttk.Entry(price_region_frame, width=10)
+        self.sell_item_price_width_entry.grid(row=2, column=9, padx=5, sticky=tk.W)
+
+        ttk.Label(price_region_frame, text="Height:").grid(row=2, column=10, sticky=tk.W)
+        self.sell_item_price_height_entry = ttk.Entry(price_region_frame, width=10)
+        self.sell_item_price_height_entry.grid(row=2, column=11, padx=5, sticky=tk.W)
+
+        self.capture_sell_item_price_region_btn = ttk.Button(price_region_frame, text="Захватить область цены предмета продажи", command=self.start_capture_sell_item_price_region)
+        self.capture_sell_item_price_region_btn.grid(row=3, column=8, columnspan=4, pady=5)
         
         # OCR region frame
         quantity_region_frame = ttk.LabelFrame(main_frame, text="Области для OCR", padding="5")
@@ -260,7 +286,6 @@ class MarketBotGUI:
         self.capture_quantity_region_btn.grid(row=3, column=0, columnspan=4, pady=5)
         
         # Item name
-        
         ttk.Label(quantity_region_frame, text="Left:").grid(row=1, column=4, sticky=tk.W)
         self.left_item_name_entry = ttk.Entry(quantity_region_frame, width=10)
         self.left_item_name_entry.grid(row=1, column=5, padx=5, sticky=tk.W)
@@ -394,8 +419,8 @@ class MarketBotGUI:
             return
         self.capturing = True
         self.capture_type = 'sell_region'
-        self.update_status("Нажмите и перетащите для выделения области цены...")
-        self.capture_region_btn.config(command=self.cancel_capture)
+        self.update_status("Нажмите и перетащите для выделения области цены продажи...")
+        self.capture_sell_region_btn.config(command=self.cancel_capture)
         
         def on_click(x, y, button, pressed):
             if button == mouse.Button.left and pressed:
@@ -419,7 +444,7 @@ class MarketBotGUI:
                 self.sell_height_entry.delete(0, tk.END)
                 self.sell_height_entry.insert(0, str(height))
                 
-                self.finish_capture(f"Область цены захвачена: {width}x{height}")
+                self.finish_capture(f"Область цены продажи захвачена: {width}x{height}")
                 return False
         
         self.mouse_listener = mouse.Listener(on_click=on_click)
@@ -430,7 +455,7 @@ class MarketBotGUI:
             return
         self.capturing = True
         self.capture_type = 'price_region'
-        self.update_status("Нажмите и перетащите для выделения области цены...")
+        self.update_status("Нажмите и перетащите для выделения области цены покупки...")
         self.capture_region_btn.config(command=self.cancel_capture)
         
         def on_click(x, y, button, pressed):
@@ -455,7 +480,43 @@ class MarketBotGUI:
                 self.height_entry.delete(0, tk.END)
                 self.height_entry.insert(0, str(height))
                 
-                self.finish_capture(f"Область цены захвачена: {width}x{height}")
+                self.finish_capture(f"Область цены покупки захвачена: {width}x{height}")
+                return False
+        
+        self.mouse_listener = mouse.Listener(on_click=on_click)
+        self.mouse_listener.start()
+
+    def start_capture_sell_item_price_region(self):
+        if self.capturing:
+            return
+        self.capturing = True
+        self.capture_type = 'sell_item_price_region'
+        self.update_status("Нажмите и перетащите для выделения области цены предмета продажи...")
+        self.capture_sell_item_price_region_btn.config(command=self.cancel_capture)
+        
+        def on_click(x, y, button, pressed):
+            if button == mouse.Button.left and pressed:
+                self.region_start = (x, y)
+                return True
+            elif button == mouse.Button.left and not pressed and self.region_start:
+                end_x, end_y = x, y
+                start_x, start_y = self.region_start
+                
+                left = min(start_x, end_x)
+                top = min(start_y, end_y)
+                width = abs(end_x - start_x)
+                height = abs(end_y - start_y)
+                
+                self.sell_item_price_left_entry.delete(0, tk.END)
+                self.sell_item_price_left_entry.insert(0, str(left))
+                self.sell_item_price_top_entry.delete(0, tk.END)
+                self.sell_item_price_top_entry.insert(0, str(top))
+                self.sell_item_price_width_entry.delete(0, tk.END)
+                self.sell_item_price_width_entry.insert(0, str(width))
+                self.sell_item_price_height_entry.delete(0, tk.END)
+                self.sell_item_price_height_entry.insert(0, str(height))
+                
+                self.finish_capture(f"Область цены предмета продажи захвачена: {width}x{height}")
                 return False
         
         self.mouse_listener = mouse.Listener(on_click=on_click)
@@ -502,7 +563,7 @@ class MarketBotGUI:
             return
         self.capturing = True
         self.capture_type = 'item_name_region'
-        self.update_status("Нажмите и перетащите для выделения области количества...")
+        self.update_status("Нажмите и перетащите для выделения области названия предмета...")
         self.capture_item_name_region_btn.config(command=self.cancel_capture)
         
         def on_click(x, y, button, pressed):
@@ -626,7 +687,10 @@ class MarketBotGUI:
         self.capture_quantity_btn.config(text="Захватить ввод кол-ва", command=self.start_capture_quantity_input)
         self.capture_buy_order_btn.config(text="Захватить заказ на покупку", command=self.start_capture_buy_order)
         self.capture_price_per_unit_btn.config(text="Захватить цену за штуку", command=self.start_capture_price_per_unit)
+        self.capture_minus_btn.config(text="Захватить кнопку минуса", command=self.start_capture_minus)
         self.capture_region_btn.config(command=self.start_capture_region)
+        self.capture_sell_region_btn.config(command=self.start_capture_sell_region)
+        self.capture_sell_item_price_region_btn.config(command=self.start_capture_sell_item_price_region)
         self.capture_quantity_region_btn.config(text="Захватить область количества", command=self.start_capture_quantity_region)
         self.capture_item_name_region_btn.config(text="Захватить область названия предмета", command=self.start_capture_item_name_region)
         
@@ -660,6 +724,11 @@ class MarketBotGUI:
             width_sell = int(self.sell_width_entry.get())
             height_sell = int(self.sell_height_entry.get())
             
+            left_sell_item_price = int(self.sell_item_price_left_entry.get())
+            top_sell_item_price = int(self.sell_item_price_top_entry.get())
+            width_sell_item_price = int(self.sell_item_price_width_entry.get())
+            height_sell_item_price = int(self.sell_item_price_height_entry.get())
+            
             left_q = int(self.left_q_entry.get())
             top_q = int(self.top_q_entry.get())
             width_q = int(self.width_q_entry.get())
@@ -674,7 +743,7 @@ class MarketBotGUI:
             delay = float(self.delay_entry.get())
             start_row = int(self.start_row_entry.get())
             
-            if width <= 0 or height <= 0 or width_q <= 0 or height_q <= 0 or width_sell <= 0 or height_sell <= 0 or width_item_name <=0 or height_item_name <=0:
+            if width <= 0 or height <= 0 or width_q <= 0 or height_q <= 0 or width_sell <= 0 or height_sell <= 0 or width_item_name <=0 or height_item_name <=0 or width_sell_item_price <= 0 or height_sell_item_price <= 0:
                 raise ValueError("Ширина и высота должны быть положительными")
             if budget <= 0:
                 raise ValueError("Бюджет должен быть положительным")
@@ -721,7 +790,6 @@ class MarketBotGUI:
             'top_q': self.top_q_entry.get(),
             'width_q': self.width_q_entry.get(),
             'height_q': self.height_q_entry.get(),
-            'height': self.height_entry.get(),
             'left_item_name': self.left_item_name_entry.get(),
             'top_item_name': self.top_item_name_entry.get(),
             'width_item_name': self.width_item_name_entry.get(),
@@ -730,9 +798,13 @@ class MarketBotGUI:
             'top_sell': self.sell_top_entry.get(),
             'width_sell': self.sell_width_entry.get(),
             'height_sell': self.sell_height_entry.get(),
-            'cumulative_spent': self.cumulative_spent_entry.get(),
+            'left_sell_item_price': self.sell_item_price_left_entry.get(),
+            'top_sell_item_price': self.sell_item_price_top_entry.get(),
+            'width_sell_item_price': self.sell_item_price_width_entry.get(),
+            'height_sell_item_price': self.sell_item_price_height_entry.get(),
             'minus_x': self.minus_x_entry.get(),
             'minus_y': self.minus_y_entry.get(),
+            'cumulative_spent': self.cumulative_spent_entry.get(),
             'budget': self.budget_entry.get(),
             'delay': self.delay_entry.get(),
             'start_row': self.start_row_entry.get(),
@@ -782,8 +854,12 @@ class MarketBotGUI:
                 self.sell_top_entry.insert(0, settings.get('top_sell', ''))
                 self.sell_width_entry.insert(0, settings.get('width_sell', ''))
                 self.sell_height_entry.insert(0, settings.get('height_sell', ''))
-                self.minus_x_entry.insert(0,settings.get('minus_x', ''))
-                self.minus_y_entry.insert(0,settings.get('minus_y', ''))
+                self.sell_item_price_left_entry.insert(0, settings.get('left_sell_item_price', ''))
+                self.sell_item_price_top_entry.insert(0, settings.get('top_sell_item_price', ''))
+                self.sell_item_price_width_entry.insert(0, settings.get('width_sell_item_price', ''))
+                self.sell_item_price_height_entry.insert(0, settings.get('height_sell_item_price', ''))
+                self.minus_x_entry.insert(0, settings.get('minus_x', ''))
+                self.minus_y_entry.insert(0, settings.get('minus_y', ''))
                 self.cumulative_spent_entry.delete(0, tk.END)
                 self.cumulative_spent_entry.insert(0, settings.get('cumulative_spent', '0'))
                 self.budget_entry.insert(0, settings.get('budget', ''))
@@ -833,6 +909,18 @@ class MarketBotGUI:
             self.update_status(msg)
             self.log_entries.append(f"[{datetime.now()}] {msg}")
             logging.info(msg)
+
+    def update_table(self):
+        try:
+            excel_file_path = Path(__file__).parent / 'table.xlsx'
+            response = requests.get(url)
+            response.raise_for_status()
+
+            with open(excel_file_path, "wb") as f:
+                f.write(response.content)
+            print('Таблица успешно обновлена')
+        except Exception as e:
+            print('Не удалось обновить таблицу')
 
     def start_manual(self):
         if self.script_running:
@@ -1354,7 +1442,7 @@ class MarketBotGUI:
                     self.log_entries.append(f"[{datetime.now()}] Предупреждение: {msg}")
                     continue
 
-                limit_price = int(value * present)
+                limit_price = int(value * present) 
                 # Update current item info at start of processing
                 self.update_current_item_info(name=name, value=value, ocr_price="N/A", bought=0, store=store, limit_price=limit_price, budget=budget, total_spent=total_spent)
 
@@ -1396,7 +1484,7 @@ class MarketBotGUI:
                     except (ValueError, pytesseract.TesseractError) as e:
                         failed_ocr_attempts += 1
                         try:
-                            ocr_text  # to reference for msg
+                            ocr_text 
                         except NameError:
                             ocr_text = ''
                         msg = f"OCR ошибка для {name} (попытка {failed_ocr_attempts}): '{ocr_text.strip()}' - {e}"
@@ -1450,11 +1538,11 @@ class MarketBotGUI:
                     
                     pyautogui.moveTo(buy_x, buy_y, duration=random.uniform(0.1, 0.2))
                     pyautogui.click()
-                    time.sleep(random.uniform(0.3, 0.5))  # Wait for dialog to open
+                    time.sleep(random.uniform(0.1, 0.2))  # Wait for dialog to open
                     
                     pyautogui.moveTo(buy_order_x, buy_order_y, duration=random.uniform(0.1, 0.2))
                     pyautogui.click()
-                    time.sleep(random.uniform(0.3, 0.5))
+                    time.sleep(random.uniform(0.1, 0.2))
                     
                     pyautogui.moveTo(quantity_x, quantity_y, duration=random.uniform(0.1, 0.2))
                     pyautogui.click()
@@ -1558,12 +1646,13 @@ class MarketBotGUI:
         coords = {
             "sell_button": (int(self.buy_x_entry.get()), int(self.buy_y_entry.get())),
             'minus_button': (int(self.minus_x_entry.get()), int(self.minus_y_entry.get())),
-            "confirm_button":(int(self.confirm_x_entry.get()), int(self.confirm_y_entry.get()))
+            "confirm_button":(int(self.confirm_x_entry.get()), int(self.confirm_y_entry.get())) 
         }
 
         regions = {
             'item_name': (int(self.left_item_name_entry.get()), int(self.top_item_name_entry.get()), int(self.width_item_name_entry.get()), int(self.height_item_name_entry.get())),
             'sale_price':(int(self.sell_left_entry.get()), int(self.sell_top_entry.get()), int(self.sell_width_entry.get()), int(self.sell_height_entry.get())),
+            'buy_price':(int(self.sell_item_price_left_entry.get()), int(self.sell_item_price_top_entry.get()), int(self.sell_item_price_width_entry.get()), int(self.sell_item_price_height_entry.get())),
         }
         
         total_spent = int(self.cumulative_spent_entry.get() or 0)
@@ -1615,4 +1704,5 @@ class MarketBotGUI:
 
 if __name__ == "__main__":
     app = MarketBotGUI()
+    app.update_table()
     app.run()
