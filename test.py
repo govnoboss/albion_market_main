@@ -1,30 +1,29 @@
-import requests
-import pandas as pd
-from pathlib import Path
+import pytesseract
+import mss
+import mss.tools
+from PIL import Image
 
-# путь куда сохраняем Excel
-local_file = Path("table.xlsx")
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
-# ссылка на экспорт в Excel (.xlsx)
-url = "https://docs.google.com/spreadsheets/d/1D5MmKgJUaV00Owa3ILBiIg-2Jpu4ZezTkYuP1pJrSWM/export?format=xlsx&id=1D5MmKgJUaV00Owa3ILBiIg-2Jpu4ZezTkYuP1pJrSWM&gid=0"
+def ocr_region(left, top, width, height):
+    """
+    Делает OCR указанного региона экрана и выводит текст в консоль.
 
-def update_table():
-    # скачиваем
-    response = requests.get(url)
-    response.raise_for_status()
+    :param left: координата X верхнего левого угла
+    :param top: координата Y верхнего левого угла
+    :param width: ширина региона
+    :param height: высота региона
+    """
+    with mss.mss() as sct:
+        region = {"left": left, "top": top, "width": width, "height": height}
+        screenshot = sct.grab(region)
 
-    # сохраняем/заменяем старый Excel
-    with open(local_file, "wb") as f:
-        f.write(response.content)
+        # Конвертируем в формат PIL для OCR
+        img = Image.frombytes("RGB", screenshot.size, screenshot.rgb)
 
-    print("Excel таблица обновлена:", local_file)
+        # Распознаём текст
+        text = pytesseract.image_to_string(img, lang="rus")  # можешь поменять lang
+        print("Распознанный текст:", text.strip())
 
-def load_table():
-    # читаем через pandas
-    df = pd.read_excel(local_file, engine="openpyxl")
-    return df
-
-# пример использования
-update_table()
-df = load_table()
-print(df.head())
+# Пример вызова
+ocr_region(662, 411, 244, 45)

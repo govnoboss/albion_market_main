@@ -1680,7 +1680,8 @@ class MarketBotGUI:
                     time.sleep(1)
 
                 self.script_running = True
-                success, message = run_selling_cycle(coords, regions, total_spent, gui_callback)
+                
+                success, message = run_selling_cycle(coords, regions, gui_callback)
                 
                 if success:
                     # Сброс затрат после успешной продажи
