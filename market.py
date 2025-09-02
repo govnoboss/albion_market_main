@@ -25,7 +25,7 @@ from seller import run_selling_cycle
 logging.basicConfig(filename='log.txt', level=logging.INFO, format='%(asctime)s - %(message)s')
 
 # URL Path to Excel
-url = "https://docs.google.com/spreadsheets/d/1D5MmKgJUaV00Owa3ILBiIg-2Jpu4ZezTkYuP1pJrSWM/export?format=xlsx&id=1D5MmKgJUaV00Owa3ILBiIg-2Jpu4ZezTkYuP1pJrSWM&gid=0"
+url = "https://docs.google.com/spreadsheets/d/1jbvKACZKQHwrvfFj-mpFGHizkBAz1vZ-QGCNlL7vpzM/export?format=xlsx&id=1jbvKACZKQHwrvfFj-mpFGHizkBAz1vZ-QGCNlL7vpzM&gid=1970104303"
 
 # Path to Tesseract (update if necessary)
 try:
@@ -355,6 +355,7 @@ class MarketBotGUI:
         self.order_btn = ttk.Button(control_frame, text="Закупка ордерами", 
                                     command=self.start_order)
         self.order_btn.grid(row=0, column=1, padx=5)
+        
         
         self.sell_btn = ttk.Button(control_frame, text="Продажа предметов", 
                                     command=self.start_sell)
@@ -913,11 +914,11 @@ class MarketBotGUI:
     def update_table(self):
         try:
             excel_file_path = Path(__file__).parent / 'table.xlsx'
-            response = requests.get(url)
-            response.raise_for_status()
+            #response = requests.get(url)
+            #response.raise_for_status()
 
-            with open(excel_file_path, "wb") as f:
-                f.write(response.content)
+            #with open(excel_file_path, "wb") as f:
+            #   f.write(response.content)
             print('Таблица успешно обновлена')
         except Exception as e:
             print('Не удалось обновить таблицу')
@@ -1655,7 +1656,6 @@ class MarketBotGUI:
             'buy_price':(int(self.sell_item_price_left_entry.get()), int(self.sell_item_price_top_entry.get()), int(self.sell_item_price_width_entry.get()), int(self.sell_item_price_height_entry.get())),
         }
         
-        total_spent = int(self.cumulative_spent_entry.get() or 0)
         
         self.manual_btn.config(state="disabled")
         self.order_btn.config(state="disabled")
