@@ -1,29 +1,30 @@
-import pytesseract
-import mss
-import mss.tools
-from PIL import Image
+import pandas as pd
+import numpy as np
 
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+# Загружаем Excel файл
+df = pd.read_excel('table.xlsx')
 
-def ocr_region(left, top, width, height):
-    """
-    Делает OCR указанного региона экрана и выводит текст в консоль.
+# Выбираем нужные колонки
+columns = ['name', 'valuefromcity', 'value', 'profit', 'store']
+df_selected = df[columns]
 
-    :param left: координата X верхнего левого угла
-    :param top: координата Y верхнего левого угла
-    :param width: ширина региона
-    :param height: высота региона
-    """
-    with mss.mss() as sct:
-        region = {"left": left, "top": top, "width": width, "height": height}
-        screenshot = sct.grab(region)
+# Создаем маску для строк, где valuefromcity или value равны 0 или NaN
+invalid_mask = (df_selected['valuefromcity'].isna() | (df_selected['valuefromcity'] == 0) |
+                df_selected['value'].isna() | (df_selected['value'] == 0))
 
-        # Конвертируем в формат PIL для OCR
-        img = Image.frombytes("RGB", screenshot.size, screenshot.rgb)
+# Разделяем на валидные и невалидные строки
+df_valid = df_selected[~invalid_mask]
+df_invalid = df_selected[invalid_mask]
 
-        # Распознаём текст
-        text = pytesseract.image_to_string(img, lang="rus")  # можешь поменять lang
-        print("Распознанный текст:", text.strip())
+# Сортируем валидные строки по профиту в descending порядке
+df_sorted = df_valid.sort_values(by='profit', ascending=False)
 
-# Пример вызова
-ocr_region(662, 411, 244, 45)
+# Объединяем отсортированные валидные строки с невалидными (в конец)
+df_final = pd.concat([df_sorted, df_invalid])
+
+# Записываем в log.txt
+with open('log.txt', 'w', encoding='utf-8') as f:
+    for index, row in df_final.iterrows():
+        f.write(f"Название - {row['name']}, Цена закупки - {row['valuefromcity']}, Цена продажи - {row['value']}, Полученный профит = {row['profit']} | Закупаем в среднем - {row['store']}\n")
+
+print("Данные успешно записаны в log.txt")
