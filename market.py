@@ -200,6 +200,18 @@ class MarketBotGUI:
                                                      command=self.start_capture_close)
         self.capture_close_btn.grid(row=8, column=4, padx=5)
         
+
+        ttk.Label(coords_frame, text="Качество X:").grid(row=9, column=0, sticky=tk.W)
+        self.quality_x_entry = ttk.Entry(coords_frame, width=10)
+        self.quality_x_entry.grid(row=9, column=1, padx=5)
+        
+        ttk.Label(coords_frame, text="Качество Y:").grid(row=9, column=2, sticky=tk.W, padx=(10,0))
+        self.quality_y_entry = ttk.Entry(coords_frame, width=10)
+        self.quality_y_entry.grid(row=9, column=3, padx=5)
+        
+        self.capture_quality_btn = ttk.Button(coords_frame, text="Захватить качество", 
+                                                       command=self.start_capture_quality)
+        self.capture_quality_btn.grid(row=9, column=4, padx=5)
         # === Price region frame ===
         price_region_frame = ttk.LabelFrame(main_frame, text="Области цен для OCR", padding="5")
         price_region_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
@@ -432,6 +444,9 @@ class MarketBotGUI:
     def start_capture_close(self):
         self.start_coordinate_capture('close')
 
+    def start_capture_quality(self):
+        self.start_coordinate_capture('quality')
+
     def start_capture_sell_region(self):
         if self.capturing:
             return
@@ -638,6 +653,8 @@ class MarketBotGUI:
             btn = self.capture_minus_btn
         elif capture_type == 'close':
             btn = self.capture_close_btn
+        elif capture_type == 'quality':
+            btn = self.capture_quality_btn
         if btn:
             btn.config(command=self.cancel_capture)
         
@@ -688,6 +705,11 @@ class MarketBotGUI:
                     self.close_x_entry.insert(0, str(x))
                     self.close_y_entry.delete(0, tk.END)
                     self.close_y_entry.insert(0, str(y))
+                elif capture_type == 'quality':
+                    self.quality_x_entry.delete(0, tk.END)
+                    self.quality_x_entry.insert(0, str(x))
+                    self.quality_y_entry.delete(0, tk.END)
+                    self.quality_y_entry.insert(0, str(y))
                 self.finish_capture(f"Координаты {capture_type} захвачены: ({x}, {y})")
                 return False
         
@@ -714,6 +736,7 @@ class MarketBotGUI:
         self.capture_price_per_unit_btn.config(text="Захватить цену за штуку", command=self.start_capture_price_per_unit)
         self.capture_minus_btn.config(text="Захватить кнопку минуса", command=self.start_capture_minus)
         self.capture_close_btn.config(text="Захватить крестик", command=self.start_capture_close)
+        self.capture_quality_btn.config(text="Захватить качество", command=self.start_capture_quality)
         self.capture_region_btn.config(command=self.start_capture_region)
         self.capture_sell_region_btn.config(command=self.start_capture_sell_region)
         self.capture_sell_item_price_region_btn.config(command=self.start_capture_sell_item_price_region)
@@ -741,6 +764,8 @@ class MarketBotGUI:
             int(self.minus_y_entry.get())
             int(self.close_x_entry.get())
             int(self.close_y_entry.get())
+            int(self.quality_x_entry.get())
+            int(self.quality_y_entry.get())
             left = int(self.left_entry.get())
             top = int(self.top_entry.get())
             width = int(self.width_entry.get())
@@ -833,6 +858,8 @@ class MarketBotGUI:
             'minus_y': self.minus_y_entry.get(),
             'close_x': self.close_x_entry.get(),
             'close_y': self.close_y_entry.get(),
+            'quality_x': self.quality_x_entry.get(),
+            'quality_y': self.quality_y_entry.get(),
             'cumulative_spent': self.cumulative_spent_entry.get(),
             'budget': self.budget_entry.get(),
             'delay': self.delay_entry.get(),
@@ -892,6 +919,8 @@ class MarketBotGUI:
                 self.minus_y_entry.insert(0, settings.get('minus_y', ''))
                 self.close_x_entry.insert(0, settings.get('close_x', ''))
                 self.close_y_entry.insert(0, settings.get('close_y', ''))
+                self.quality_x_entry.insert(0, settings.get('quality_x', ''))
+                self.quality_y_entry.insert(0, settings.get('quality_y', ''))
                 self.cumulative_spent_entry.delete(0, tk.END)
                 self.cumulative_spent_entry.insert(0, settings.get('cumulative_spent', '0'))
                 self.budget_entry.insert(0, settings.get('budget', ''))
@@ -1036,6 +1065,8 @@ class MarketBotGUI:
         buy_order_y = int(self.buy_order_y_entry.get())
         price_per_unit_x = int(self.price_per_unit_x_entry.get())
         price_per_unit_y = int(self.price_per_unit_y_entry.get())
+        quality_x = int(self.quality_x_entry.get())
+        quality_y = int(self.quality_y_entry.get())
         left = int(self.left_entry.get())
         top = int(self.top_entry.get())
         width = int(self.width_entry.get())
@@ -1050,11 +1081,11 @@ class MarketBotGUI:
         
         self.countdown_and_run_order(search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
                                      quantity_x, quantity_y, buy_order_x, buy_order_y, price_per_unit_x, price_per_unit_y, 
-                                     left, top, width, height, budget, delay, start_row)
+                                     left, top, width, height, budget, delay, start_row, quality_x, quality_y)
         
     def countdown_and_run_order(self, search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
                                 quantity_x, quantity_y, buy_order_x, buy_order_y, price_per_unit_x, price_per_unit_y, 
-                                left, top, width, height, budget, delay, start_row):
+                                left, top, width, height, budget, delay, start_row, quality_x, quality_y):
         def countdown():
             try:
                 for i in range(5, 0, -1):
@@ -1064,7 +1095,7 @@ class MarketBotGUI:
                 self.script_running = True
                 self.run_script_order(search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
                                       quantity_x, quantity_y, buy_order_x, buy_order_y, price_per_unit_x, price_per_unit_y, 
-                                      left, top, width, height, budget, delay, start_row)
+                                      left, top, width, height, budget, delay, start_row, quality_x, quality_y)
             except Exception as e:
                 self.emergency_stop()
                 messagebox.showerror("Ошибка", f"Ошибка при запуске скрипта: {e}")
@@ -1437,7 +1468,7 @@ class MarketBotGUI:
 
     def run_script_order(self, search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
                          quantity_x, quantity_y, buy_order_x, buy_order_y, price_per_unit_x, price_per_unit_y, 
-                         left, top, width, height, budget, delay, start_row):
+                         left, top, width, height, budget, delay, start_row, quality_x, quality_y):
         self.log_entries = []
         try:
             self.update_status("Загрузка данных из Excel...")
@@ -1501,8 +1532,6 @@ class MarketBotGUI:
                 
                 time.sleep(random.uniform(0.5, 1))
                 
-                # --- ИЗМЕНЕНИЕ 1: Старая проверка имени отсюда УДАЛЕНА ---
-
                 failed_ocr_attempts = 0
                 max_failed_attempts = 5
                 
@@ -1529,7 +1558,7 @@ class MarketBotGUI:
                             time.sleep(delay)
                             continue
                             
-                        failed_ocr_attempts = 0 # Сбрасываем счетчик, если цена распознана
+                        failed_ocr_attempts = 0
 
                     except (ValueError, pytesseract.TesseractError) as e:
                         failed_ocr_attempts += 1
@@ -1555,6 +1584,13 @@ class MarketBotGUI:
                     pyautogui.click()
                     time.sleep(random.uniform(0.3, 0.5)) # Ждем открытия окна ордера
 
+                    pyautogui.moveTo(quality_x, quality_y, duration=random.uniform(0.1, 0.2))
+                    pyautogui.click()
+                    time.sleep(0.1)
+                    pyautogui.moveTo(quality_x, quality_y + 30, duration=random.uniform(0.1, 0.2))
+                    pyautogui.click()
+                    time.sleep(0.2) 
+                    
                     # --- ШАГ 4: Проверяем название предмета в окне ордера ---
                     item_name_region = (
                         int(self.left_item_name_entry.get()),
