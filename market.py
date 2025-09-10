@@ -1582,7 +1582,7 @@ class MarketBotGUI:
                     
                     pyautogui.moveTo(buy_order_x, buy_order_y, duration=random.uniform(0.1, 0.2))
                     pyautogui.click()
-                    time.sleep(random.uniform(0.3, 0.5)) # Ждем открытия окна ордера
+                    time.sleep(random.uniform(0.3, 0.5))
 
                     pyautogui.moveTo(quality_x, quality_y, duration=random.uniform(0.1, 0.2))
                     pyautogui.click()
