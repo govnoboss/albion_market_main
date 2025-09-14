@@ -132,7 +132,7 @@ def run_selling_cycle(coords, regions, gui_callback):
             failure_counter += 1
             log_and_update(f"[WARNING] Проверка имени не пройдена: {reason}. Попытка {failure_counter}/5. Отмена продажи.")
             # Click the close button to exit the sell window
-            time.sleep(0.3) # Wait before trying the next item
+            time.sleep(0.2) # Wait before trying the next item
             continue # Skip to the next iteration of the while loop
 
         # If verification is successful, reset the failure counter and proceed
@@ -151,7 +151,7 @@ def run_selling_cycle(coords, regions, gui_callback):
         
         if wapp == 0:
             log_and_update(f"[WARNING] Не найдена себестоимость для '{scanned_item_name}'. Пропуск.")
-            time.sleep(0.3)
+            time.sleep(0.2)
             continue
         
         # 3. Click Minus Button

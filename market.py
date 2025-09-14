@@ -1519,19 +1519,11 @@ class MarketBotGUI:
                 limit_price = int(value * present) 
                 self.update_current_item_info(name=name, value=value, ocr_price="N/A", bought=0, store=store, limit_price=limit_price, budget=budget, total_spent=total_spent)
 
-                pyautogui.moveTo(clear_x, clear_y, duration=random.uniform(0.1, 0.2))
-                pyautogui.click()
-                
-                pyautogui.moveTo(search_x, search_y, duration=random.uniform(0.1, 0.2))
-                pyautogui.click()
-                time.sleep(random.uniform(0.1, 0.2))
-                
-                for char in name:
-                    keyboard.write(char)
-                    time.sleep(random.uniform(0.01, 0.05))
-                
-                time.sleep(random.uniform(0.5, 1))
-                
+                pyautogui.moveTo(clear_x, clear_y, duration=0.1); pyautogui.click()
+                pyautogui.moveTo(search_x, search_y, duration=0.1); pyautogui.click()
+                time.sleep(0.2)
+                keyboard.write(name); time.sleep(0.8)
+                                
                 failed_ocr_attempts = 0
                 max_failed_attempts = 5
                 
