@@ -1114,7 +1114,7 @@ class MarketBotGUI:
             
             # Use a config that works well for single lines of text
             config = '--psm 7' 
-            ocr_text = pytesseract.image_to_string(screenshot, lang='rus', config=config).strip()
+            ocr_text = pytesseract.image_to_string(screenshot, lang='rus+eng', config=config).strip()
 
             # --- FUZZY MATCHING LOGIC ---
             # Normalize both strings for the best comparison
@@ -1466,204 +1466,215 @@ class MarketBotGUI:
             except Exception as e:
                 print(f"Не удалось сохранить лог прогресса: {e}")
 
-    def run_script_order(self, search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y, 
-                         quantity_x, quantity_y, buy_order_x, buy_order_y, price_per_unit_x, price_per_unit_y, 
-                         left, top, width, height, budget, delay, start_row, quality_x, quality_y):
+    def run_script_order(self, search_x, search_y, clear_x, clear_y, buy_x, buy_y, confirm_x, confirm_y,
+                        quantity_x, quantity_y, buy_order_x, buy_order_y, price_per_unit_x, price_per_unit_y,
+                        left, top, width, height, budget, delay, start_row, quality_x, quality_y):
         self.log_entries = []
         try:
-            self.update_status("Загрузка данных из Excel...")
-            self.log_entries.append(f"[{datetime.now()}] --- Начать сессию ордерами с строки {start_row} ---")
-            
+            self.update_status("Загрузка данных из Excel и сортировка по прибыли...")
+            self.log_entries.append(f"[{datetime.now()}] --- Начало сессии закупки ордерами ---")
+
             excel_file_path = Path(__file__).parent / 'table.xlsx'
             df = pd.read_excel(excel_file_path, sheet_name=0, header=0)
-            
-            total_spent = 0
-            total_items = len(df) - start_row + 1
-            if total_items <= 0:
-                raise ValueError("Начальная строка больше количества строк в таблице")
-            min_budget_threshold = 10000
+            df['unit_profit'] = df['value'] * (1 - df['present'])
+            df['total_profit'] = df['unit_profit'] * df['store']
+            df = df.sort_values(by='total_profit', ascending=False).reset_index(drop=True)
 
-            for index, row in df.iloc[start_row-1:].iterrows():
+            if self.tier6_only_var.get():
+                df = df[df['name'].str.contains('мастер', case=False, na=False)].reset_index(drop=True)
+
+            total_spent = 0
+            total_items = len(df)
+            if total_items == 0:
+                raise ValueError("Таблица пуста")
+
+            for index, row in df.iterrows():
                 self.pause_event.wait()
-                
+
                 if not self.script_running:
                     self.log_entries.append(f"[{datetime.now()}] Сессия остановлена пользователем.")
                     break
-                
+
                 if self.skip_item:
                     msg = f"Пропускаю {row['name']} по запросу пользователя (F3)."
                     self.update_status(msg)
                     self.log_entries.append(f"[{datetime.now()}] {msg}")
                     self.skip_item = False
                     continue
-                    
-                self.progress['value'] = ((index - (start_row - 1)) / total_items) * 100
-                self.update_status(f"Обрабатывается {index - start_row + 2}/{total_items}: {row['name']}")
-                
+
+                self.progress['value'] = ((index) / total_items) * 100
                 name = str(row['name']).strip()
-                
+                self.update_status(f"Обрабатывается {index + 1}/{total_items}: {name}")
+
                 try:
                     value = int(row['value'])
                     store = int(row['store'])
                     present = float(row['present'])
-                except (ValueError, TypeError) as e:
-                    msg = f"Некорректные данные для {name}: {str(e)}. Пропускается."
-                    print(msg); logging.warning(msg); self.log_entries.append(f"[{datetime.now()}] Ошибка: {msg}")
+                except (ValueError, TypeError):
+                    msg = f"Ошибка данных для {name}. Пропускаю."
+                    logging.warning(msg)
+                    self.log_entries.append(f"[{datetime.now()}] {msg}")
                     continue
-                
+
                 if value <= 0 or store <= 0 or present <= 0:
-                    msg = f"Пропускается {name} (некорректные значения)"
-                    print(msg); logging.info(msg); self.log_entries.append(f"[{datetime.now()}] Предупреждение: {msg}")
+                    msg = f"Пропуск {name} — некорректные значения."
+                    logging.info(msg)
+                    self.log_entries.append(f"[{datetime.now()}] {msg}")
                     continue
 
-                limit_price = int(value * present) 
-                self.update_current_item_info(name=name, value=value, ocr_price="N/A", bought=0, store=store, limit_price=limit_price, budget=budget, total_spent=total_spent)
+                limit_price = int(value * present)
+                self.update_current_item_info(name=name, value=value, ocr_price="N/A", bought=0, store=store,
+                                            limit_price=limit_price, budget=budget, total_spent=total_spent)
 
-                pyautogui.moveTo(clear_x, clear_y, duration=0.1); pyautogui.click()
-                pyautogui.moveTo(search_x, search_y, duration=0.1); pyautogui.click()
+                # Очистка и поиск предмета
+                pyautogui.moveTo(clear_x, clear_y, duration=random.uniform(0.1, 0.2))
+                pyautogui.click()
+                pyautogui.moveTo(search_x, search_y, duration=random.uniform(0.1, 0.2))
+                pyautogui.click()
                 time.sleep(0.2)
-                keyboard.write(name); time.sleep(0.8)
-                                
-                failed_ocr_attempts = 0
-                max_failed_attempts = 5
-                
-                while self.script_running and failed_ocr_attempts < max_failed_attempts and not self.skip_item:
+                keyboard.write(name)
+                time.sleep(0.7)
+
+                bought = 0
+                if store > 30:
+                    part_size = max(1, store // 3)
+                else:
+                    part_size = max(1, store // 10)
+
+                while bought < store and self.script_running and not self.skip_item:
                     self.pause_event.wait()
-                    
+                    if not self.script_running or self.skip_item:
+                        break
+                    # Проверка окна ошибок
                     if self.check_and_click_ok():
                         continue
-                        
-                    # --- ШАГ 1: Распознаем цену из списка ---
+
+                    # OCR текущей цены
                     try:
                         screenshot = ImageGrab.grab(bbox=(left, top, left + width, top + height))
-                        ocr_text = pytesseract.image_to_string(screenshot, config='--psm 7 -c tessedit_char_whitelist=0123456789')
+                        ocr_text = pytesseract.image_to_string(screenshot,
+                            config='--psm 7 -c tessedit_char_whitelist=0123456789')
                         ocr_price = int(ocr_text.strip() or 0)
-                        
-                        msg = f"Текущая цена для {name}: {ocr_price}"
-                        print(msg); logging.info(msg); self.log_entries.append(f"[{datetime.now()}] {msg}")
-                        self.update_current_item_info(name=name, value=value, ocr_price=ocr_price, bought=0, store=store, limit_price=limit_price, budget=budget, total_spent=total_spent)
-                        
-                        if ocr_price == 0:
-                            failed_ocr_attempts += 1
-                            msg = f"OCR вернул 0. Попытка {failed_ocr_attempts}. Пропускаю."
-                            print(msg); logging.warning(msg); self.log_entries.append(f"[{datetime.now()}] Предупреждение: {msg}")
-                            time.sleep(delay)
-                            continue
-                            
-                        failed_ocr_attempts = 0
-
-                    except (ValueError, pytesseract.TesseractError) as e:
-                        failed_ocr_attempts += 1
-                        ocr_text = ocr_text if 'ocr_text' in locals() else ''
-                        msg = f"OCR ошибка для {name} (попытка {failed_ocr_attempts}): '{ocr_text.strip()}' - {e}"
-                        print(msg); logging.warning(msg); self.log_entries.append(f"[{datetime.now()}] Ошибка OCR: {msg}")
+                    except Exception as e:
+                        msg = f"OCR ошибка для {name}: {e}"
+                        print(msg); logging.warning(msg)
+                        self.log_entries.append(f"[{datetime.now()}] {msg}")
                         time.sleep(delay)
                         continue
-                    
-                    # --- ШАГ 2: Сравниваем цену с лимитом для ордера ---
-                    order_limit_price = int(value * present * 0.975)
-                    if ocr_price > order_limit_price:
-                        msg = f"Цена {ocr_price} не подходит для ордера {name} (лимит: {order_limit_price})"
-                        print(msg); logging.info(msg); self.log_entries.append(f"[{datetime.now()}] {msg}")
+                    if not self.script_running or self.skip_item:
                         break
 
-                    # --- ШАГ 3: Если цена выгодна, кликаем "Купить", затем "Заказ на покупку" ---
+                    # Проверяем лимит
+                    if ocr_price == 0 or ocr_price > limit_price:
+                        msg = f"Цена {ocr_price} не выгодна для {name} (лимит: {limit_price}). Прекращаю закупку."
+                        print(msg); logging.info(msg)
+                        self.log_entries.append(f"[{datetime.now()}] {msg}")
+                        break
+
+                    # Проверяем бюджет
+                    remaining_budget = budget - total_spent
+                    if remaining_budget < ocr_price:
+                        msg = f"Бюджет закончился ({remaining_budget}). Остановка закупки."
+                        print(msg); logging.info(msg)
+                        self.log_entries.append(f"[{datetime.now()}] {msg}")
+                        self.script_running = False
+                        break
+                    
+                    to_buy = min(part_size, store - bought)
+                    batch_cost = to_buy * ocr_price
+                    if batch_cost > remaining_budget:
+                        to_buy = max(1, remaining_budget // ocr_price)
+                        if to_buy <= 0:
+                            msg = f"Бюджет исчерпан перед покупкой {name}."
+                            print(msg); logging.info(msg)
+                            self.log_entries.append(f"[{datetime.now()}] {msg}")
+                            break
+                            
                     pyautogui.moveTo(buy_x, buy_y, duration=random.uniform(0.1, 0.2))
                     pyautogui.click()
-                    time.sleep(random.uniform(0.1, 0.2))
-                    
-                    pyautogui.moveTo(buy_order_x, buy_order_y, duration=random.uniform(0.1, 0.2))
-                    pyautogui.click()
-                    time.sleep(random.uniform(0.3, 0.5))
-
-                    pyautogui.moveTo(quality_x, quality_y, duration=random.uniform(0.1, 0.2))
-                    pyautogui.click()
-                    time.sleep(0.1)
-                    pyautogui.moveTo(quality_x, quality_y + 30, duration=random.uniform(0.1, 0.2))
-                    pyautogui.click()
-                    time.sleep(0.2) 
-                    
-                    # --- ШАГ 4: Проверяем название предмета в окне ордера ---
+                    time.sleep(random.uniform(0.2, 0.4))
+                    if not self.script_running or self.skip_item:
+                        break                   
+                    # Проверка имени товара
                     item_name_region = (
-                        int(self.left_item_name_entry.get()),
+                        int(self.left_item_name_entry.get()),   
                         int(self.top_item_name_entry.get()),
                         int(self.left_item_name_entry.get()) + int(self.width_item_name_entry.get()),
                         int(self.top_item_name_entry.get()) + int(self.height_item_name_entry.get())
                     )
-
-                    if self.verify_item_name(name, item_name_region):
-                        # --- ШАГ 5A: Имя совпало -> продолжаем размещение ордера ---
-                        
-                        # Расчет бюджета и количества (остается без изменений)
-                        tax_rate = 1.025
-                        max_cost = store * limit_price * tax_rate
-                        if budget - total_spent < min_budget_threshold:
-                            self.script_running = False; break
-                        if total_spent + max_cost > budget:
-                            store = int((budget - total_spent) / (limit_price * tax_rate))
-                            if store <= 0: self.script_running = False; break
-                        
-                        # Ввод количества
-                        pyautogui.moveTo(quantity_x, quantity_y, duration=random.uniform(0.1, 0.2))
-                        pyautogui.click(); time.sleep(random.uniform(0.1, 0.2))
-                        for char in str(store):
-                            keyboard.write(char); time.sleep(random.uniform(0.01, 0.05))
-                        
-                        # Ввод цены
-                        pyautogui.moveTo(price_per_unit_x, price_per_unit_y, duration=random.uniform(0.1, 0.2))
-                        pyautogui.click(); time.sleep(random.uniform(0.1, 0.2))
-                        for char in str(limit_price):
-                            keyboard.write(char); time.sleep(random.uniform(0.01, 0.05))
-                        
-                        # Подтверждение ордера
-                        pyautogui.moveTo(confirm_x, confirm_y, duration=random.uniform(0.1, 0.2))
-                        pyautogui.click()
-                        time.sleep(random.uniform(0.1, 0.2))
-                        
-                        self.check_and_click_yes()
-                        
-                        total_spent += store * limit_price * tax_rate 
-                        try:
-                            log_path = Path(__file__).parent / 'purchase_log.csv'
-                            file_exists = log_path.exists()
-                            with open(log_path, 'a', newline='', encoding='utf-8') as f:
-                                writer = csv.writer(f)
-                                if not file_exists:
-                                    writer.writerow(['item_name', 'quantity', 'price_per_unit', 'purchase_type'])
-                                writer.writerow([name, store, limit_price, 'order'])
-                        except Exception as e:
-                            logging.error(f"Не удалось записать в purchase_log.csv: {e}")
-
-                        msg = f"Ордер размещен для {name} ({store} шт.) по {limit_price} each. Потрачено (примерно): {total_spent}"
-                        print(msg); logging.info(msg); self.log_entries.append(f"[{datetime.now()}] {msg}")
-                        self.update_current_item_info(name=name, value=value, ocr_price=ocr_price, bought=store, store=store, limit_price=limit_price)
-                        
-                    else:
-                        # --- ШАГ 5B: Имя не совпало -> кликаем "Крестик" и выходим ---
-                        msg = f"Имя не совпало после клика на ордер ('{name}'). Отмена."
-                        print(msg); logging.warning(msg); self.log_entries.append(f"[{datetime.now()}] {msg}")
-                        
+                    if not self.verify_item_name(name, item_name_region):
+                        msg = f"Имя не совпало после клика на покупку ('{name}'). Отмена."
+                        print(msg); logging.warning(msg)
+                        self.log_entries.append(f"[{datetime.now()}] {msg}")
                         close_x = int(self.close_x_entry.get())
                         close_y = int(self.close_y_entry.get())
                         pyautogui.moveTo(close_x, close_y, duration=random.uniform(0.1, 0.2))
                         pyautogui.click()
                         time.sleep(delay)
+                        break
+                    # Клик по кнопке ордера
+                    pyautogui.moveTo(buy_order_x, buy_order_y, duration=random.uniform(0.1, 0.2))
+                    pyautogui.click()
+                    time.sleep(random.uniform(0.2, 0.4))
 
-                    break # Выходим из while и переходим к следующему предмету в любом случае
-                
+                    # Установка цены за штуку
+                    pyautogui.moveTo(price_per_unit_x, price_per_unit_y, duration=random.uniform(0.1, 0.2))
+                    pyautogui.click()
+                    time.sleep(0.1)
+                    keyboard.write(str(limit_price))
+                    time.sleep(0.1)
+
+                    # Ввод количества
+                    pyautogui.moveTo(quantity_x, quantity_y, duration=random.uniform(0.1, 0.2))
+                    pyautogui.click()
+                    time.sleep(0.1)
+                    keyboard.write(str(to_buy))
+                    time.sleep(0.1)
+                    if not self.script_running or self.skip_item:
+                        break 
+                    # Подтверждение ордера
+                    pyautogui.moveTo(confirm_x, confirm_y, duration=random.uniform(0.1, 0.2))
+                    pyautogui.click()
+                    time.sleep(random.uniform(0.2, 0.3))
+                    self.check_and_click_ok()
+
+                    bought += to_buy
+                    total_spent += ocr_price * to_buy
+
+                    msg = (f"Куплена часть ({to_buy} шт.) товара '{name}' по {ocr_price} each. "
+                        f"Всего куплено: {bought}/{store}. Потрачено: {total_spent}.")
+                    print(msg); logging.info(msg)
+                    self.log_entries.append(f"[{datetime.now()}] {msg}")
+                    self.update_current_item_info(name=name, value=value, ocr_price=ocr_price, bought=bought,
+                                                store=store, limit_price=limit_price, budget=budget,
+                                                total_spent=total_spent)
+                    pyautogui.moveTo(clear_x, clear_y, duration=random.uniform(0.1, 0.2))
+                    pyautogui.click()
+                    pyautogui.moveTo(search_x, search_y, duration=random.uniform(0.1, 0.2))
+                    pyautogui.click()
+                    time.sleep(0.2)
+                    keyboard.write(name)
+                    time.sleep(0.5)
+                    if bought >= store:
+                        break
+
+                    time.sleep(random.uniform(delay, delay + 0.5))
+
                 self.skip_item = False
                 self.update_current_item_info()
-            
+
             if self.script_running:
-                msg = f"Скрипт завершен. Всего потрачено (примерно): {total_spent}"
-                print(msg); logging.info(msg); self.log_entries.append(f"[{datetime.now()}] --- Сессия завершена. Всего потрачено (примерно): {total_spent} ---")
-                self.update_status(f"Завершено! Потрачено (примерно): {total_spent}")
+                msg = f"Закупка завершена. Всего потрачено: {total_spent}"
+                print(msg)
+                logging.info(msg)
+                self.log_entries.append(f"[{datetime.now()}] --- Сессия завершена. Потрачено: {total_spent} ---")
+                self.update_status(f"Завершено! Потрачено: {total_spent}")
                 messagebox.showinfo("Завершено", msg)
-            
+
         except Exception as e:
-            # ... (блок finally остается без изменений) ...
-            error_msg = f"Критическая ошибка: {str(e)}"
-            print(error_msg); logging.error(error_msg)
+            error_msg = f"Критическая ошибка в run_script_order: {str(e)}"
+            print(error_msg)
+            logging.error(error_msg)
             self.update_status("Ошибка выполнения")
             self.log_entries.append(f"[{datetime.now()}] Критическая ошибка: {error_msg}")
             messagebox.showerror("Ошибка", error_msg)
