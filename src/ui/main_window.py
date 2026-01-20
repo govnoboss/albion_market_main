@@ -13,7 +13,9 @@ from PyQt6.QtGui import QFont, QIcon
 
 from .styles import MAIN_STYLE, COLORS
 from .coordinate_panel import CoordinatePanel
+from .coordinate_panel import CoordinatePanel
 from .control_panel import ControlPanel
+from .settings_panel import SettingsPanel
 from ..utils.logger import get_logger
 from ..utils.config import get_config
 
@@ -133,7 +135,7 @@ class MainWindow(QMainWindow):
         
         splitter.addWidget(left_panel)
         
-        # Правая панель - Управление
+        # Правая панель - Табы
         right_panel = QFrame()
         right_panel.setStyleSheet("""
             QFrame {
@@ -143,10 +145,19 @@ class MainWindow(QMainWindow):
             }
         """)
         right_layout = QVBoxLayout(right_panel)
-        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setContentsMargins(5, 5, 5, 5)  # Немного отступа для табов
         
+        self.tabs = QTabWidget()
+        
+        # Вкладка Управления
         self.control_panel = ControlPanel()
-        right_layout.addWidget(self.control_panel)
+        self.tabs.addTab(self.control_panel, "🕹 Управление")
+        
+        # Вкладка Настроек
+        self.settings_panel = SettingsPanel()
+        self.tabs.addTab(self.settings_panel, "⚙️ Настройки")
+        
+        right_layout.addWidget(self.tabs)
         
         splitter.addWidget(right_panel)
         

@@ -1,7 +1,77 @@
 {
-    "coordinates": {},
+    "coordinates": {
+        "search_input": {
+            "x": 846,
+            "y": 358
+        },
+        "search_clear": {
+            "x": 965,
+            "y": 363
+        },
+        "buy_button": {
+            "x": 1704,
+            "y": 571
+        },
+        "item_expand": {
+            "x": 1675,
+            "y": 431
+        },
+        "tier_dropdown": {
+            "x": 682,
+            "y": 531
+        },
+        "enchant_dropdown": {
+            "x": 890,
+            "y": 532
+        },
+        "quality_dropdown": {
+            "x": 1096,
+            "y": 529
+        },
+        "menu_close": {
+            "x": 1252,
+            "y": 407
+        }
+    },
     "settings": {
         "click_delay": 100,
         "scan_interval": 500
-    }
+    },
+    "dropdowns": {
+        "row_height": 26,
+        "list_start_offset": 30
+    },
+    "scan_filters": {
+        "tiers": [
+            4,
+            5,
+            6,
+            7,
+            8
+        ],
+        "enchants": [
+            0,
+            1,
+            2,
+            3,
+            4
+        ],
+        "qualities": [
+            1
+        ]
+    },
+    "items": [
+        {
+            "name": "Ботинки охотника",
+            "max_price": 0,
+            "quantity": 1,
+            "enabled": true
+        },
+        {
+            "name": "Сапоги хранителя",
+            "max_price": 0,
+            "quantity": 1,
+            "enabled": true
+        }
+    ]
 }

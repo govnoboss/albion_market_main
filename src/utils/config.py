@@ -41,6 +41,15 @@ class ConfigManager:
                 "scan_interval": 500,
                 "tesseract_path": "",
             },
+            "dropdowns": {
+                "row_height": 28,
+                "list_start_offset": 30,
+            },
+            "scan_filters": {
+                "tiers": [4, 5, 6, 7, 8],
+                "enchants": [0, 1, 2, 3, 4],
+                "qualities": [1, 2, 3, 4, 5]
+            },
             "items": []  # Список предметов для покупки
         }
     
@@ -98,6 +107,41 @@ class ConfigManager:
         self._config["settings"][key] = value
         self.save()
     
+
+    # === Dropdown Settings ===
+
+    def get_dropdown_setting(self, key: str, default: Any = None) -> Any:
+        """Получить настройку выпадающего меню"""
+        return self._config.get("dropdowns", {}).get(key, default)
+
+    def set_dropdown_setting(self, key: str, value: Any) -> None:
+        """Установить настройку выпадающего меню"""
+        if "dropdowns" not in self._config:
+            self._config["dropdowns"] = {}
+        
+        self._config["dropdowns"][key] = value
+        self.save()
+
+    # === Scan Filters ===
+
+    def get_scan_filters(self) -> dict:
+        """Получить настройки фильтров сканирования"""
+        defaults = {
+            "tiers": [4, 5, 6, 7, 8],
+            "enchants": [0, 1, 2, 3, 4],
+            "qualities": [1, 2, 3, 4, 5]
+        }
+        return self._config.get("scan_filters", defaults)
+
+    def set_scan_filter(self, category: str, values: list) -> None:
+        """Установить фильтр сканирования"""
+        if "scan_filters" not in self._config:
+            self._config["scan_filters"] = {}
+        
+        self._config["scan_filters"][category] = values
+        self.save()
+
+
     # === Предметы ===
     
     def get_items(self) -> list:

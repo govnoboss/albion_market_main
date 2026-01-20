@@ -34,6 +34,29 @@ COORDINATE_DEFINITIONS = {
             "description": "Основная кнопка покупки"
         },
     },
+    # Меню и взаимодействие
+    "interaction": {
+        "item_expand": {
+            "name": "Раскрыть окно предмета",
+            "description": "Кнопка стрелки для раскрытия лота"
+        },
+        "tier_dropdown": {
+            "name": "Дропдаун Тиров",
+            "description": "Выпадающий список выбора тира"
+        },
+        "enchant_dropdown": {
+            "name": "Дропдаун Энчантов",
+            "description": "Выпадающий список выбора зачарования"
+        },
+        "quality_dropdown": {
+            "name": "Дропдаун Качеств",
+            "description": "Выпадающий список выбора качества"
+        },
+        "menu_close": {
+            "name": "Закрыть меню",
+            "description": "Крестик или кнопка закрытия окна"
+        },
+    },
 }
 
 
@@ -66,11 +89,13 @@ class CoordinateCard(QFrame):
         # Название
         self.name_label = QLabel(self.coord_name)
         self.name_label.setStyleSheet("font-size: 14px; font-weight: 600; color: #f0f6fc;")
+        self.name_label.setWordWrap(True)
         info_layout.addWidget(self.name_label)
         
         # Описание
         desc_label = QLabel(self.description)
         desc_label.setStyleSheet("font-size: 12px; color: #8b949e;")
+        desc_label.setWordWrap(True)
         info_layout.addWidget(desc_label)
         
         layout.addLayout(info_layout, stretch=1)
@@ -117,6 +142,9 @@ class CoordinateCard(QFrame):
         self.clear_btn.clicked.connect(self._on_clear_clicked)
         self.clear_btn.setVisible(False)
         layout.addWidget(self.clear_btn)
+
+        # Set minimum width to prevent squashing
+        self.setMinimumWidth(450)
     
     def _load_saved_coordinate(self):
         """Загрузить сохраненную координату"""
@@ -188,7 +216,7 @@ class CoordinatePanel(QWidget):
         # Скролл область
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
         
         # Контент
