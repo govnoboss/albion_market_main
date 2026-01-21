@@ -69,18 +69,34 @@ class ConfigManager:
     # === Координаты ===
     
     def get_coordinate(self, key: str) -> Optional[tuple]:
-        """Получить координату по ключу"""
+        """Получить точку (x, y)"""
         coord = self._config.get("coordinates", {}).get(key)
-        if coord and isinstance(coord, dict):
+        # Fix: Default type to 'point' for backward compatibility
+        if coord and isinstance(coord, dict) and coord.get("type", "point") == "point":
             return (coord.get("x"), coord.get("y"))
+        return None
+        
+    def get_coordinate_area(self, key: str) -> Optional[dict]:
+        """Получить область {x, y, w, h}"""
+        coord = self._config.get("coordinates", {}).get(key)
+        if coord and isinstance(coord, dict) and coord.get("type") == "area":
+             return coord
         return None
     
     def set_coordinate(self, key: str, x: int, y: int) -> None:
-        """Установить координату"""
+        """Установить координату (точку)"""
         if "coordinates" not in self._config:
             self._config["coordinates"] = {}
         
-        self._config["coordinates"][key] = {"x": x, "y": y}
+        self._config["coordinates"][key] = {"x": x, "y": y, "type": "point"}
+        self.save()
+
+    def set_coordinate_area(self, key: str, x: int, y: int, w: int, h: int) -> None:
+        """Установить координату (область)"""
+        if "coordinates" not in self._config:
+            self._config["coordinates"] = {}
+        
+        self._config["coordinates"][key] = {"x": x, "y": y, "w": w, "h": h, "type": "area"}
         self.save()
     
     def get_all_coordinates(self) -> dict:
@@ -142,6 +158,25 @@ class ConfigManager:
         self.save()
 
 
+    # === Known Items (Database) ===
+
+    def get_known_items(self) -> list:
+        """Получить список известных предметов"""
+        return self._config.get("known_items", [])
+
+    def set_known_items(self, items: list) -> None:
+        """Установить список известных предметов"""
+        self._config["known_items"] = items
+        self.save()
+
+    def add_known_item(self, item: str) -> None:
+        """Добавить предмет в базу известных"""
+        items = self.get_known_items()
+        if item not in items:
+            items.append(item)
+            self._config["known_items"] = items
+            self.save()
+
     # === Предметы ===
     
     def get_items(self) -> list:
@@ -179,6 +214,21 @@ class ConfigManager:
     def clear_items(self) -> None:
         """Очистить список предметов"""
         self._config["items"] = []
+        self.save()
+
+    # === Tier Exceptions ===
+
+    def get_tier_exceptions(self) -> dict:
+        """Получить словарь исключений тиров"""
+        return self._config.get("tier_exceptions", {
+            "Tier_1": [], 
+            "Tier_2": [], 
+            "Tier_3": []
+        })
+
+    def set_tier_exceptions(self, data: dict):
+        """Сохранить словарь исключений тиров"""
+        self._config["tier_exceptions"] = data
         self.save()
 
 

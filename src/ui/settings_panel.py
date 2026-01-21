@@ -181,7 +181,7 @@ class SettingsPanel(QScrollArea):
         
     def _on_offset_changed(self, value):
         get_config().set_dropdown_setting("list_start_offset", value)
-
+ 
     def _on_filters_changed(self):
         """Сохранить фильтры при изменении чекбоксов"""
         if self.signalsBlocked():

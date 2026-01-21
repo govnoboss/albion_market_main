@@ -17,59 +17,78 @@ from ..utils.config import get_config
 from ..utils.logger import get_logger
 
 
-# Определение координат для захвата (базовые)
+# Определение координат для захвата
 COORDINATE_DEFINITIONS = {
-    # Основные координаты
     "basic": {
         "search_input": {
             "name": "🔍 Поле поиска",
-            "description": "Клик для активации поиска"
+            "description": "Клик для активации поиска",
+            "type": "point"
         },
         "search_clear": {
             "name": "❌ Очистка поиска", 
-            "description": "Кнопка очистки поля поиска"
+            "description": "Кнопка очистки поля поиска",
+            "type": "point"
         },
         "buy_button": {
             "name": "💰 Кнопка Купить",
-            "description": "Основная кнопка покупки"
+            "description": "Основная кнопка покупки",
+            "type": "point"
         },
     },
-    # Меню и взаимодействие
     "interaction": {
         "item_expand": {
             "name": "Раскрыть окно предмета",
-            "description": "Кнопка стрелки для раскрытия лота"
+            "description": "Кнопка стрелки для раскрытия лота",
+            "type": "point"
         },
         "tier_dropdown": {
             "name": "Дропдаун Тиров",
-            "description": "Выпадающий список выбора тира"
+            "description": "Выпадающий список выбора тира",
+            "type": "point"
         },
         "enchant_dropdown": {
             "name": "Дропдаун Энчантов",
-            "description": "Выпадающий список выбора зачарования"
+            "description": "Выпадающий список выбора зачарования",
+            "type": "point"
         },
         "quality_dropdown": {
             "name": "Дропдаун Качеств",
-            "description": "Выпадающий список выбора качества"
+            "description": "Выпадающий список выбора качества",
+            "type": "point"
         },
         "menu_close": {
             "name": "Закрыть меню",
-            "description": "Крестик или кнопка закрытия окна"
+            "description": "Крестик или кнопка закрытия окна",
+            "type": "point"
         },
     },
+    "validation": {
+        "market_menu_check": {
+            "name": "🏪 Область Меню (OCR)",
+            "description": "Заголовок окна рынка (для проверки открытия)",
+            "type": "area"
+        },
+        "item_icon_check": {
+            "name": "🖼️ Иконка Предмета",
+            "description": "Область иконки текущего предмета (на будущее)",
+            "type": "area"
+        }
+    }
 }
 
 
 class CoordinateCard(QFrame):
     """Карточка для одной координаты"""
     
-    capture_requested = pyqtSignal(str, str)  # key, display_name
+    capture_requested = pyqtSignal(str, str, str)  # key, display_name, mode
     
-    def __init__(self, key: str, name: str, description: str):
+    def __init__(self, key: str, name: str, description: str, capture_mode: str = "point"):
         super().__init__()
         self.key = key
         self.coord_name = name
         self.description = description
+        self.capture_mode = capture_mode
         
         self._setup_ui()
         self._load_saved_coordinate()
@@ -82,17 +101,15 @@ class CoordinateCard(QFrame):
         layout.setContentsMargins(15, 12, 15, 12)
         layout.setSpacing(15)
         
-        # Левая часть: информация
+        # Левая часть
         info_layout = QVBoxLayout()
         info_layout.setSpacing(4)
         
-        # Название
-        self.name_label = QLabel(self.coord_name)
-        self.name_label.setStyleSheet("font-size: 14px; font-weight: 600; color: #f0f6fc;")
-        self.name_label.setWordWrap(True)
-        info_layout.addWidget(self.name_label)
+        name_label = QLabel(self.coord_name)
+        name_label.setStyleSheet("font-size: 14px; font-weight: 600; color: #f0f6fc;")
+        name_label.setWordWrap(True)
+        info_layout.addWidget(name_label)
         
-        # Описание
         desc_label = QLabel(self.description)
         desc_label.setStyleSheet("font-size: 12px; color: #8b949e;")
         desc_label.setWordWrap(True)
@@ -100,103 +117,78 @@ class CoordinateCard(QFrame):
         
         layout.addLayout(info_layout, stretch=1)
         
-        # Центр: отображение координат
+        # Центр
         self.coord_label = QLabel("Не задано")
-        self.coord_label.setStyleSheet("""
-            font-size: 13px;
-            color: #8b949e;
-            font-family: 'Consolas', monospace;
-            padding: 5px 10px;
-            background-color: #0d1117;
-            border-radius: 4px;
-            min-width: 100px;
-        """)
+        self._set_label_style(False)
         self.coord_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.coord_label)
         
-        # Правая часть: кнопка захвата
-        self.capture_btn = QPushButton("Захватить")
+        # Правая часть
+        self.capture_btn = QPushButton("Выбрать" if self.capture_mode == "area" else "Захватить")
         self.capture_btn.setObjectName("capture")
         self.capture_btn.setMinimumWidth(100)
         self.capture_btn.clicked.connect(self._on_capture_clicked)
         layout.addWidget(self.capture_btn)
         
-        # Кнопка очистки
+        # Очистка
         self.clear_btn = QPushButton("✕")
         self.clear_btn.setStyleSheet("""
             QPushButton {
-                background-color: transparent;
-                border: 1px solid #30363d;
-                border-radius: 4px;
-                padding: 6px 10px;
-                color: #8b949e;
-                min-width: 30px;
-                max-width: 30px;
+                background-color: transparent; border: 1px solid #30363d;
+                border-radius: 4px; padding: 6px 10px; color: #8b949e;
+                min-width: 30px; max-width: 30px;
             }
             QPushButton:hover {
-                background-color: #da3633;
-                border-color: #da3633;
-                color: #f0f6fc;
+                background-color: #da3633; border-color: #da3633; color: #f0f6fc;
             }
         """)
         self.clear_btn.clicked.connect(self._on_clear_clicked)
         self.clear_btn.setVisible(False)
         layout.addWidget(self.clear_btn)
 
-        # Set minimum width to prevent squashing
         self.setMinimumWidth(450)
     
+    def _set_label_style(self, success: bool):
+        color = "#3fb950" if success else "#8b949e"
+        self.coord_label.setStyleSheet(f"""
+            font-size: 13px; color: {color}; font-family: 'Consolas', monospace;
+            padding: 5px 10px; background-color: #0d1117; border-radius: 4px; min-width: 100px;
+        """)
+
     def _load_saved_coordinate(self):
-        """Загрузить сохраненную координату"""
         config = get_config()
-        coord = config.get_coordinate(self.key)
-        if coord:
-            self.set_coordinate(coord[0], coord[1])
+        if self.capture_mode == "point":
+            coord = config.get_coordinate(self.key)
+            if coord: self.set_point(coord[0], coord[1])
+        else:
+            area = config.get_coordinate_area(self.key)
+            if area: self.set_area(area['x'], area['y'], area['w'], area['h'])
     
     def _on_capture_clicked(self):
-        """Обработчик клика на кнопку захвата"""
-        self.capture_requested.emit(self.key, self.coord_name)
+        self.capture_requested.emit(self.key, self.coord_name, self.capture_mode)
     
     def _on_clear_clicked(self):
-        """Очистить координату"""
         config = get_config()
         config.clear_coordinate(self.key)
-        
         self.coord_label.setText("Не задано")
-        self.coord_label.setStyleSheet("""
-            font-size: 13px;
-            color: #8b949e;
-            font-family: 'Consolas', monospace;
-            padding: 5px 10px;
-            background-color: #0d1117;
-            border-radius: 4px;
-            min-width: 100px;
-        """)
+        self._set_label_style(False)
         self.clear_btn.setVisible(False)
-        
         get_logger().info(f"Координата '{self.coord_name}' очищена")
     
-    def set_coordinate(self, x: int, y: int):
-        """Установить координату"""
+    def set_point(self, x: int, y: int):
         self.coord_label.setText(f"X: {x}, Y: {y}")
-        self.coord_label.setStyleSheet("""
-            font-size: 13px;
-            color: #3fb950;
-            font-family: 'Consolas', monospace;
-            padding: 5px 10px;
-            background-color: #0d1117;
-            border-radius: 4px;
-            min-width: 100px;
-        """)
+        self._set_label_style(True)
+        self.clear_btn.setVisible(True)
+
+    def set_area(self, x: int, y: int, w: int, h: int):
+        self.coord_label.setText(f"Area: {w}x{h}")
+        self.coord_label.setToolTip(f"X:{x}, Y:{y}, W:{w}, H:{h}")
+        self._set_label_style(True)
         self.clear_btn.setVisible(True)
     
     def set_capturing(self, is_capturing: bool):
-        """Установить состояние захвата"""
         self.capture_btn.setEnabled(not is_capturing)
-        if is_capturing:
-            self.capture_btn.setText("...")
-        else:
-            self.capture_btn.setText("Захватить")
+        self.capture_btn.setText("..." if is_capturing else ("Выбрать" if self.capture_mode == "area" else "Захватить"))
 
 
 class CoordinatePanel(QWidget):
@@ -213,34 +205,34 @@ class CoordinatePanel(QWidget):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
         
-        # Скролл область
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
         
-        # Контент
         content = QWidget()
         content_layout = QVBoxLayout(content)
         content_layout.setContentsMargins(15, 15, 15, 15)
         content_layout.setSpacing(20)
         
-        # Заголовок
         header = QLabel("⚙️ Настройка координат")
         header.setObjectName("sectionHeader")
         content_layout.addWidget(header)
         
-        # Информация
-        info = QLabel("Нажмите 'Захватить' и кликните в нужном месте экрана игры")
+        info = QLabel("Настройте точки кликов и области проверок")
         info.setStyleSheet("color: #8b949e; font-size: 13px; margin-bottom: 10px;")
         content_layout.addWidget(info)
         
-        # Группы координат
         group_names = {
             "basic": "⚙️ Основные координаты",
+            "interaction": "🖱️ Взаимодействие с меню",
+            "validation": "🛡️ Проверки (Валидация)"
         }
         
-        for group_key, coords in COORDINATE_DEFINITIONS.items():
+        # Сортировка групп для порядка отображения
+        for group_key in ["basic", "interaction", "validation"]:
+            if group_key not in COORDINATE_DEFINITIONS: continue
+            
+            coords = COORDINATE_DEFINITIONS[group_key]
             group_box = QGroupBox(group_names.get(group_key, group_key))
             group_layout = QVBoxLayout(group_box)
             group_layout.setSpacing(10)
@@ -249,7 +241,8 @@ class CoordinatePanel(QWidget):
                 card = CoordinateCard(
                     key=coord_key,
                     name=coord_info["name"],
-                    description=coord_info["description"]
+                    description=coord_info["description"],
+                    capture_mode=coord_info.get("type", "point")
                 )
                 card.capture_requested.connect(self._start_capture)
                 group_layout.addWidget(card)
@@ -257,58 +250,51 @@ class CoordinatePanel(QWidget):
             
             content_layout.addWidget(group_box)
         
-        # Spacer
         content_layout.addStretch()
-        
         scroll.setWidget(content)
         main_layout.addWidget(scroll)
     
     def _connect_capture_manager(self):
-        """Подключить сигналы менеджера захвата"""
         capture = get_capture_manager()
         capture.coordinate_captured.connect(self._on_coordinate_captured)
+        capture.area_captured.connect(self._on_area_captured)
         capture.capture_cancelled.connect(self._on_capture_cancelled)
         capture.capture_started.connect(self._on_capture_started)
     
-    def _start_capture(self, key: str, display_name: str):
-        """Начать захват координаты"""
+    def _start_capture(self, key: str, display_name: str, mode: str):
         capture = get_capture_manager()
-        capture.start_capture(key, display_name)
+        capture.start_capture(key, display_name, mode)
     
-    def _on_capture_started(self, key: str):
-        """Обработчик начала захвата"""
+    def _on_capture_started(self, key: str, mode: str):
         if key in self._cards:
             self._cards[key].set_capturing(True)
-        get_logger().info(f"Захват координаты начат...")
+        get_logger().info(f"Захват '{key}' начат (mode={mode})")
     
     def _on_coordinate_captured(self, key: str, x: int, y: int):
-        """Обработчик успешного захвата"""
-        # Сохраняем координату
-        config = get_config()
-        config.set_coordinate(key, x, y)
-        
-        # Обновляем карточку
+        get_config().set_coordinate(key, x, y)
         if key in self._cards:
-            self._cards[key].set_coordinate(x, y)
+            self._cards[key].set_point(x, y)
             self._cards[key].set_capturing(False)
-        
-        get_logger().success(f"Координата захвачена: X={x}, Y={y}")
+        get_logger().success(f"Точка '{key}' сохранена: {x}, {y}")
+
+    def _on_area_captured(self, key: str, x: int, y: int, w: int, h: int):
+        get_config().set_coordinate_area(key, x, y, w, h)
+        if key in self._cards:
+            self._cards[key].set_area(x, y, w, h)
+            self._cards[key].set_capturing(False)
+        get_logger().success(f"Область '{key}' сохранена: {w}x{h}")
     
     def _on_capture_cancelled(self, key: str):
-        """Обработчик отмены захвата"""
         if key in self._cards:
             self._cards[key].set_capturing(False)
         get_logger().warning("Захват отменен")
     
     def get_missing_coordinates(self) -> list:
-        """Получить список незаданных обязательных координат"""
         required = ["search_input", "search_clear", "buy_button"]
         config = get_config()
         missing = []
-        
         for key in required:
             if config.get_coordinate(key) is None:
                 if key in self._cards:
                     missing.append(self._cards[key].coord_name)
-        
         return missing

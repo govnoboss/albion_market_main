@@ -48,19 +48,48 @@ class DropdownSelector:
         
         return (anchor_x, target_y)
 
-    def get_tier_click_point(self, tier: int) -> Optional[Tuple[int, int]]:
+    def get_tier_click_point(self, tier: int, item_name: str = None) -> Optional[Tuple[int, int]]:
         """
         Получить координату для выбора Тира
         
         Args:
             tier: Уровень тира (4-8)
+            item_name: Название предмета (для обработки исключений смещения)
         """
-        if not (4 <= tier <= 8):
-            self.logger.warning(f"Запрошен некорректный тир: {tier}. Допустимо 4-8.")
+        # Базовая проверка
+        # (для T1 вещей мы можем запросить tier=1, надо расширить диапазон или убрать проверку)
+        # Если мы все еще сканируем 4-8, но для T1 предмета это может быть смещено.
+        # Пока оставим 4-8 как в логике бота, но логика смещения должна работать.
+        if not (1 <= tier <= 8):
+             self.logger.warning(f"Запрошен некорректный тир: {tier}")
+             return None
+            
+        offset = 4 # Default for T4 items
+        
+        if item_name:
+            item_lower = item_name.lower().strip()
+            exceptions = self.config.get_tier_exceptions()
+            
+            # Проверяем списки
+            # Tier_1: T1-T8 -> offset 1
+            # Tier_2: T2-T8 -> offset 2
+            # Tier_3: T3-T8 -> offset 3
+            
+            # Helper to check list
+            def in_list(key):
+                return any(x.lower() == item_lower for x in exceptions.get(key, []))
+
+            if in_list("Tier_1"): offset = 1
+            elif in_list("Tier_2"): offset = 2
+            elif in_list("Tier_3"): offset = 3
+        
+        # Индекс в меню
+        index = tier - offset
+        
+        if index < 0:
+            self.logger.warning(f"Индекс тира < 0 для {item_name} T{tier} (offset {offset})")
             return None
             
-        # Список тиров начинается с 4.0, поэтому индекс 0 соответствует T4
-        index = tier - 4
         return self.get_dropdown_click_point("tier_dropdown", index)
 
     def get_enchant_click_point(self, enchant: int) -> Optional[Tuple[int, int]]:
