@@ -94,7 +94,7 @@ class MiniOverlay(QWidget):
         # --- Кнопки управления ---
         btn_layout = QHBoxLayout()
         
-        self.pause_btn = QPushButton("❚❚ Пауза")
+        self.pause_btn = QPushButton("❚❚ Пауза (F6)")
         self.pause_btn.setFixedHeight(30)
         self.pause_btn.setStyleSheet("""
             QPushButton {
@@ -109,7 +109,7 @@ class MiniOverlay(QWidget):
         self.pause_btn.clicked.connect(self.pause_clicked.emit)
         btn_layout.addWidget(self.pause_btn)
         
-        self.stop_btn = QPushButton("■ Стоп")
+        self.stop_btn = QPushButton("■ Стоп (F5)")
         self.stop_btn.setFixedHeight(30)
         self.stop_btn.setStyleSheet("""
             QPushButton {
@@ -140,7 +140,7 @@ class MiniOverlay(QWidget):
             """)
             self.pause_btn.setEnabled(False)
             self.stop_btn.setEnabled(False)
-            self.pause_btn.setText("❚❚ Пауза")
+            self.pause_btn.setText("❚❚ Пауза (F6)")
             
         elif is_paused:
             self.status_label.setText("⏸ Paused")
@@ -154,7 +154,7 @@ class MiniOverlay(QWidget):
             """)
             self.pause_btn.setEnabled(True)
             self.stop_btn.setEnabled(True)
-            self.pause_btn.setText("▶ Продолжить")
+            self.pause_btn.setText("▶ Продолжить (F6)")
             self.pause_btn.setStyleSheet("""
                 QPushButton {
                     background-color: #238636;
@@ -178,7 +178,7 @@ class MiniOverlay(QWidget):
             """)
             self.pause_btn.setEnabled(True)
             self.stop_btn.setEnabled(True)
-            self.pause_btn.setText("❚❚ Пауза")
+            self.pause_btn.setText("❚❚ Пауза (F6)")
             self.pause_btn.setStyleSheet("""
                 QPushButton {
                     background-color: #d29922;

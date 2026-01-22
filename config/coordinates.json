@@ -64,6 +64,25 @@
             "x": 564,
             "y": 537,
             "type": "point"
+        },
+        "item_name_area": {
+            "x": 548,
+            "y": 296,
+            "w": 312,
+            "h": 32,
+            "type": "area"
+        },
+        "market_name_area": {
+            "x": 652,
+            "y": 190,
+            "w": 174,
+            "h": 45,
+            "type": "area"
+        },
+        "item_sort": {
+            "x": 728,
+            "y": 366,
+            "type": "point"
         }
     },
     "settings": {
@@ -85,12 +104,11 @@
         "enchants": [
             0,
             1,
-            2,
-            3,
-            4
+            2
         ],
         "qualities": [
-            1
+            1,
+            2
         ]
     },
     "items": [],

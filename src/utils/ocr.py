@@ -33,11 +33,12 @@ def is_ocr_available() -> bool:
     """Проверка доступности OCR"""
     return TESSERACT_CMD is not None
 
-def read_screen_text(x: int, y: int, w: int, h: int, lang: str = 'eng+rus') -> str:
+def read_screen_text(x: int, y: int, w: int, h: int, lang: str = 'rus', whitelist: str = None) -> str:
     """
     Считывает текст с указанной области экрана.
     x, y, w, h: координаты области
     lang: языки ('eng', 'rus', 'eng+rus')
+    whitelist: строка разрешенных символов (например '0123456789')
     """
     if not is_ocr_available():
         return ""
@@ -80,7 +81,11 @@ def read_screen_text(x: int, y: int, w: int, h: int, lang: str = 'eng+rus') -> s
 
         # 3. Распознавание
         # --psm 7: Treat the image as a single text line.
-        text = pytesseract.image_to_string(binarized, lang=lang, config='--psm 7')
+        config = '--psm 7'
+        if whitelist:
+            config += f' -c tessedit_char_whitelist={whitelist}'
+            
+        text = pytesseract.image_to_string(binarized, lang=lang, config=config)
         
         clean_text = text.strip()
         logger.debug(f"OCR Scan [{x},{y},{w},{h}]: '{clean_text}'")
@@ -161,11 +166,17 @@ def parse_price(text: str) -> Optional[int]:
         # Если есть точка и множитель -> float -> int
         if '.' in filtered and multiplier > 1.0:
             val = float(filtered)
-            return int(val * multiplier)
+            result = int(val * multiplier)
+        else:
+            # Иначе просто int (игнорируя точки внутри, если они вдруг остались и не удалились)
+            # Но выше мы удалили точки если multiplier == 1.
+            result = int(int(filtered) * int(multiplier))
+        
+        # Цена <= 5 скорее всего ошибка OCR (мусор)
+        if result <= 5:
+            return 0
             
-        # Иначе просто int (игнорируя точки внутри, если они вдруг остались и не удалились)
-        # Но выше мы удалили точки если multiplier == 1.
-        return int(int(filtered) * int(multiplier))
+        return result
         
     except ValueError:
         return None
@@ -178,10 +189,13 @@ def read_price_at(area: dict) -> Optional[int]:
     if not area:
         return None
         
-    # Считываем текст, разрешаем только цифры и спецсимволы, чтобы OCR не гадал
-    # Хотя Tesseract лучше работает с полным текстом, а потом чистим.
-    # Используем whitelisting для надежности? 
-    # Нет, лучше общий режим, так как бывают мусорные буквы.
+    # Используем английский язык для цифр и белый список
+    whitelist = "0123456789km., " # Основные
+    whitelist += "oli|][!t" # Для поддержки fallback логики в parse_price
     
-    raw_text = read_screen_text(area['x'], area['y'], area['w'], area['h'])
+    raw_text = read_screen_text(
+        area['x'], area['y'], area['w'], area['h'], 
+        lang='eng', 
+        whitelist=whitelist
+    )
     return parse_price(raw_text)

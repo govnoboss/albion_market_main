@@ -51,6 +51,7 @@ class CoordinatesTab(QWidget):
                 ("search_input", "Поле поиска", "point"),
                 ("search_clear", "Очистка поиска", "point"),
                 ("buy_button", "Кнопка Купить", "point"),
+                ("item_sort", "🔀 Сортировка", "point"),
                 ("item_expand", "Раскрыть лот", "point"),
                 ("create_buy_order", "Вкладка Заказ", "point"),
                 ("menu_close", "Закрыть меню", "point"),
@@ -63,7 +64,8 @@ class CoordinatesTab(QWidget):
             "OCR (Распознавание / Валидация)": [
                 ("quality_text_region", "Текст Качества", "area"),
                 ("market_menu_check", "Заголовок Рынка (Меню)", "area"),
-                ("item_icon_check", "Иконка Предмета", "area"),
+                ("market_name_area", "🏪 Название рынка (EN)", "area"),
+                ("item_name_area", "📛 Название предмета", "area"),
                 ("best_price_area", "Цена (Топ лот)", "area"),
             ]
         }
@@ -153,7 +155,7 @@ class CoordinatesTab(QWidget):
         self._refresh_values()
         
         # Если это зона валидации -> сохраняем эталонное изображение
-        validation_keys = ["market_menu_check", "item_icon_check"]
+        validation_keys = ["market_menu_check", "item_name_area"]
         if key in validation_keys:
             try:
                 import os
@@ -212,6 +214,15 @@ class CoordinatesTab(QWidget):
             else:
                 QMessageBox.warning(self, "⚠️ Не удалось распознать", 
                     "Результат: None\n\nПроверьте, что в зоне только цифры.")
+            return
+        
+        # 2.5. Спец. проверка для Названия Рынка (English OCR)
+        if key == "market_name_area":
+            from ..utils.ocr import read_screen_text
+            
+            text = read_screen_text(area['x'], area['y'], area['w'], area['h'], lang='eng')
+            QMessageBox.information(self, "🏪 Название рынка", 
+                f"Результат: {text}\n\n(English OCR)")
             return
 
         # 3. Обычный OCR тест (для остальных)

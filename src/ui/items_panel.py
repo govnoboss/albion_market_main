@@ -77,10 +77,17 @@ class ItemsPanel(QWidget):
         add_db_btn.setObjectName("primary")
         add_db_btn.clicked.connect(self._add_to_database)
         add_db_layout.addWidget(add_db_btn)
+        
+        del_db_btn = QPushButton("Удалить")
+        del_db_btn.setStyleSheet("background-color: #da3633; color: white;")
+        del_db_btn.clicked.connect(self._remove_from_database)
+        add_db_layout.addWidget(del_db_btn)
+        
         layout.addLayout(add_db_layout)
         
         # === Список базы ===
         self.db_list = QListWidget()
+        self.db_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)  # Множественный выбор
         self.db_list.setStyleSheet("""
             QListWidget { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; }
             QListWidget::item { padding: 8px; color: #f0f6fc; }
@@ -217,3 +224,23 @@ class ItemsPanel(QWidget):
             self._load_database_list()
             self.db_input.clear()
             get_logger().info(f"В базу добавлен: {name}")
+
+    def _remove_from_database(self):
+        """Удалить выбранные предметы из базы"""
+        selected_items = self.db_list.selectedItems()
+        if not selected_items:
+            return
+        
+        config = get_config()
+        current_items = config.get_known_items()
+        
+        removed_count = 0
+        for item in selected_items:
+            item_name = item.text()
+            if item_name in current_items:
+                current_items.remove(item_name)
+                removed_count += 1
+        
+        config.set_known_items(current_items)
+        self._load_database_list()
+        get_logger().info(f"Удалено из базы: {removed_count} предметов")

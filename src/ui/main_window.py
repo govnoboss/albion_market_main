@@ -59,6 +59,7 @@ class MainWindow(QMainWindow):
     
     # Сигнал для переключения по хоткею (из потока pynput в GUI поток)
     toggle_hotkey_signal = pyqtSignal()
+    pause_hotkey_signal = pyqtSignal()
     
     def __init__(self):
         super().__init__()
@@ -119,11 +120,16 @@ class MainWindow(QMainWindow):
         
         def on_f5():
             self.toggle_hotkey_signal.emit()
+
+        def on_f6():
+            self.pause_hotkey_signal.emit()
             
         self.hotkey_listener = keyboard.GlobalHotKeys({
-            '<f5>': on_f5
+            '<f5>': on_f5,
+            '<f6>': on_f6
         })
         self.toggle_hotkey_signal.connect(self._toggle_bot_state)
+        self.pause_hotkey_signal.connect(self._on_pause_bot)
         self.hotkey_listener.start()
         
     def _toggle_bot_state(self):
@@ -151,6 +157,10 @@ class MainWindow(QMainWindow):
         title = QLabel("👽 Albion Market Scanner")
         title.setObjectName("title")
         header_layout.addWidget(title)
+        
+        hotkeys_info = QLabel("  [ F5: Start/Stop  |  F6: Pause ]")
+        hotkeys_info.setStyleSheet("color: #636e7b; font-size: 12px; font-weight: bold;")
+        header_layout.addWidget(hotkeys_info)
         
         header_layout.addStretch()
         
@@ -230,8 +240,13 @@ class MainWindow(QMainWindow):
         from .coordinates_tab import CoordinatesTab
         self.coords_tab = CoordinatesTab()
         self.tabs.addTab(self.coords_tab, "🗺️ Координаты")
+        
+        # --- Вкладка 4: Цены ---
+        from .prices_tab import PricesTab
+        self.prices_tab = PricesTab()
+        self.tabs.addTab(self.prices_tab, "💰 Цены")
 
-        # --- Вкладка 4: Настройки ---
+        # --- Вкладка 5: Настройки ---
         self.settings_panel = SettingsPanel()
         self.tabs.addTab(self.settings_panel, "⚙️ Настройки")
         

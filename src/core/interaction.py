@@ -48,13 +48,14 @@ class DropdownSelector:
         
         return (anchor_x, target_y)
 
-    def get_tier_click_point(self, tier: int, item_name: str = None) -> Optional[Tuple[int, int]]:
+    def get_tier_click_point(self, tier: int, item_name: str = None, current_enchant: int = 0) -> Optional[Tuple[int, int]]:
         """
         Получить координату для выбора Тира
         
         Args:
             tier: Уровень тира (4-8)
             item_name: Название предмета (для обработки исключений смещения)
+            current_enchant: Текущее зачарование (если > 0, исключения игнорируются)
         """
         # Базовая проверка
         # (для T1 вещей мы можем запросить tier=1, надо расширить диапазон или убрать проверку)
@@ -66,7 +67,12 @@ class DropdownSelector:
             
         offset = 4 # Default for T4 items
         
-        if item_name:
+        # Применяем исключения ТОЛЬКО если энчант = 0 (или None -> считаем 0).
+        # Если зачарование > 0, игра показывает стандартный список (T4, T5...),
+        # и смещение для "Новичка" не нужно.
+        should_check_exceptions = (current_enchant is None or current_enchant == 0)
+        
+        if item_name and should_check_exceptions:
             item_lower = item_name.lower().strip()
             exceptions = self.config.get_tier_exceptions()
             

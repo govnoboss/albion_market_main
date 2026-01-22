@@ -1,0 +1,124 @@
+"""
+Вкладка просмотра цен по городам
+"""
+
+from PyQt6.QtWidgets import (
+    QWidget, QVBoxLayout, QTabWidget, QTableWidget, 
+    QTableWidgetItem, QHeaderView, QLabel, QPushButton, QHBoxLayout
+)
+from PyQt6.QtCore import Qt, QTimer
+
+from ..utils.price_storage import get_price_storage
+
+
+class PricesTab(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.storage = get_price_storage()
+        self._setup_ui()
+
+    def _setup_ui(self):
+        layout = QVBoxLayout(self)
+        
+        # Заголовок и кнопки
+        top_layout = QHBoxLayout()
+        header = QLabel("💰 Цены по городам")
+        header.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 5px;")
+        top_layout.addWidget(header)
+        
+        top_layout.addStretch()
+        
+        refresh_btn = QPushButton("Обновить")
+        refresh_btn.clicked.connect(self.refresh_data)
+        top_layout.addWidget(refresh_btn)
+        
+        layout.addLayout(top_layout)
+        
+        # Вкладки городов
+        self.city_tabs = QTabWidget()
+        layout.addWidget(self.city_tabs)
+        
+        # Инициализация (первая загрузка)
+        self.refresh_data()
+
+    def refresh_data(self):
+        """Обновить данные во всех вкладках"""
+        self.storage.reload()
+        cities = self.storage.get_cities()
+        
+        # Сохраняем текущий активный таб
+        current_tab_idx = self.city_tabs.currentIndex()
+        current_tab_text = self.city_tabs.tabText(current_tab_idx) if current_tab_idx >= 0 else None
+        
+        self.city_tabs.clear()
+        
+        if not cities:
+            self.city_tabs.addTab(QLabel("Нет данных. Запустите бота для сканирования."), "Пусто")
+            return
+            
+        cities.sort()
+        for city in cities:
+            tab = self._create_city_table(city)
+            self.city_tabs.addTab(tab, city)
+            
+        # Восстанавливаем вкладку
+        if current_tab_text:
+            for i in range(self.city_tabs.count()):
+                if self.city_tabs.tabText(i) == current_tab_text:
+                    self.city_tabs.setCurrentIndex(i)
+                    break
+
+    def _create_city_table(self, city):
+        """Создать таблицу для конкретного города"""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        layout.setContentsMargins(0, 5, 0, 0)
+        
+        table = QTableWidget()
+        table.setColumnCount(4)
+        table.setHorizontalHeaderLabels(["Предмет", "Вариант", "Цена", "Обновлено"])
+        
+        # Настройка заголовков
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch) # Предмет
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents) # Вариант
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents) # Цена
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents) # Время
+        
+        # Заполняем данными
+        items_data = self.storage.get_city_prices(city)
+        
+        row_count = 0
+        for item_name, variants in items_data.items():
+            row_count += len(variants)
+            
+        table.setRowCount(row_count)
+        
+        current_row = 0
+        # Сортируем предметы по имени
+        for item_name in sorted(items_data.keys()):
+            variants = items_data[item_name]
+            # Сортируем варианты (по ключу T4.0.Q1 и т.д.)
+            for variant_key in sorted(variants.keys()):
+                data = variants[variant_key]
+                price = data['price']
+                updated = data['updated'].split('T')[1][:8] # Только время HH:MM:SS
+                
+                # Item Name
+                table.setItem(current_row, 0, QTableWidgetItem(item_name))
+                
+                # Variant
+                table.setItem(current_row, 1, QTableWidgetItem(variant_key))
+                
+                # Price (с форматированием)
+                price_item = QTableWidgetItem(f"{price:,}")
+                price_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+                table.setItem(current_row, 2, price_item)
+                
+                # Time
+                table.setItem(current_row, 3, QTableWidgetItem(updated))
+                
+                current_row += 1
+        
+        layout.addWidget(table)
+        return widget
