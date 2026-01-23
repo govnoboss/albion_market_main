@@ -80,7 +80,59 @@ class BlackMarketTab(QWidget):
         self.status_label.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 14px;")
         self.layout.addWidget(self.status_label)
         
+        # 5. Debug Utils
+        debug_group = QGroupBox("Debug Utils")
+        debug_layout = QHBoxLayout(debug_group)
+
+        self.btn_debug_vision = QPushButton("📸 Check Vision")
+        self.btn_debug_vision.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {COLORS['bg_card']};
+                border: 1px solid {COLORS['accent']};
+                color: {COLORS['accent']};
+            }}
+            QPushButton:hover {{
+                background-color: {COLORS['accent']};
+                color: white;
+            }}
+        """)
+        self.btn_debug_vision.clicked.connect(self._on_check_vision)
+        debug_layout.addWidget(self.btn_debug_vision)
+
+        self.btn_test_bank = QPushButton("🏦 Test Bank (2 Sets)")
+        self.btn_test_bank.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {COLORS['bg_card']};
+                border: 1px solid {COLORS['accent']};
+                color: {COLORS['accent']};
+            }}
+            QPushButton:hover {{
+                background-color: {COLORS['accent']};
+                color: white;
+            }}
+        """)
+        self.btn_test_bank.clicked.connect(self._on_test_bank)
+        debug_layout.addWidget(self.btn_test_bank)
+
+        self.layout.addWidget(debug_group)
+
         self.layout.addStretch()
+
+    def _on_check_vision(self):
+        """Запустить визуальную проверку"""
+        from ..core.navigator import Navigator
+        nav = Navigator()
+        nav.debug_view()
+
+    def _on_test_bank(self):
+        """Тест автоматизации банка"""
+        from ..core.navigator import Navigator
+        # Запускаем в отдельном потоке, так как это долгая операция
+        # Для MVP просто в GUI потоке с processEvents, но лучше Thread.
+        # Поскольку это тест кнопка - запустим так.
+        nav = Navigator()
+        nav.equip_loadouts(count=2)
+
 
     def set_running_state(self, is_running: bool):
         """Обновить состояние кнопок"""

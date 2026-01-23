@@ -47,6 +47,16 @@ def main():
     else:
         logger.warning("⚠️ Ни сундук, ни флаги не найдены!")
 
+    # LOGIC CHECK: Chest -> NE Flag
+    if chest_pos and flags:
+        logger.info("📐 Проверка логики NE Флага...")
+        ne_flag = nav.get_ne_flag(chest_pos, flags)
+        if ne_flag:
+            logger.success(f"✅ NE Флаг найден: {ne_flag}")
+            if target is None: target = ne_flag # Override target for movement test
+        else:
+            logger.warning("⚠️ Флагов в секторе NE (Top-Right) не найдено.")
+
     if target:
         # 4. Движение
         logger.info("🏃 Пробуем сделать шаг к цели...")

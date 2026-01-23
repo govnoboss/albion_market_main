@@ -88,8 +88,8 @@ class MainWindow(QMainWindow):
     def _setup_window(self):
         """Настройка окна"""
         self.setWindowTitle("Albion Market Scanner & Buyer")
-        self.setMinimumSize(1200, 800)
-        self.resize(1400, 900)
+        self.setMinimumSize(800, 600)
+        self.resize(1000, 700)
         self.setStyleSheet(MAIN_STYLE)
 
     def _switch_to_mini_mode(self):

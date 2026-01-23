@@ -55,6 +55,75 @@ class Navigator:
         pyautogui.keyUp('alt')
         time.sleep(0.5) # Ждем исчезновения/появления HUD
 
+        screen_w, screen_h = pyautogui.size()
+        center_x, center_y = screen_w // 2, screen_h // 2
+        
+        # Область поиска (центральная часть экрана, чтобы не ловить лишнее)
+        # Например, 400x400 пикселей в центре
+        search_w, search_h = 400, 400
+        left = center_x - search_w // 2
+        top = center_y - search_h // 2
+        
+        # Захват экрана
+        img = ImageGrab.grab(bbox=(left, top, left + search_w, top + search_h))
+        pixels = img.load()
+        
+        # Диапазон цвета игрока (Синий/Голубой треугольник)
+        # RGB примерно (0, 150-255, 200-255) - очень яркий голубой
+        # Нужно калибровать. Пока возьмем эвристику.
+        
+        x_sum = 0
+        y_sum = 0
+        count = 0
+        
+        for y in range(img.height):
+            for x in range(img.width):
+                r, g, b = pixels[x, y]
+                
+                # 1. Проверка на СИНИЙ (Blue dominant)
+                if b > 180 and g > 150 and r < 100:
+                    
+                    # 2. Проверка на ЧЕРНЫЙ КОНТУР (по соседству)
+                    # Иконка игрока обведена черным. Портал - нет (он светится).
+                    has_black_border = False
+                    
+                    # Проверяем соседей в радиусе 2 пикселей
+                    for dy in range(-2, 3):
+                        for dx in range(-2, 3):
+                            nx, ny = x + dx, y + dy
+                            
+                            # Проверка границ
+                            if 0 <= nx < img.width and 0 <= ny < img.height:
+                                nr, ng, nb = pixels[nx, ny]
+                                # Черный/Очень темный цвет
+                                if nr < 30 and ng < 30 and nb < 30:
+                                    has_black_border = True
+                                    break
+                        if has_black_border: break
+                    
+                    if has_black_border:
+                        x_sum += x
+                        y_sum += y
+                        count += 1
+        
+        if count > 0:
+            # Смещение относительно области захвата
+            # Reconstruct 'left', 'top' since they are local variables in the function
+            screen_w, screen_h = pyautogui.size()
+            center_x, center_y = screen_w // 2, screen_h // 2
+            search_w, search_h = 400, 400
+            left = center_x - search_w // 2
+            top = center_y - search_h // 2
+            
+            found_x = left + (x_sum // count)
+            found_y = top + (y_sum // count)
+            self.logger.debug(f"📍 Игрок найден по цвету (с контуром): {found_x}, {found_y} (px: {count})")
+            return (found_x, found_y)
+            
+        self.logger.warning("⚠️ Игрок не найден! Используем центр экрана.")
+        screen_w, screen_h = pyautogui.size()
+        return (screen_w // 2, screen_h // 2)
+
     def get_player_position(self) -> tuple[int, int]:
         """
         Возвращает координаты центра игрока на экране.
@@ -128,6 +197,55 @@ class Navigator:
         self.logger.warning("⚠️ Игрок не найден! Используем центр экрана.")
         screen_w, screen_h = pyautogui.size()
         return (screen_w // 2, screen_h // 2)
+
+    def is_inventory_open(self) -> bool:
+        """Проверяет, открыт ли инвентарь (по тексту 'Рюкзак')"""
+        area = self.config.get_coordinate_area("inventory_check_area")
+        if not area:
+            return False
+            
+        from ..utils.ocr import read_screen_text
+        text = read_screen_text(area['x'], area['y'], area['w'], area['h'], lang='rus')
+        
+        # Fuzzy match for 'Рюкзак'
+        normalized = text.lower().strip()
+        if "рюкзак" in normalized or "ok3ak" in normalized or "okzak" in normalized: # OCR typos
+            return True
+            
+        return False
+
+    def is_bank_open(self) -> bool:
+        """Проверяет, открыт ли Банк (по тексту 'Банк'/'Bank')"""
+        area = self.config.get_coordinate_area("bank_check_area")
+        if not area:
+            return False
+            
+        from ..utils.ocr import read_screen_text
+        text = read_screen_text(area['x'], area['y'], area['w'], area['h'], lang='rus+eng')
+        
+        normalized = text.lower().strip()
+        if "банк" in normalized or "bank" in normalized:
+            return True
+        return False
+
+    def ensure_inventory_closed(self) -> bool:
+        """
+        Гарантирует, что инвентарь закрыт.
+        Если открыт -> жмет 'I' и проверяет.
+        Возвращает True, если в итоге закрыт.
+        """
+        if self.is_inventory_open():
+            self.logger.info("🎒 Инвентарь открыт! Закрываю (I)...")
+            pyautogui.press('i')
+            time.sleep(1.0)
+            
+            if self.is_inventory_open():
+                self.logger.warning("⚠️ Инвентарь не закрылся после нажатия I!")
+                return False
+            else:
+                self.logger.info("✅ Инвентарь успешно закрыт.")
+                return True
+        return True
         
     def find_yellow_flags(self) -> list[tuple[int, int]]:
         """
@@ -180,6 +298,31 @@ class Navigator:
             flags.append((avg_x, avg_y))
             
         return flags
+
+    def get_ne_flag(self, origin: tuple[int, int], flags: list[tuple[int, int]]) -> tuple[int, int] | None:
+        """
+        Ищет флаг, который находится на Северо-Востоке (NE) от origin (обычно сундука).
+        NE = X > origin.X (Право) и Y < origin.Y (Верх).
+        Возвращает ближайший подходящий или None.
+        """
+        if not origin or not flags:
+            return None
+            
+        ox, oy = origin
+        candidates = []
+        
+        for fx, fy in flags:
+            # Проверка квадранта NE (Top-Right)
+            if fx > ox and fy < oy:
+                dist = ((fx - ox)**2 + (fy - oy)**2)**0.5
+                candidates.append(((fx, fy), dist))
+        
+        if not candidates:
+            return None
+            
+        # Сортируем по дистанции (берем ближайший)
+        candidates.sort(key=lambda x: x[1])
+        return candidates[0][0]
 
     def find_chest(self) -> tuple[int, int] | None:
         """
@@ -247,6 +390,12 @@ class Navigator:
             
             self.logger.info(f"🔎 Score сундука ({'Masked' if mask is not None else 'Normal'}): {max_val:.4f} (Требуется: {threshold})")
             
+            # CHECK FOR INF/NAN (Fix for black screen issue)
+            import math
+            if math.isinf(max_val) or math.isnan(max_val) or max_val > 1.0:
+                 self.logger.warning(f"⚠️ Ложное срабатывание (inf/nan) на черной или пустой зоне. Score: {max_val}")
+                 return None
+            
             # Сохраняем "что мы нашли" для дебага
             h, w = template.shape[:2]
             top_left = max_loc
@@ -291,6 +440,108 @@ class Navigator:
         pyautogui.moveTo(target_x, target_y, duration=0.2)
         pyautogui.click(button='right')
         
+    def open_bank(self) -> bool:
+        """
+        Robustly opens the bank.
+        1. Checks if already open.
+        2. Tries to find chest.
+        3. If not found -> Presses Shift+N (Open Travel Map) -> Waits -> Tries again.
+        4. Moves to chest -> Clicks.
+        5. Waits for 'Bank' header (with 2s delay).
+        """
+        if self.is_bank_open():
+            self.logger.info("🏦 Банк уже открыт.")
+            return True
+            
+        self.logger.info("SEARCH: Ищу сундук на экране...")
+        chest_pos = self.find_chest()
+        
+        if not chest_pos:
+            self.logger.warning("⚠️ Сундук не найден. Возможно, карта закрыта.")
+            self.logger.info("ACTION: Нажимаю Shift+N (Открыть Travel Map)...")
+            pyautogui.keyDown('shift')
+            pyautogui.press('n')
+            pyautogui.keyUp('shift')
+            
+            self.logger.info("⏳ Жду 1.0 сек (Анимация карты)...")
+            time.sleep(1.0)
+            
+            self.logger.info("SEARCH: Повторный поиск сундука...")
+            chest_pos = self.find_chest()
+            
+            if not chest_pos:
+                self.logger.error("❌ Сундук НЕ найден даже после открытия карты! Проверьте шаблон.")
+                return False
+        
+        self.logger.success(f"✅ Сундук найден: {chest_pos}")
+        
+        # Move and Click
+        self.move_towards(*chest_pos)
+        time.sleep(0.5)
+        
+        self.logger.info("ACTION: Клик по сундуку (Right Click)...")
+        pyautogui.click(button='right') 
+        
+        self.logger.info("⏳ Ожидание открытия банка (Start 2s delay)...")
+        time.sleep(2.0) # Requested explicit delay
+        
+        # Ждем открытия (до 5 сек после задержки)
+        for i in range(10):
+            if self.is_bank_open():
+                self.logger.success("✅ Банк успешно открыт!")
+                return True
+            self.logger.debug(f"⏳ Проверка банка... ({i+1}/10)")
+            time.sleep(0.5)
+                
+        self.logger.error("❌ Таймаут: Банк не открылся.")
+        return False
+
+    def equip_loadouts(self, count: int = 2) -> bool:
+        """
+        Экипирует первые `count` комплектов из вкладки Loadouts.
+        Использует смещение по Y из настроек (row_height).
+        """
+        if not self.open_bank():
+            return False
+            
+        # Координаты
+        tabs_point = self.config.get_coordinate("bank_tabs_point") # (Опционально, если нужно переключить на сеты)
+        sets_tab = self.config.get_coordinate("bank_sets_tab_point")
+        select_set = self.config.get_coordinate("bank_select_set_point")
+        equip_btn = self.config.get_coordinate("bank_equip_point")
+        
+        if not sets_tab or not select_set or not equip_btn:
+             self.logger.error("❌ Не заданы координаты для банка (Вкладка сетов, Выбор сета или Кнопка Экипировать)!")
+             return False
+             
+        # 1. Переходим во вкладку Сетов
+        self.logger.info("Click -> Вкладка Сетов")
+        pyautogui.click(*sets_tab)
+        time.sleep(1.0) # Анимация
+        
+        # 2. Берем высоту строки из конфига
+        row_height = self.config.get_dropdown_setting("row_height", 30) # Default 30 if not set
+        self.logger.info(f"Using Row Height: {row_height} px")
+        
+        base_x, base_y = select_set
+        
+        # 3. Цикл экипировки
+        for i in range(count):
+            target_y = base_y + (i * row_height)
+            
+            self.logger.info(f"👘 Экипировка Сета #{i+1} (Y={target_y})...")
+            
+            # Клик по сету
+            pyautogui.click(base_x, target_y)
+            time.sleep(0.3)
+            
+            # Клик Экипировать
+            pyautogui.click(*equip_btn)
+            time.sleep(1.5) # Ждем пока наденется (Channeling time usually 0 for quick equip, but safe wait)
+            
+        self.logger.success(f"✅ Экипировано {count} сетов.")
+        return True
+
     def debug_view(self, save_path: str = "nav_debug.png"):
         """
         Создает скриншот с визуализацией того, что видит бот.
@@ -320,7 +571,15 @@ class Navigator:
             cx, cy = chest_pos
             draw.ellipse((cx - 20, cy - 20, cx + 20, cy + 20), outline="cyan", width=3)
             draw.text((cx + 25, cy), "CHEST (Bank)", fill="cyan")
+            draw.text((cx + 25, cy), "CHEST (Bank)", fill="cyan")
             draw.line((px, py, cx, cy), fill="cyan", width=2)
+            
+            # 4. Рисуем NE маршрут (от сундука к NE флагу)
+            ne_flag = self.get_ne_flag(chest_pos, flags)
+            if ne_flag:
+                nx, ny = ne_flag
+                draw.line((cx, cy, nx, ny), fill="#ff00ff", width=4) # Magenta Line
+                draw.text((nx, ny - 25), "TARGET (NE)", fill="#ff00ff")
         
         # Сохраняем
         try:

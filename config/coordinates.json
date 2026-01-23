@@ -13,20 +13,23 @@
             "y": 433
         },
         "item_expand": {
-            "x": 1258,
-            "y": 326
+            "x": 1491,
+            "y": 507,
+            "type": "point"
         },
         "tier_dropdown": {
-            "x": 519,
-            "y": 397
+            "x": 1473,
+            "y": 497,
+            "type": "point"
         },
         "enchant_dropdown": {
             "x": 668,
             "y": 396
         },
         "quality_dropdown": {
-            "x": 813,
-            "y": 398
+            "x": 1151,
+            "y": 363,
+            "type": "point"
         },
         "menu_close": {
             "x": 942,
@@ -40,10 +43,10 @@
             "type": "area"
         },
         "market_menu_check": {
-            "x": 554,
-            "y": 165,
-            "w": 101,
-            "h": 89,
+            "x": 718,
+            "y": 415,
+            "w": 388,
+            "h": 207,
             "type": "area"
         },
         "item_icon_check": {
@@ -80,8 +83,8 @@
             "type": "area"
         },
         "item_sort": {
-            "x": 728,
-            "y": 366,
+            "x": 1264,
+            "y": 472,
             "type": "point"
         },
         "item_menu_check": {
@@ -104,6 +107,55 @@
             "w": 124,
             "h": 25,
             "type": "area"
+        },
+        "inventory_check_area": {
+            "x": 1629,
+            "y": 107,
+            "w": 102,
+            "h": 37,
+            "type": "area"
+        },
+        "bank_check_area": {
+            "x": 110,
+            "y": 97,
+            "w": 83,
+            "h": 38,
+            "type": "area"
+        },
+        "bank_sets_tab_point": {
+            "x": 174,
+            "y": 334,
+            "type": "point"
+        },
+        "bank_select_set_point": {
+            "x": 156,
+            "y": 249,
+            "type": "point"
+        },
+        "bank_equip_point": {
+            "x": 422,
+            "y": 247,
+            "type": "point"
+        },
+        "bank_move_all_point": {
+            "x": 92,
+            "y": 943,
+            "type": "point"
+        },
+        "bank_to_inventory_point": {
+            "x": 94,
+            "y": 867,
+            "type": "point"
+        },
+        "bank_from_inventory_point": {
+            "x": 96,
+            "y": 901,
+            "type": "point"
+        },
+        "bank_tabs_point": {
+            "x": 161,
+            "y": 205,
+            "type": "point"
         }
     },
     "settings": {
@@ -111,8 +163,8 @@
         "scan_interval": 100
     },
     "dropdowns": {
-        "row_height": 26,
-        "list_start_offset": 30
+        "row_height": 18,
+        "list_start_offset": 31
     },
     "scan_filters": {
         "tiers": [

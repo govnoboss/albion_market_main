@@ -40,8 +40,10 @@ class CoordinatesTab(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setStyleSheet("background: transparent;")
         
         content = QWidget()
+        content.setStyleSheet("background: transparent;")
         self.content_layout = QVBoxLayout(content)
         self.content_layout.setSpacing(15)
         
@@ -72,6 +74,17 @@ class CoordinatesTab(QWidget):
             "Black Market OCR": [
                 ("ui_avatar_check", "Аватар (Проверка UI)", "area"),
                 ("travel_mode_text", "Текст 'Игрок по центру'", "area"),
+                ("inventory_check_area", "Текст 'Рюкзак'", "area"),
+                ("bank_check_area", "Текст 'Банк' (Заголовок)", "area"),
+            ],
+            "Black Market (Bank)": [
+                ("bank_tabs_point", "Вкладки банка", "point"),
+                ("bank_sets_tab_point", "Вкладка с сетами (Loadouts)", "point"),
+                ("bank_select_set_point", "Выбрать комплект", "point"),
+                ("bank_equip_point", "Экипировать", "point"),
+                ("bank_move_all_point", "Переместить все", "point"),
+                ("bank_to_inventory_point", "В инвентарь (Withdraw)", "point"),
+                ("bank_from_inventory_point", "Из инвентаря (Deposit)", "point"),
             ]
         }
         
@@ -263,7 +276,19 @@ class CoordinatesTab(QWidget):
                 f"Результат: '{text}'\n\n(Russian OCR)")
             return
 
-        if key == "market_name_area":
+            QMessageBox.information(self, "OCR Result (ENG)", 
+                f"Результат: '{text}'\n\n(English OCR)")
+            return
+
+        if key in ["inventory_check_area", "bank_check_area"]:
+            from ..utils.ocr import read_screen_text
+            # Используем rus+eng, так как Рюкзак=Rus, Bank=Eng (возможно)
+            text = read_screen_text(area['x'], area['y'], area['w'], area['h'], lang='rus+eng')
+            QMessageBox.information(self, f"OCR Result ({key})", 
+                f"Результат: '{text}'")
+            return
+
+        # 3. Обычный OCR тест (для остальных)
             from ..utils.ocr import read_screen_text
             text = read_screen_text(area['x'], area['y'], area['w'], area['h'], lang='eng')
             QMessageBox.information(self, "OCR Result (ENG)", 

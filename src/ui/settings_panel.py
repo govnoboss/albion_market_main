@@ -18,9 +18,18 @@ class SettingsPanel(QScrollArea):
         super().__init__()
         self.setWidgetResizable(True)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        
+        # Убираем рамки и ставим фон
+        self.setStyleSheet("""
+            QScrollArea { border: none; background-color: #0d1117; }
+            QWidget { background-color: #0d1117; color: #f0f6fc; }
+            QGroupBox { background-color: transparent; }
+            QLabel { background-color: transparent; }
+            QCheckBox { background-color: transparent; }
+        """)
         
         self.content_widget = QWidget()
+        self.content_widget.setObjectName("settingsContent") # Для CSS если нужно
         self.setWidget(self.content_widget)
         
         self._setup_ui()

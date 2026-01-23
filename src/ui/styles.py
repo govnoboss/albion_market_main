@@ -363,6 +363,52 @@ QToolTip {
     padding: 8px;
     color: #f0f6fc;
 }
+
+/* QMessageBox */
+QMessageBox {
+    background-color: #161b22;
+    color: #f0f6fc;
+}
+
+QMessageBox QLabel {
+    color: #f0f6fc;
+}
+
+/* Таблицы (QTableWidget) */
+QTableWidget {
+    background-color: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    gridline-color: #30363d;
+    color: #f0f6fc;
+    selection-background-color: #1f6feb;
+    selection-color: #f0f6fc;
+    outline: none;
+}
+
+QTableWidget::item {
+    padding: 5px;
+    border-bottom: 1px solid #161b22;
+}
+
+QTableWidget::item:selected {
+    background-color: #21262d; 
+    border-bottom: 1px solid #1f6feb;
+}
+
+QHeaderView::section {
+    background-color: #161b22;
+    color: #8b949e;
+    padding: 8px;
+    border: none;
+    border-bottom: 1px solid #30363d;
+    font-weight: 600;
+}
+
+QTableWidget QTableCornerButton::section {
+    background-color: #161b22;
+    border: none;
+}
 """
 
 # Стиль для оверлея захвата координат
