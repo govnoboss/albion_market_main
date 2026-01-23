@@ -83,6 +83,27 @@
             "x": 728,
             "y": 366,
             "type": "point"
+        },
+        "item_menu_check": {
+            "x": 972,
+            "y": 304,
+            "w": 509,
+            "h": 48,
+            "type": "area"
+        },
+        "ui_avatar_check": {
+            "x": 24,
+            "y": 26,
+            "w": 73,
+            "h": 71,
+            "type": "area"
+        },
+        "travel_mode_text": {
+            "x": 1699,
+            "y": 857,
+            "w": 124,
+            "h": 25,
+            "type": "area"
         }
     },
     "settings": {

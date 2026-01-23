@@ -236,6 +236,11 @@ class MainWindow(QMainWindow):
         self.items_panel = ItemsPanel()
         self.tabs.addTab(self.items_panel, "📦 Предметы")
 
+        # --- Вкладка 3 (New): Black Market ---
+        from .black_market_tab import BlackMarketTab
+        self.bm_tab = BlackMarketTab()
+        self.tabs.addTab(self.bm_tab, "🕷️ Black Market")
+
         # --- Вкладка 3: Координаты ---
         from .coordinates_tab import CoordinatesTab
         self.coords_tab = CoordinatesTab()

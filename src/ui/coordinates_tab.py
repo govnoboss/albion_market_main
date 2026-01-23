@@ -64,9 +64,14 @@ class CoordinatesTab(QWidget):
             "OCR (Распознавание / Валидация)": [
                 ("quality_text_region", "Текст Качества", "area"),
                 ("market_menu_check", "Заголовок Рынка (Меню)", "area"),
+                ("item_menu_check", "Валидация Меню Предмета", "area"),
                 ("market_name_area", "🏪 Название рынка (EN)", "area"),
                 ("item_name_area", "📛 Название предмета", "area"),
                 ("best_price_area", "Цена (Топ лот)", "area"),
+            ],
+            "Black Market OCR": [
+                ("ui_avatar_check", "Аватар (Проверка UI)", "area"),
+                ("travel_mode_text", "Текст 'Игрок по центру'", "area"),
             ]
         }
         
@@ -155,7 +160,7 @@ class CoordinatesTab(QWidget):
         self._refresh_values()
         
         # Если это зона валидации -> сохраняем эталонное изображение
-        validation_keys = ["market_menu_check", "item_name_area"]
+        validation_keys = ["market_menu_check", "item_name_area", "ui_avatar_check"]
         if key in validation_keys:
             try:
                 import os
@@ -216,13 +221,53 @@ class CoordinatesTab(QWidget):
                     "Результат: None\n\nПроверьте, что в зоне только цифры.")
             return
         
-        # 2.5. Спец. проверка для Названия Рынка (English OCR)
+        # 2.5. Спец. проверка для Проверки UI (Avatar Pixel Match)
+        if key == "ui_avatar_check":
+            import os
+            import numpy as np
+            from PIL import Image, ImageGrab, ImageChops
+            
+            ref_path = os.path.join(os.getcwd(), "resources", f"ref_{key}.png")
+            if not os.path.exists(ref_path):
+                QMessageBox.warning(self, "Ошибка", f"Нет эталона: {ref_path}\nСначала задайте область!")
+                return
+                
+            # Захват текущего
+            bbox = (area['x'], area['y'], area['x'] + area['w'], area['y'] + area['h'])
+            current_img = ImageGrab.grab(bbox=bbox)
+            ref_img = Image.open(ref_path).convert('RGB')
+            current_img = current_img.resize(ref_img.size) # На всякий случай
+            
+            # Сравнение
+            diff = ImageChops.difference(ref_img, current_img)
+            diff_np = np.array(diff)
+            mean_diff = np.mean(diff_np)
+            
+            # Чем меньше mean_diff, тем больше похожесть
+            # E.g. 0 = копия. > 50 = сильно отличается.
+            
+            is_match = mean_diff < 15.0 # Порог
+            
+            status = "👁️ Аватар на месте (UI Visible)" if is_match else "🕶️ Аватар скрыт (UI Hidden) или изменен"
+            color = "red" if is_match else "green" # Для Travel Mode нам нужно чтобы он ИСЧЕЗ
+            
+            QMessageBox.information(self, "Pixel Check", 
+                f"Статус: {status}\n\nРазличие (Mean Diff): {mean_diff:.2f}\n(Порог < 15.0 -> Match)")
+            return
+
+        # 2.6. Спец. проверка для текста (Travel Mode -> RUS, Market Name -> ENG)
+        if key == "travel_mode_text":
+            from ..utils.ocr import read_screen_text
+            text = read_screen_text(area['x'], area['y'], area['w'], area['h'], lang='rus')
+            QMessageBox.information(self, "OCR Result (RUS)", 
+                f"Результат: '{text}'\n\n(Russian OCR)")
+            return
+
         if key == "market_name_area":
             from ..utils.ocr import read_screen_text
-            
             text = read_screen_text(area['x'], area['y'], area['w'], area['h'], lang='eng')
-            QMessageBox.information(self, "🏪 Название рынка", 
-                f"Результат: {text}\n\n(English OCR)")
+            QMessageBox.information(self, "OCR Result (ENG)", 
+                f"Результат: '{text}'\n\n(English OCR)")
             return
 
         # 3. Обычный OCR тест (для остальных)
