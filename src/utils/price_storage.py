@@ -65,7 +65,7 @@ class PriceStorage:
             item_name: Название предмета (например "Авалонский Плащ")
             tier: Тир (4-8)
             enchant: Зачарование (0-4)
-            quality: Качество (1-5)
+            quality: Качество (игнорируется для ключа, цена сохраняется последняя)
             price: Цена
         """
         if price <= 0:
@@ -78,8 +78,8 @@ class PriceStorage:
         if item_name not in self._data[city]:
             self._data[city][item_name] = {}
         
-        # Ключ вариации: "T4.0.Q1"
-        variant_key = f"T{tier}.{enchant}.Q{quality}"
+        # Ключ вариации: "T4.0" (без качества, объединяем всё)
+        variant_key = f"T{tier}.{enchant}"
         
         # Сохраняем с временной меткой
         self._data[city][item_name][variant_key] = {
@@ -99,7 +99,8 @@ class PriceStorage:
     
     def get_item_price(self, city: str, item_name: str, tier: int, enchant: int, quality: int) -> Optional[int]:
         """Получить цену конкретного предмета"""
-        variant_key = f"T{tier}.{enchant}.Q{quality}"
+        # Ключ теперь без качества
+        variant_key = f"T{tier}.{enchant}"
         try:
             return self._data[city][item_name][variant_key]["price"]
         except KeyError:
@@ -119,3 +120,6 @@ class PriceStorage:
 def get_price_storage() -> PriceStorage:
     """Получить экземпляр хранилища цен (Singleton)"""
     return PriceStorage()
+
+# Экспорт синглтона для удобного импорта
+price_storage = get_price_storage()

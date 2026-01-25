@@ -9,18 +9,19 @@ from PyQt6.QtCore import QObject, pyqtSignal
 
 
 class LogHandler(logging.Handler):
-    """Обработчик логов для отправки в UI"""
+    """Обработчик логов для отправки в UI через сигналы"""
     
-    def __init__(self, callback: Callable[[str, str], None]):
+    def __init__(self, emitter: 'LogEmitter'):
         super().__init__()
-        self.callback = callback
+        self.emitter = emitter
         self.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s', 
                                             datefmt='%H:%M:%S'))
     
     def emit(self, record: logging.LogRecord) -> None:
         msg = self.format(record)
         level = record.levelname.lower()
-        self.callback(msg, level)
+        # Отправляем сигнал (Thread-Safe)
+        self.emitter.log_signal.emit(msg, level)
 
 
 class LogEmitter(QObject):
@@ -49,13 +50,20 @@ class Logger:
         self._ui_handler: Optional[LogHandler] = None
     
     def connect_ui(self, callback: Callable[[str, str], None]) -> None:
-        """Подключить UI callback для получения логов"""
-        if self._ui_handler:
-            self.logger.removeHandler(self._ui_handler)
-        
-        self._ui_handler = LogHandler(callback)
-        self._ui_handler.setLevel(logging.INFO)
-        self.logger.addHandler(self._ui_handler)
+        """
+        Подключить UI callback для получения логов.
+        Callback будет вызываться в потоке UI (через слот).
+        """
+        # 1. Создаем хендлер, если нет
+        if not self._ui_handler:
+            self._ui_handler = LogHandler(self.emitter)
+            self._ui_handler.setLevel(logging.INFO)
+            self.logger.addHandler(self._ui_handler)
+            
+        # 2. Подключаем сигнал к callback (слоту)
+        # Обратите внимание: Qt автоматически определит QueuedConnection,
+        # если сигнал идет из другого потока.
+        self.emitter.log_signal.connect(callback)
     
     def debug(self, msg: str) -> None:
         self.logger.debug(msg)
@@ -68,6 +76,9 @@ class Logger:
     
     def error(self, msg: str) -> None:
         self.logger.error(msg)
+        
+    def critical(self, msg: str) -> None:
+        self.logger.critical(msg)
     
     def success(self, msg: str) -> None:
         """Кастомный уровень для успешных операций"""

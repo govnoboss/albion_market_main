@@ -83,7 +83,8 @@ class DropdownSelector:
             
             # Helper to check list
             def in_list(key):
-                return any(x.lower() == item_lower for x in exceptions.get(key, []))
+                # Using strip() to be safe against trailing spaces in config
+                return any(x.lower().strip() == item_lower for x in exceptions.get(key, []))
 
             if in_list("Tier_1"): offset = 1
             elif in_list("Tier_2"): offset = 2
@@ -126,3 +127,26 @@ class DropdownSelector:
         # Список качеств начинается с 1 (Обычное). Индекс = quality - 1
         index = quality - 1
         return self.get_dropdown_click_point("quality_dropdown", index)
+        
+    # --- Helpers to open menus (since they are used in Bot) ---
+    def open_tier_menu(self, runner_instance):
+        """Click to open Tier dropdown"""
+        # runner_instance must have _human_move_to, _human_click and config
+        coord = self.config.get_coordinate("tier_dropdown")
+        if coord:
+            runner_instance._human_move_to(*coord)
+            runner_instance._human_click()
+            
+    def open_enchant_menu(self, runner_instance):
+        """Click to open Enchant dropdown"""
+        coord = self.config.get_coordinate("enchant_dropdown")
+        if coord:
+            runner_instance._human_move_to(*coord)
+            runner_instance._human_click()
+            
+    def open_quality_menu(self, runner_instance):
+        """Click to open Quality dropdown"""
+        coord = self.config.get_coordinate("quality_dropdown")
+        if coord:
+            runner_instance._human_move_to(*coord)
+            runner_instance._human_click()

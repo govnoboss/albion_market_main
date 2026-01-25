@@ -98,7 +98,7 @@ class PricesTab(QWidget):
         # Сортируем предметы по имени
         for item_name in sorted(items_data.keys()):
             variants = items_data[item_name]
-            # Сортируем варианты (по ключу T4.0.Q1 и т.д.)
+            # Сортируем варианты (по ключу T4.0 и т.д.)
             for variant_key in sorted(variants.keys()):
                 data = variants[variant_key]
                 price = data['price']

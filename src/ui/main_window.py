@@ -61,8 +61,9 @@ class MainWindow(QMainWindow):
     toggle_hotkey_signal = pyqtSignal()
     pause_hotkey_signal = pyqtSignal()
     
-    def __init__(self):
+    def __init__(self, launcher=None):
         super().__init__()
+        self.launcher = launcher
         
         # Инициализация оверлея перед UI, чтобы можно было подключить логгер
         self.mini_overlay = MiniOverlay()
@@ -97,12 +98,11 @@ class MainWindow(QMainWindow):
         # Скрыть главное окно
         self.hide()
         
-        # Позиционировать оверлей в правом верхнем углу (с небольшим отступом)
+        # Позиционировать оверлей по ЦЕНТРУ сверху (чтобы не закрывать Settings/Avatar)
         screen_geo = QApplication.primaryScreen().availableGeometry()
         overlay_w = self.mini_overlay.width()
-        overlay_h = self.mini_overlay.height()
         
-        x = screen_geo.width() - overlay_w - 20
+        x = (screen_geo.width() - overlay_w) // 2
         y = screen_geo.top() + 20
         
         self.mini_overlay.move(x, y)
@@ -163,6 +163,17 @@ class MainWindow(QMainWindow):
         header_layout.addWidget(hotkeys_info)
         
         header_layout.addStretch()
+        
+        # Кнопка 'Меню' (если запущен через лаунчер)
+        if self.launcher:
+            menu_btn = QPushButton("Меню")
+            menu_btn.setFixedSize(60, 24)
+            menu_btn.setStyleSheet("""
+                QPushButton { background: #21262d; color: #8b949e; border: 1px solid #30363d; border-radius: 4px; }
+                QPushButton:hover { background: #30363d; color: #f0f6fc; }
+            """)
+            menu_btn.clicked.connect(self.close) # Закрытие вернет в меню через closeEvent
+            header_layout.addWidget(menu_btn)
         
         # Кнопка 'Мини режим'
         self.mini_mode_btn = QPushButton("↘ Mini Mode")
@@ -232,26 +243,26 @@ class MainWindow(QMainWindow):
         control_layout.addWidget(self.control_panel)
         self.tabs.addTab(self.control_tab, "🎮 Главная")
     
-        # --- Вкладка 2: Предметы ---
-        self.items_panel = ItemsPanel()
-        self.tabs.addTab(self.items_panel, "📦 Предметы")
+        # --- Вкладка 2: Профиты (NEW) ---
+        from .profits_tab import ProfitsTab
+        self.profits_tab = ProfitsTab()
+        self.tabs.addTab(self.profits_tab, "📈 Профиты")
 
-        # --- Вкладка 3 (New): Black Market ---
-        from .black_market_tab import BlackMarketTab
-        self.bm_tab = BlackMarketTab()
-        self.tabs.addTab(self.bm_tab, "🕷️ Black Market")
-
-        # --- Вкладка 3: Координаты ---
-        from .coordinates_tab import CoordinatesTab
-        self.coords_tab = CoordinatesTab()
-        self.tabs.addTab(self.coords_tab, "🗺️ Координаты")
-        
-        # --- Вкладка 4: Цены ---
+        # --- Вкладка 3: Цены ---
         from .prices_tab import PricesTab
         self.prices_tab = PricesTab()
         self.tabs.addTab(self.prices_tab, "💰 Цены")
 
-        # --- Вкладка 5: Настройки ---
+        # --- Вкладка 4: Предметы ---
+        self.items_panel = ItemsPanel()
+        self.tabs.addTab(self.items_panel, "📦 Предметы")
+
+        # --- Вкладка 5: Координаты ---
+        from .coordinates_tab import CoordinatesTab
+        self.coords_tab = CoordinatesTab()
+        self.tabs.addTab(self.coords_tab, "🗺️ Координаты")
+
+        # --- Вкладка 6: Настройки ---
         self.settings_panel = SettingsPanel()
         self.tabs.addTab(self.settings_panel, "⚙️ Настройки")
         
@@ -345,7 +356,13 @@ class MainWindow(QMainWindow):
         # Close overlay too
         self.mini_overlay.close()
         
-        get_logger().info("Приложение закрыто")
+        # Если есть лаунчер -> возвращаемся в меню
+        if self.launcher:
+            self.launcher.show()
+            get_logger().info("Возврат в главное меню")
+        else:
+            get_logger().info("Приложение закрыто")
+            
         event.accept()
 
 

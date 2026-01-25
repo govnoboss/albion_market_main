@@ -12,50 +12,40 @@ class ScreenValidator:
     def check_market_open(area: Dict[str, int]) -> Tuple[bool, str]:
         """
         Проверяет, открыто ли окно рынка.
-        Возвращает: (is_open, details_message)
+        (Только по наличию названия города в заголовке)
         """
         if not area:
-            return True, "Зона проверки не задана"
+            return True, "Зона проверки названия рынка не задана (Skip)"
 
-        # 1. Pixel Match (Prioritized)
-        resources_dir = os.path.join(os.getcwd(), "resources")
-        ref_path = os.path.join(resources_dir, "ref_market_menu_check.png")
-        
-        if os.path.exists(ref_path):
-            try:
-                ref_img = Image.open(ref_path)
-                bbox = (area['x'], area['y'], area['x'] + area['w'], area['y'] + area['h'])
-                current_img = ImageGrab.grab(bbox=bbox)
-                
-                # Сравниваем размеры, на всякий случай
-                if ref_img.size != current_img.size:
-                     current_img = current_img.resize(ref_img.size)
-
-                rms = compare_images_rms(ref_img, current_img)
-                threshold = 30.0 # Порог
-                
-                if rms < threshold:
-                    return True, f"Image Match OK (RMS: {rms:.2f})"
-                else:
-                    return False, f"Image Mismatch (RMS: {rms:.2f} > {threshold})"
-            except Exception as e:
-                get_logger().error(f"Image Method Error: {e}")
-                # Fallback to OCR
-        
-        # 2. OCR Fallback
+        # 2. OCR Only (Pixel Check removed by user request)
         if not is_ocr_available():
-            return True, "OCR N/A, Image Ref Missing"
+            return True, "OCR N/A (Skip Check)"
 
         try:
-            text = read_screen_text(area['x'], area['y'], area['w'], area['h'])
-            text_lower = text.lower()
-            keywords = ["рынок", "market", "order", "ордер", "купить", "покупка", "buy"]
+            # Читаем текст (Eng)
+            text = read_screen_text(area['x'], area['y'], area['w'], area['h'], lang='eng')
+            text_clean = text.strip().lower()
             
-            found = [k for k in keywords if k in text_lower]
+            # Список городов (и ключевых слов заголовка, если вдруг Black Market)
+            valid_indicators = [
+                "bridgewatch", "martlock", "lymhurst", "thetford", 
+                "fort sterling", "caerleon", "brecilien", "black market", 
+                "market" # Fallback если "Market" есть в названии
+            ]
+            
+            # Проверяем нечеткое вхождение
+            found = [k for k in valid_indicators if k in text_clean]
+            
             if found:
-                return True, f"OCR Match OK ('{found[0]}' found in '{text}')"
+                return True, f"Market Open Validated: '{text_clean}' (Found: {found[0]})"
             
-            return False, f"OCR Mismatch (Text: '{text}')"
+            # Если текст слишком короткий (пусто), считаем что закрыто
+            if len(text_clean) < 3:
+                 return False, f"Market Closed (Empty Text): '{text_clean}'"
+                 
+            # Если текст есть, но не город?
+            # Возможно это другое окно.
+            return False, f"Market header mismatch: '{text_clean}' not in cities list"
             
         except Exception as e:
             return True, f"OCR Error: {e}"

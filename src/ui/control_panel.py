@@ -6,8 +6,10 @@
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-    QPushButton, QGroupBox, QProgressBar
+    QPushButton, QGroupBox, QProgressBar, QMessageBox
 )
+import os
+import pyautogui
 
 from ..utils.logger import get_logger
 
@@ -116,5 +118,7 @@ class ControlPanel(QWidget):
             self.progress_bar.setValue(percent)
             self.progress_bar.setFormat(f"{item_name} ({current}/{total})")
         else:
-             self.progress_bar.setValue(0)
-             self.progress_bar.setFormat(item_name if item_name else "Ожидание...")
+            self.progress_bar.setValue(0)
+            self.progress_bar.setFormat(item_name if item_name else "Ожидание...")
+
+

@@ -33,7 +33,7 @@ class MiniOverlay(QWidget):
             Qt.WindowType.Tool
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setFixedSize(320, 130)
+        self.setFixedSize(320, 130) # Compact height
         
     def _setup_ui(self):
         """Создание интерфейса"""
@@ -42,15 +42,15 @@ class MiniOverlay(QWidget):
         self.container.setGeometry(0, 0, 320, 130)
         self.container.setStyleSheet("""
             QFrame {
-                background-color: rgba(22, 27, 34, 230);
+                background-color: rgba(22, 27, 34, 240); /* Чуть менее прозрачный */
                 border: 1px solid #30363d;
                 border-radius: 8px;
             }
         """)
         
         layout = QVBoxLayout(self.container)
-        layout.setContentsMargins(15, 10, 15, 10)
-        layout.setSpacing(5)
+        layout.setContentsMargins(10, 5, 10, 5) # Compact margins
+        layout.setSpacing(2) # Minimal spacing
         
         # --- Верхняя строка: Статус и Кнопка возврата ---
         top_layout = QHBoxLayout()
@@ -63,13 +63,13 @@ class MiniOverlay(QWidget):
         
         self.restore_btn = QPushButton("↙")
         self.restore_btn.setToolTip("Развернуть")
-        self.restore_btn.setFixedSize(24, 24)
+        self.restore_btn.setFixedSize(20, 20)
         self.restore_btn.setStyleSheet("""
             QPushButton { 
                 background-color: transparent; 
                 color: #8b949e; 
                 border: none; 
-                font-size: 16px;
+                font-size: 14px;
                 font-weight: bold;
             }
             QPushButton:hover { color: #58a6ff; }
@@ -81,15 +81,28 @@ class MiniOverlay(QWidget):
         
         # --- Строка прогресса ---
         self.progress_label = QLabel("Ожидание запуска...")
-        self.progress_label.setStyleSheet("color: #f0f6fc; font-size: 13px; border: none; background: transparent;")
+        self.progress_label.setStyleSheet("color: #f0f6fc; font-size: 11px; border: none; background: transparent;")
         layout.addWidget(self.progress_label)
         
-        # --- Строка лога (последнее сообщение) ---
-        self.log_label = QLabel("")
-        self.log_label.setStyleSheet("color: #8b949e; font-size: 11px; font-style: italic; border: none; background: transparent;")
-        self.log_label.setFixedHeight(15)
-        self.log_label.setWordWrap(False) # Обрезаем длинный текст
-        layout.addWidget(self.log_label)
+        # --- Лог (Список) ---
+        from PyQt6.QtWidgets import QListWidget, QAbstractItemView
+        self.log_list = QListWidget()
+        self.log_list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff) # Hide scrollbar
+        self.log_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.log_list.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        self.log_list.setStyleSheet("""
+            QListWidget {
+                background-color: transparent;
+                border: none;
+                color: #8b949e;
+                font-size: 10px;
+            }
+            QListWidget::item {
+                padding: 0px;
+            }
+        """)
+        self.log_list.setFixedHeight(35) # Space for ~3 tiny lines
+        layout.addWidget(self.log_list)
         
         # --- Кнопки управления ---
         btn_layout = QHBoxLayout()
@@ -200,11 +213,18 @@ class MiniOverlay(QWidget):
     def set_last_log(self, message: str):
         """Обновление последней строки лога"""
         # Убираем HTML теги если есть, для простоты просто показываем текст
-        # Можно почистить теги regex-ом, но для скорости пока так
         clean_msg = message
         if ">" in message and "<" in message:
              # Basic stripping of span tags
              import re
              clean_msg = re.sub('<[^<]+?>', '', message)
              
-        self.log_label.setText(clean_msg)
+        # Добавляем в список
+        self.log_list.addItem(clean_msg)
+        
+        # Автопрокрутка вниз
+        self.log_list.scrollToBottom()
+        
+        # Ограничиваем историю (например, 20 строк)
+        if self.log_list.count() > 20:
+             self.log_list.takeItem(0)

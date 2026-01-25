@@ -190,7 +190,7 @@ def read_price_at(area: dict) -> Optional[int]:
         return None
         
     # Используем английский язык для цифр и белый список
-    whitelist = "0123456789km., " # Основные
+    whitelist = "0123456789., " # Основные
     whitelist += "oli|][!t" # Для поддержки fallback логики в parse_price
     
     raw_text = read_screen_text(
@@ -199,3 +199,23 @@ def read_price_at(area: dict) -> Optional[int]:
         whitelist=whitelist
     )
     return parse_price(raw_text)
+
+def read_amount_at(area: dict) -> int:
+    """
+    Считывает количество (целое число) из заданной области.
+    """
+    if not area: return 1 # Default fallback
+    
+    # Только цифры
+    whitelist = "0123456789"
+    # Добавляем возможные OCR ошибки 
+    whitelist += "oli|][!t" 
+    
+    raw_text = read_screen_text(
+        area['x'], area['y'], area['w'], area['h'], 
+        lang='eng', 
+        whitelist=whitelist
+    )
+    
+    val = parse_price(raw_text)
+    return val if val is not None else 0

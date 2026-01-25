@@ -231,6 +231,61 @@ class ConfigManager:
         self._config["tier_exceptions"] = data
         self.save()
 
+    def is_tier_exception(self, tier: int, item_name: str) -> bool:
+        """
+        Проверить, является ли данный предмет исключением для данного тира.
+        (Например, если для T4 он не существует или его нельзя скрафтить).
+        Возвращает True, если надо пропустить.
+        """
+        exceptions = self.get_tier_exceptions()
+
+        # Формат ключа: "Tier_{tier}"
+        key = f"Tier_{tier}"
+        
+        # Если в списке исключений для этого тира есть этот предмет -> True
+        if key in exceptions:
+            # Нормализация для надежности
+            target = item_name.strip()
+            # Проверяем, есть ли совпадение
+            if target in exceptions[key]:
+                 return True
+                 
+        return False
+
+    # === Wholesale Targets (Buyer) ===
+
+    def get_wholesale_targets(self) -> dict:
+        """
+        Получить настройки оптовой закупки.
+        Format: { "Item Name": { "T4.0": {"limit": 10, "enabled": True}, ... } }
+        """
+        return self._config.get("wholesale_targets", {})
+        
+    def set_wholesale_target(self, item_name: str, tier: int, enchant: int, limit: int, enabled: bool):
+        """Сохранить настройку для конкретной вариации"""
+        if "wholesale_targets" not in self._config:
+            self._config["wholesale_targets"] = {}
+            
+        targets = self._config["wholesale_targets"]
+        
+        if item_name not in targets:
+            targets[item_name] = {}
+            
+        key = f"T{tier}.{enchant}"
+        targets[item_name][key] = {
+            "limit": limit,
+            "enabled": enabled
+        }
+        self.save()
+        
+    def get_wholesale_limit(self, item_name: str, tier: int, enchant: int) -> tuple[int, bool]:
+        """Получить (limit, enabled) для вариации. Возвращает (0, False) если не задано."""
+        targets = self._config.get("wholesale_targets", {})
+        key = f"T{tier}.{enchant}"
+        
+        data = targets.get(item_name, {}).get(key, {})
+        return (data.get("limit", 0), data.get("enabled", False))
+
 
 # Глобальный экземпляр
 _config_manager: Optional[ConfigManager] = None

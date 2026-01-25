@@ -52,40 +52,43 @@ class CoordinatesTab(QWidget):
             "Поиск и Покупка": [
                 ("search_input", "Поле поиска", "point"),
                 ("search_clear", "Очистка поиска", "point"),
-                ("buy_button", "Кнопка Купить", "point"),
-                ("item_sort", "🔀 Сортировка", "point"),
-                ("item_expand", "Раскрыть лот", "point"),
-                ("create_buy_order", "Вкладка Заказ", "point"),
-                ("menu_close", "Закрыть меню", "point"),
+                ("buy_button", "Кнопка Купить Предмет", "point"),
+                ("item_sort", "Кнопка Сортировки Предмета", "point"),
+                ("item_expand", "Кнопка Раскрыть цены предмета", "point"),
+                ("create_buy_order", "Кнопка Заказ на покупку", "point"),
+                ("menu_close", "Крестик закрытия меню предмета", "point"),
             ],
             "Фильтры": [
-                ("tier_dropdown", "Меню Тира", "point"),
-                ("enchant_dropdown", "Меню Чары", "point"),
-                ("quality_dropdown", "Меню Качества", "point"),
+                ("tier_dropdown", "Выпадающий список Тира", "point"),
+                ("enchant_dropdown", "Выпадающий список Чары", "point"),
+                ("quality_dropdown", "Выпадающий список Качества", "point"),
             ],
             "OCR (Распознавание / Валидация)": [
-                ("quality_text_region", "Текст Качества", "area"),
+                ("quality_text_region", "Название текущего качество", "area"),
                 ("market_menu_check", "Заголовок Рынка (Меню)", "area"),
-                ("item_menu_check", "Валидация Меню Предмета", "area"),
-                ("market_name_area", "🏪 Название рынка (EN)", "area"),
-                ("item_name_area", "📛 Название предмета", "area"),
+                ("item_menu_check", "Заказы на продажу", "area"),
+                ("market_name_area", "Название текущего рынка", "area"),
+                ("item_name_area", "Область названия предмета", "area"),
                 ("best_price_area", "Цена (Топ лот)", "area"),
             ],
-            "Black Market OCR": [
-                ("ui_avatar_check", "Аватар (Проверка UI)", "area"),
-                ("travel_mode_text", "Текст 'Игрок по центру'", "area"),
-                ("inventory_check_area", "Текст 'Рюкзак'", "area"),
-                ("bank_check_area", "Текст 'Банк' (Заголовок)", "area"),
+            "Закупщик (Ордера)": [
+                ("buyer_minus_btn", "Кнопка Минус", "point"),
+                ("buyer_amount_input", "Кнопка Количество (Ввод)", "point"),
+                ("buyer_create_order_confirm", "Кнопка Заказать (Confirm)", "point"),
+                ("buyer_tab_buy", "Вкладка 'Купить' (Direct)", "point"),
+                ("buyer_top_lot_qty", "OCR: Кол-во в топ лоте", "area"),
+                ("buyer_total_price", "OCR: Итоговая стоимость", "area"),
             ],
-            "Black Market (Bank)": [
-                ("bank_tabs_point", "Вкладки банка", "point"),
-                ("bank_sets_tab_point", "Вкладка с сетами (Loadouts)", "point"),
-                ("bank_select_set_point", "Выбрать комплект", "point"),
-                ("bank_equip_point", "Экипировать", "point"),
-                ("bank_move_all_point", "Переместить все", "point"),
-                ("bank_to_inventory_point", "В инвентарь (Withdraw)", "point"),
-                ("bank_from_inventory_point", "Из инвентаря (Deposit)", "point"),
-            ]
+            "Black Market (New)": [
+                ("bm_sell_tab", "Вкладка 'Продать'", "point"),
+                ("bm_settings_btn", "⚙️ Кнопка Настройки", "point"),
+                ("bm_logout_btn", "🚪 Кнопка Выйти", "point"),
+                ("bm_login_btn", "▶️ Кнопка Войти", "point"),
+                ("bm_open_market_btn", "🏪 Открыть Рынок", "point"),
+                ("bm_char1_area", "👤 Персонаж 1 (Area/Ref)", "area"),
+                ("bm_char2_area", "👤 Персонаж 2 (Area/Ref)", "area"),
+            ],
+
         }
         
         self.coord_widgets = {}  # key -> value_label
@@ -173,7 +176,7 @@ class CoordinatesTab(QWidget):
         self._refresh_values()
         
         # Если это зона валидации -> сохраняем эталонное изображение
-        validation_keys = ["market_menu_check", "item_name_area", "ui_avatar_check"]
+        validation_keys = ["market_menu_check", "item_name_area", "ui_avatar_check", "bm_char1_area", "bm_char2_area"]
         if key in validation_keys:
             try:
                 import os
