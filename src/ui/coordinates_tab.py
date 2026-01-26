@@ -4,7 +4,7 @@
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, 
-    QScrollArea, QFrame, QGroupBox, QMessageBox
+    QScrollArea, QFrame, QGroupBox, QMessageBox, QComboBox, QInputDialog
 )
 from PyQt6.QtCore import Qt, pyqtSlot
 
@@ -18,6 +18,7 @@ class CoordinatesTab(QWidget):
         self.capture = get_capture_manager()
         
         self._setup_ui()
+        self._refresh_profiles() # Load profiles
         self._connect_signals()
         self._refresh_values()
 
@@ -26,15 +27,18 @@ class CoordinatesTab(QWidget):
         
         # Header
         header = QLabel("Управление координатами")
-        header.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 10px;")
+        header.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 2px;")
         layout.addWidget(header)
         
         instruction = QLabel(
             "Для точечных координат: нажмите 'Задать', затем кликните в нужном месте.\n"
             "Для областей (OCR): нажмите 'Задать', затем выделите область с зажатой мышью."
         )
-        instruction.setStyleSheet("color: #888; margin-bottom: 10px;")
+        instruction.setStyleSheet("color: #888; margin-bottom: 2px;")
+        instruction.setStyleSheet("color: #888; margin-bottom: 2px;")
         layout.addWidget(instruction)
+
+        self._setup_profiles_ui(layout) # Add profiles UI
         
         # Scroll Area
         scroll = QScrollArea()
@@ -85,8 +89,8 @@ class CoordinatesTab(QWidget):
                 ("bm_logout_btn", "🚪 Кнопка Выйти", "point"),
                 ("bm_login_btn", "▶️ Кнопка Войти", "point"),
                 ("bm_open_market_btn", "🏪 Открыть Рынок", "point"),
-                ("bm_char1_area", "👤 Персонаж 1 (Area/Ref)", "area"),
-                ("bm_char2_area", "👤 Персонаж 2 (Area/Ref)", "area"),
+                ("bm_char1_area", "👤 Аватарка Персонаж 1 (Area/Ref)", "area"),
+                ("bm_char2_area", "👤 Аватарка Персонаж 2 (Area/Ref)", "area"),
             ],
 
         }
@@ -310,6 +314,99 @@ class CoordinatesTab(QWidget):
             )
         except Exception as e:
             QMessageBox.critical(self, "Ошибка OCR", str(e))
+
+    def _setup_profiles_ui(self, parent_layout):
+        """Создание секции управления профилями"""
+        group = QGroupBox("📁 Профили координат")
+        group_layout = QVBoxLayout(group)
+        
+        # Row with controls
+        controls_layout = QHBoxLayout()
+        
+        self.profiles_combo = QComboBox()
+        self.profiles_combo.setPlaceholderText("Выберите профиль...")
+        self.profiles_combo.setMinimumWidth(150)
+        
+        load_btn = QPushButton("Загрузить")
+        load_btn.clicked.connect(self._on_load_profile)
+        
+        save_btn = QPushButton("Сохранить...")
+        save_btn.clicked.connect(self._on_save_profile)
+        
+        del_btn = QPushButton("Удалить")
+        del_btn.setStyleSheet("""
+            QPushButton { background-color: #4a3b3b; }
+            QPushButton:hover { background-color: #bd3b3b; }
+        """)
+        del_btn.clicked.connect(self._on_delete_profile)
+        
+        controls_layout.addWidget(self.profiles_combo, stretch=1)
+        controls_layout.addWidget(load_btn)
+        controls_layout.addWidget(save_btn)
+        controls_layout.addWidget(del_btn)
+        
+        group_layout.addLayout(controls_layout)
+        parent_layout.addWidget(group)
+
+    def _refresh_profiles(self):
+        """Обновить список профилей в ComboBox"""
+        current = self.profiles_combo.currentText()
+        self.profiles_combo.clear()
+        
+        profiles = self.config.get_profiles_list()
+        self.profiles_combo.addItems(profiles)
+        
+        # Restore selection if possible
+        index = self.profiles_combo.findText(current)
+        if index >= 0:
+            self.profiles_combo.setCurrentIndex(index)
+
+    def _on_save_profile(self):
+        name, ok = QInputDialog.getText(self, "Сохранить профиль", "Введите название профиля:")
+        if ok and name:
+            if self.config.save_profile(name):
+                QMessageBox.information(self, "Успех", f"Профиль '{name}' сохранен!")
+                self._refresh_profiles()
+                # Select the new profile
+                self.profiles_combo.setCurrentText(name)
+            else:
+                QMessageBox.warning(self, "Ошибка", "Не удалось сохранить профиль.\nПроверьте имя и права доступа.")
+
+    def _on_load_profile(self):
+        name = self.profiles_combo.currentText()
+        if not name:
+            return
+            
+        reply = QMessageBox.question(
+            self, "Подтверждение", 
+            f"Загрузить профиль '{name}'?\nТекущие координаты будут перезаписаны!",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            if self.config.load_profile(name):
+                QMessageBox.information(self, "Успех", f"Профиль '{name}' загружен!")
+                self._refresh_values() # Update UI
+            else:
+                QMessageBox.warning(self, "Ошибка", f"Не удалось загрузить профиль '{name}'.")
+
+    def _on_delete_profile(self):
+        name = self.profiles_combo.currentText()
+        if not name:
+            return
+            
+        reply = QMessageBox.question(
+            self, "Подтверждение", 
+            f"Удалить профиль '{name}' навсегда?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            if self.config.delete_profile(name):
+                QMessageBox.information(self, "Успех", f"Профиль '{name}' удален.")
+                self._refresh_profiles()
+            else:
+                QMessageBox.warning(self, "Ошибка", f"Не удалось удалить профиль '{name}'.")
 
     def _refresh_values(self):
         coords = self.config.get_all_coordinates()

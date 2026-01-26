@@ -1,0 +1,251 @@
+{
+    "coordinates": {
+        "search_input": {
+            "x": 1138,
+            "y": 553,
+            "type": "point"
+        },
+        "search_clear": {
+            "x": 1225,
+            "y": 584,
+            "type": "point"
+        },
+        "buy_button": {
+            "x": 974,
+            "y": 620,
+            "type": "point"
+        },
+        "item_expand": {
+            "x": 1258,
+            "y": 323,
+            "type": "point"
+        },
+        "tier_dropdown": {
+            "x": 508,
+            "y": 396,
+            "type": "point"
+        },
+        "enchant_dropdown": {
+            "x": 668,
+            "y": 397,
+            "type": "point"
+        },
+        "quality_dropdown": {
+            "x": 813,
+            "y": 398,
+            "type": "point"
+        },
+        "menu_close": {
+            "x": 938,
+            "y": 309,
+            "type": "point"
+        },
+        "quality_text_region": {
+            "x": 762,
+            "y": 383,
+            "w": 70,
+            "h": 24,
+            "type": "area"
+        },
+        "market_menu_check": {
+            "x": 653,
+            "y": 196,
+            "w": 216,
+            "h": 36,
+            "type": "area"
+        },
+        "item_icon_check": {
+            "x": 451,
+            "y": 303,
+            "w": 76,
+            "h": 72,
+            "type": "area"
+        },
+        "best_price_area": {
+            "x": 1018,
+            "y": 357,
+            "w": 79,
+            "h": 25,
+            "type": "area"
+        },
+        "create_buy_order": {
+            "x": 562,
+            "y": 540,
+            "type": "point"
+        },
+        "item_name_area": {
+            "x": 544,
+            "y": 294,
+            "w": 316,
+            "h": 34,
+            "type": "area"
+        },
+        "market_name_area": {
+            "x": 651,
+            "y": 192,
+            "w": 219,
+            "h": 43,
+            "type": "area"
+        },
+        "item_sort": {
+            "x": 718,
+            "y": 359,
+            "type": "point"
+        },
+        "item_menu_check": {
+            "x": 971,
+            "y": 303,
+            "w": 206,
+            "h": 33,
+            "type": "area"
+        },
+        "ui_avatar_check": {
+            "x": 24,
+            "y": 26,
+            "w": 73,
+            "h": 71,
+            "type": "area"
+        },
+        "travel_mode_text": {
+            "x": 1699,
+            "y": 857,
+            "w": 124,
+            "h": 25,
+            "type": "area"
+        },
+        "inventory_check_area": {
+            "x": 1629,
+            "y": 107,
+            "w": 102,
+            "h": 37,
+            "type": "area"
+        },
+        "bank_check_area": {
+            "x": 110,
+            "y": 97,
+            "w": 83,
+            "h": 38,
+            "type": "area"
+        },
+        "bank_sets_tab_point": {
+            "x": 174,
+            "y": 334,
+            "type": "point"
+        },
+        "bank_select_set_point": {
+            "x": 156,
+            "y": 249,
+            "type": "point"
+        },
+        "bank_equip_point": {
+            "x": 422,
+            "y": 247,
+            "type": "point"
+        },
+        "bank_move_all_point": {
+            "x": 92,
+            "y": 943,
+            "type": "point"
+        },
+        "bank_to_inventory_point": {
+            "x": 94,
+            "y": 867,
+            "type": "point"
+        },
+        "bank_from_inventory_point": {
+            "x": 96,
+            "y": 901,
+            "type": "point"
+        },
+        "bank_tabs_point": {
+            "x": 161,
+            "y": 205,
+            "type": "point"
+        },
+        "bank_first_set_point": {
+            "x": 108,
+            "y": 299,
+            "type": "point"
+        },
+        "bm_sell_tab": {
+            "x": 1391,
+            "y": 412,
+            "type": "point"
+        },
+        "character_list_area": {
+            "x": 42,
+            "y": 179,
+            "w": 321,
+            "h": 377,
+            "type": "area"
+        },
+        "bm_login_btn": {
+            "x": 1157,
+            "y": 924,
+            "type": "point"
+        },
+        "bm_logout_btn": {
+            "x": 1776,
+            "y": 172,
+            "type": "point"
+        },
+        "bm_settings_btn": {
+            "x": 1892,
+            "y": 25,
+            "type": "point"
+        },
+        "bm_char1_area": {
+            "x": 62,
+            "y": 189,
+            "w": 45,
+            "h": 62,
+            "type": "area"
+        },
+        "bm_char2_area": {
+            "x": 63,
+            "y": 474,
+            "w": 42,
+            "h": 67,
+            "type": "area"
+        },
+        "bm_open_market_btn": {
+            "x": 683,
+            "y": 349,
+            "type": "point"
+        },
+        "buyer_minus_btn": {
+            "x": 567,
+            "y": 632,
+            "type": "point"
+        },
+        "buyer_amount_input": {
+            "x": 576,
+            "y": 574,
+            "type": "point"
+        },
+        "buyer_create_order_confirm": {
+            "x": 885,
+            "y": 732,
+            "type": "point"
+        },
+        "buyer_top_lot_qty": {
+            "x": 1102,
+            "y": 362,
+            "w": 39,
+            "h": 20,
+            "type": "area"
+        },
+        "buyer_total_price": {
+            "x": 563,
+            "y": 712,
+            "w": 90,
+            "h": 31,
+            "type": "area"
+        },
+        "buyer_tab_buy": {
+            "x": 569,
+            "y": 479,
+            "type": "point"
+        }
+    }
+}

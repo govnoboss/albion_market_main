@@ -59,29 +59,27 @@ def read_screen_text(x: int, y: int, w: int, h: int, lang: str = 'rus', whitelis
         # Конвертация в Grayscale
         gray = ImageOps.grayscale(processed)
         
-        # Адаптивная Инверсия (для поддержки светлых и темных тем)
-        # Нам нужно получить "Черный текст на Белом фоне".
-        # 1. Считаем среднюю яркость
-        stat = ImageStat.Stat(gray)
-        mean_brightness = stat.mean[0]
+        # --- OTSU THRESHOLDING ---
+        # Автоматическое определение порога (лучше чем фиксированный 140)
+        import cv2
+        import numpy as np
         
-        # 2. Если фон темный (< 128), то текст скорее всего светлый -> Инвертируем
-        # Если фон светлый (> 128), то текст скорее всего темный -> Оставляем как есть
-        if mean_brightness < 128:
-            # Темная тема: инверсия делает фон светлым, текст темным
-            prepared = ImageOps.invert(gray)
-        else:
-            # Светлая тема: уже светлый фон, темный текст
-            prepared = gray
+        # Convert PIL to Numpy
+        img_np = np.array(gray)
         
-        # Усиление контраста (Thresholding)
-        # Все что светлее 140 -> 255 (белый фон), остальное -> 0 (черный текст)
-        threshold = 140 
-        binarized = prepared.point(lambda p: 255 if p > threshold else 0)
-
+        # Otsu's thresholding
+        # Returns (ret, thresh). ret is the optimal threshold value.
+        _, thresh_np = cv2.threshold(img_np, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        
+        # Convert back to PIL
+        binarized = Image.fromarray(thresh_np)
+        
+        # --- SMART INVERSION ---
+        # User requested to REMOVE ImageOps.invert and ImageOps.expand
+        
         # 3. Распознавание
-        # --psm 7: Treat the image as a single text line.
-        config = '--psm 7'
+        # --psm 6: Assume a single uniform block of text.
+        config = '--psm 6'
         if whitelist:
             config += f' -c tessedit_char_whitelist={whitelist}'
             
@@ -189,9 +187,9 @@ def read_price_at(area: dict) -> Optional[int]:
     if not area:
         return None
         
-    # Используем английский язык для цифр и белый список
-    whitelist = "0123456789., " # Основные
-    whitelist += "oli|][!t" # Для поддержки fallback логики в parse_price
+    # whitelist: Цифры + разделители + суффиксы (k, m, b) + пробел
+    # Запрещаем остальные буквы, чтобы избежать мусора типа "Total" -> "70701"
+    whitelist="0123456789.,kKmMBb "
     
     raw_text = read_screen_text(
         area['x'], area['y'], area['w'], area['h'], 
@@ -208,8 +206,6 @@ def read_amount_at(area: dict) -> int:
     
     # Только цифры
     whitelist = "0123456789"
-    # Добавляем возможные OCR ошибки 
-    whitelist += "oli|][!t" 
     
     raw_text = read_screen_text(
         area['x'], area['y'], area['w'], area['h'], 

@@ -8,7 +8,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
     QPushButton, QFrame, QScrollArea, QGridLayout,
-    QGroupBox
+    QGroupBox, QComboBox, QMessageBox, QInputDialog
 )
 from PyQt6.QtGui import QFont
 
@@ -123,6 +123,28 @@ COORDINATE_DEFINITIONS = {
             "name": "⬆️ Из инвентаря",
             "description": "Кнопка 'Положить' или перенос в банк",
             "type": "point"
+        }
+    },
+    "buyer": {
+        "create_buy_order": {
+            "name": "➕ Вкладка 'Создать Заказ'",
+            "description": "Вкладка в окне рынка для создания ордера",
+            "type": "point"
+        },
+        "quantity_input": {
+            "name": "🔢 Ввод количества",
+            "description": "Поле для ввода количества товара",
+            "type": "point"
+        },
+        "price_input": {
+            "name": "💰 Ввод цены",
+            "description": "Поле для ввода цены за единицу",
+            "type": "point"
+        },
+        "buyer_total_price": {
+            "name": "💵 Итоговая сумма (OCR)",
+            "description": "Область с общей стоимостью заказа (Total: ...)",
+            "type": "area"
         }
     }
 }
@@ -248,6 +270,7 @@ class CoordinatePanel(QWidget):
         super().__init__()
         self._cards: Dict[str, CoordinateCard] = {}
         self._setup_ui()
+        self._refresh_profiles() # Load profiles on init
         self._connect_capture_manager()
     
     def _setup_ui(self):
@@ -272,6 +295,8 @@ class CoordinatePanel(QWidget):
         info.setStyleSheet("color: #8b949e; font-size: 13px; margin-bottom: 10px;")
         content_layout.addWidget(info)
         
+        self._setup_profiles_ui(content_layout) # Add profiles section
+
         group_names = {
             "basic": "⚙️ Основные координаты",
             "interaction": "🖱️ Взаимодействие с меню",
@@ -339,6 +364,7 @@ class CoordinatePanel(QWidget):
             self._cards[key].set_capturing(False)
         get_logger().warning("Захват отменен")
     
+    
     def get_missing_coordinates(self) -> list:
         required = ["search_input", "search_clear", "buy_button"]
         config = get_config()
@@ -348,3 +374,107 @@ class CoordinatePanel(QWidget):
                 if key in self._cards:
                     missing.append(self._cards[key].coord_name)
         return missing
+
+    def _setup_profiles_ui(self, parent_layout):
+        """Создание секции управления профилями"""
+        group = QGroupBox("📁 Профили координат")
+        group_layout = QVBoxLayout(group)
+        
+        # Row with controls
+        controls_layout = QHBoxLayout()
+        
+        self.profiles_combo = QComboBox()
+        self.profiles_combo.setPlaceholderText("Выберите профиль...")
+        self.profiles_combo.setMinimumWidth(150)
+        
+        load_btn = QPushButton("Загрузить")
+        load_btn.clicked.connect(self._on_load_profile)
+        
+        save_btn = QPushButton("Сохранить...")
+        save_btn.clicked.connect(self._on_save_profile)
+        
+        del_btn = QPushButton("Удалить")
+        del_btn.setStyleSheet("""
+            QPushButton { background-color: #4a3b3b; }
+            QPushButton:hover { background-color: #bd3b3b; }
+        """)
+        del_btn.clicked.connect(self._on_delete_profile)
+        
+        controls_layout.addWidget(self.profiles_combo, stretch=1)
+        controls_layout.addWidget(load_btn)
+        controls_layout.addWidget(save_btn)
+        controls_layout.addWidget(del_btn)
+        
+        group_layout.addLayout(controls_layout)
+        parent_layout.addWidget(group)
+
+    def _refresh_profiles(self):
+        """Обновить список профилей в ComboBox"""
+        current = self.profiles_combo.currentText()
+        self.profiles_combo.clear()
+        
+        profiles = get_config().get_profiles_list()
+        self.profiles_combo.addItems(profiles)
+        
+        # Restore selection if possible
+        index = self.profiles_combo.findText(current)
+        if index >= 0:
+            self.profiles_combo.setCurrentIndex(index)
+
+    def _on_save_profile(self):
+        name, ok = QInputDialog.getText(self, "Сохранить профиль", "Введите название профиля:")
+        if ok and name:
+            if get_config().save_profile(name):
+                QMessageBox.information(self, "Успех", f"Профиль '{name}' сохранен!")
+                self._refresh_profiles()
+                # Select the new profile
+                self.profiles_combo.setCurrentText(name)
+            else:
+                QMessageBox.warning(self, "Ошибка", "Не удалось сохранить профиль.\nПроверьте имя и права доступа.")
+
+    def _on_load_profile(self):
+        name = self.profiles_combo.currentText()
+        if not name:
+            return
+            
+        reply = QMessageBox.question(
+            self, "Подтверждение", 
+            f"Загрузить профиль '{name}'?\nТекущие координаты будут перезаписаны!",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            if get_config().load_profile(name):
+                QMessageBox.information(self, "Успех", f"Профиль '{name}' загружен!")
+                self._refresh_coordinates_ui()
+            else:
+                QMessageBox.warning(self, "Ошибка", f"Не удалось загрузить профиль '{name}'.")
+
+    def _on_delete_profile(self):
+        name = self.profiles_combo.currentText()
+        if not name:
+            return
+            
+        reply = QMessageBox.question(
+            self, "Подтверждение", 
+            f"Удалить профиль '{name}' навсегда?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            if get_config().delete_profile(name):
+                QMessageBox.information(self, "Успех", f"Профиль '{name}' удален.")
+                self._refresh_profiles()
+            else:
+                QMessageBox.warning(self, "Ошибка", f"Не удалось удалить профиль '{name}'.")
+
+    def _refresh_coordinates_ui(self):
+        """Обновить все карточки текущими значениями из конфига"""
+        # This is a bit duplicative of logic inside cards, but we need to force refresh
+        # Ideally, cards should listen to a config change signal. 
+        # For now, we will iterate and explicitly reload.
+        for card in self._cards.values():
+            card._load_saved_coordinate() 
+            # Note: accessing protected member for pragmatic reasons, 
+            # should expose public reload method in CoordinateCard ideally.
+

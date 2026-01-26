@@ -81,6 +81,15 @@ class BuyerBot(BaseBot):
                     self.logger.warning(f"❌ Не удалось открыть предмет: {item_name}")
                     continue
                 
+                # ПЕРЕД циклом вариаций переходим на вкладку "Заказ" ОДИН РАЗ
+                if not self._is_black_market:
+                     buy_order_tab = self.config.get_coordinate("create_buy_order") 
+                     if buy_order_tab:
+                        self.logger.info("📑 Переход на вкладку 'Создать заказ'")
+                        self._human_move_to(*buy_order_tab)
+                        self._human_click()
+                        time.sleep(0.5)
+
                 for tier, enchant, limit in variants:
                     if self._stop_requested: break
                     processed_count += 1
@@ -172,16 +181,8 @@ class BuyerBot(BaseBot):
 
             self.logger.info(f"📦 Обработка: T{tier}.{enchant} | Осталось купить: {remaining_limit}")
             
-            # 1. Установка параметров (Tab -> Tier -> Enchant)
-            # Переходим на вкладку "Заказ" !!! (Важно: конфиг должен иметь ключ 'create_buy_order')
-            buy_order_tab = self.config.get_coordinate("create_buy_order") # Это вкладка "Создать заказ"
-            if buy_order_tab:
-                self._human_move_to(*buy_order_tab)
-                self._human_click()
-                time.sleep(0.5)
-            else:
-                 self.logger.error("❌ Не настроена координата вкладки 'Создать заказ' (create_buy_order)")
-                 break
+            # 1. Установка параметров (Tier -> Enchant)
+            # Вкладка "Заказ" уже выбрана в _run_wholesale
             
             self._select_tier(tier) 
             self._select_enchant(enchant)
@@ -232,29 +233,58 @@ class BuyerBot(BaseBot):
             # 5. Ввод количества
             self._input_quantity(buy_qty)
             
-            # 6. Ввод цены? (Если мы в Make Order, цена может стоять +1 от топа или current)
-            # ТЗ не говорит менять цену, значит оставляем ту, что предложила игра (обычно match lowest sell order)
-            # Или вводим current_price?
-            # "Вводим меньшее, клик чуть левее... Сравниваем...". Про цену ввода не сказано.
-            # Значит игра сама подставила цену выкупа.
+            # 6. Ввод цены
+            # Цель: Цена ЧР - 6.5% налог - 2.5% fee - 25% profit
+            # Formula: BM * (1 - 0.065 - 0.025 - 0.25) = BM * 0.66
+            
+            # Получаем цену черного рынка
+            bm_price = self.market_data.get(item_name, {}).get(tier, {}).get(enchant, 0)
+            
+            if bm_price <= 0:
+                self.logger.warning(f"⚠️ Нет цены ЧР для {item_name} T{tier}.{enchant}. Пропуск.")
+                consecutive_errors += 1
+                continue
+            
+            # Расчет
+            target_price = int(bm_price * 0.66)
+            if target_price < 1: target_price = 1
+            
+            self.logger.info(f"💰 Расчет цены: BM={bm_price} -> Target={target_price} (66%)")
+            
+            # Ввод цены
+            price_coord = self.config.get_coordinate("price_input")
+            if price_coord:
+                self._human_move_to(*price_coord)
+                self._human_click()
+                self._human_type(str(target_price), clear=True)
+                time.sleep(0.3)
+            else:
+                 self.logger.error("❌ Не задана координата 'price_input'! Не могу ввести цену.")
+                 return 0
             
             # 7. Верификация суммы
-            # Итоговая = buy_qty * current_price * 1.025
-            expected_total = int(buy_qty * current_price * 1.025)
+            # Итоговая = TargetPrice * Quantity * 1.025 (Fee)
+            expected_total_cost = int(target_price * buy_qty * 1.025)
+            
+            self.logger.info(f"💵 Ожидаемая стоимость: {expected_total_cost} (Price: {target_price}, Qty: {buy_qty})")
             
             total_area = self.config.get_coordinate_area("buyer_total_price")
             if total_area:
                 total_ocr = read_price_at(total_area)
                 if total_ocr:
+                    # Добавляем небольшой буфер на округление
+                    diff = abs(total_ocr - expected_total_cost)
                     
-                    diff = abs(total_ocr - expected_total)
-                    if diff > (expected_total):
-                         self.logger.warning(f"⚠️ Ошибка суммы! OCR: {total_ocr} != Exp: {expected_total}. Скип.")
+                    # Если разница > 5% от суммы или > 1000 серебра (на случай мелких сумм)
+                    allowable_diff = max(expected_total_cost * 0.05, 1000)
+                    
+                    if diff > allowable_diff:
+                         self.logger.warning(f"⚠️ Ошибка суммы! OCR: {total_ocr} != Exp: {expected_total_cost} (Diff: {diff}). Скип.")
                          consecutive_errors += 1
                          continue
                 else:
                     self.logger.warning("⚠️ Не удалось прочитать Total Price. Рискнуть?")
-                    # Лучше скип
+                    # Пока скипаем, чтобы не слить деньги
                     consecutive_errors += 1
                     continue
             
@@ -383,7 +413,20 @@ class BuyerBot(BaseBot):
         self._human_click()
         time.sleep(1.0)
         
-        # 4. Раскрыть (если надо) - можно добавить проверку area
+        # 4. Раскрыть (Smart Expand)
+        need_expand = True
+        from ..utils.ocr import read_price_at
+        area = self.config.get_coordinate_area("best_price_area")
+        if area:
+            p = read_price_at(area)
+            if p and p > 0: need_expand = False
+        
+        if need_expand:
+            expand_coord = self.config.get_coordinate("item_expand")
+            if expand_coord:
+                self._human_move_to(*expand_coord)
+                self._human_click()
+                time.sleep(0.5)
         
         # 5. Проверка имени
         if not self._verify_item_name_with_retry(name):
@@ -531,6 +574,38 @@ class BuyerBot(BaseBot):
             self._current_enchant = enchant
 
     def _select_quality(self, quality):
+        """
+        Выбор качества с проверкой OCR.
+        Если уже стоит нужное -> пропускаем клик.
+        """
+        # 0. Имя качества для логов/проверки
+        quality_map = {
+            1: ["Обычное", "Normal"],
+            2: ["Хорошее", "Good"],
+            3: ["Выдающееся", "Outstanding"],
+            4: ["Отличное", "Excellent"],
+            5: ["Шедевр", "Masterpiece"]
+        }
+        expected_names = quality_map.get(quality, [])
+
+        # 1. Проверяем текущее состояние через OCR
+        from ..utils.ocr import read_screen_text, is_ocr_available, fuzzy_match_quality
+        
+        if is_ocr_available():
+            area = self.config.get_coordinate_area("quality_text_region")
+            if area:
+                try:
+                    passive_text = read_screen_text(area['x'], area['y'], area['w'], area['h'])
+                    # self.logger.debug(f"OCR Quality Check: '{passive_text}' vs {expected_names}")
+                    
+                    if fuzzy_match_quality(passive_text, expected_names):
+                        # self.logger.info(f"✅ Качество '{passive_text}' уже выбрано. Skip click.")
+                        return 
+                        
+                except Exception as e:
+                    pass # Fallback to click
+
+        # 2. Если не совпало или нет OCR -> Кликаем как раньше
         coord = self.dropdowns.get_quality_click_point(quality)
         if coord:
             self.dropdowns.open_quality_menu(self)

@@ -287,6 +287,74 @@ class ConfigManager:
         return (data.get("limit", 0), data.get("enabled", False))
 
 
+    # === Profiles ===
+
+    def get_profiles_list(self) -> list:
+        """Получить список доступных профилей"""
+        profiles_dir = self.config_path.parent / "profiles"
+        if not profiles_dir.exists():
+            return []
+        return sorted([f.stem for f in profiles_dir.glob("*.json")])
+
+    def save_profile(self, name: str) -> bool:
+        """Сохранить текущие координаты в профиль"""
+        try:
+            profiles_dir = self.config_path.parent / "profiles"
+            profiles_dir.mkdir(exist_ok=True)
+            
+            # Простейшая валидация имени
+            safe_name = "".join(c for c in name if c.isalnum() or c in (' ', '_', '-')).strip()
+            if not safe_name:
+                return False
+                
+            file_path = profiles_dir / f"{safe_name}.json"
+            
+            # Сохраняем ТОЛЬКО координаты
+            data = {"coordinates": self._config.get("coordinates", {})}
+            
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4, ensure_ascii=False)
+            return True
+        except Exception as e:
+            print(f"Ошибка сохранения профиля: {e}")
+            return False
+
+    def load_profile(self, name: str) -> bool:
+        """Загрузить координаты из профиля"""
+        try:
+            profiles_dir = self.config_path.parent / "profiles"
+            file_path = profiles_dir / f"{name}.json"
+            
+            if not file_path.exists():
+                return False
+                
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                
+            if "coordinates" in data:
+                self._config["coordinates"] = data["coordinates"]
+                self.save() # Сохраняем как текущую активную конфигурацию
+                return True
+            return False
+        except Exception as e:
+            print(f"Ошибка загрузки профиля: {e}")
+            return False
+
+    def delete_profile(self, name: str) -> bool:
+        """Удалить профиль"""
+        try:
+            profiles_dir = self.config_path.parent / "profiles"
+            file_path = profiles_dir / f"{name}.json"
+            
+            if file_path.exists():
+                file_path.unlink()
+                return True
+            return False
+        except Exception as e:
+            print(f"Ошибка удаления профиля: {e}")
+            return False
+
+
 # Глобальный экземпляр
 _config_manager: Optional[ConfigManager] = None
 

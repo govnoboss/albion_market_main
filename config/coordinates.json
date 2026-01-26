@@ -1,43 +1,43 @@
 {
     "coordinates": {
         "search_input": {
-            "x": 631,
-            "y": 269,
+            "x": 626,
+            "y": 268,
             "type": "point"
         },
         "search_clear": {
-            "x": 725,
-            "y": 272,
+            "x": 722,
+            "y": 273,
             "type": "point"
         },
         "buy_button": {
-            "x": 1254,
-            "y": 439,
+            "x": 1274,
+            "y": 436,
             "type": "point"
         },
         "item_expand": {
-            "x": 1258,
-            "y": 323,
+            "x": 1256,
+            "y": 326,
             "type": "point"
         },
         "tier_dropdown": {
-            "x": 508,
-            "y": 396,
-            "type": "point"
-        },
-        "enchant_dropdown": {
-            "x": 668,
+            "x": 514,
             "y": 397,
             "type": "point"
         },
+        "enchant_dropdown": {
+            "x": 672,
+            "y": 396,
+            "type": "point"
+        },
         "quality_dropdown": {
-            "x": 813,
-            "y": 398,
+            "x": 812,
+            "y": 393,
             "type": "point"
         },
         "menu_close": {
-            "x": 938,
-            "y": 309,
+            "x": 940,
+            "y": 305,
             "type": "point"
         },
         "quality_text_region": {
@@ -69,8 +69,8 @@
             "type": "area"
         },
         "create_buy_order": {
-            "x": 562,
-            "y": 540,
+            "x": 570,
+            "y": 535,
             "type": "point"
         },
         "item_name_area": {
@@ -88,8 +88,8 @@
             "type": "area"
         },
         "item_sort": {
-            "x": 718,
-            "y": 359,
+            "x": 710,
+            "y": 360,
             "type": "point"
         },
         "item_menu_check": {
@@ -214,8 +214,8 @@
             "type": "point"
         },
         "buyer_minus_btn": {
-            "x": 567,
-            "y": 632,
+            "x": 556,
+            "y": 627,
             "type": "point"
         },
         "buyer_amount_input": {
@@ -236,10 +236,10 @@
             "type": "area"
         },
         "buyer_total_price": {
-            "x": 563,
-            "y": 712,
-            "w": 90,
-            "h": 31,
+            "x": 567,
+            "y": 711,
+            "w": 87,
+            "h": 32,
             "type": "area"
         },
         "buyer_tab_buy": {
