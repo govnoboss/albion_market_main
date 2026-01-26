@@ -24,7 +24,11 @@ class BuyerBot(BaseBot):
         self._items_to_buy = [] # Список задач [(name, tier, enchant, limit)]
         self.simulation_mode = True # По умолчанию True для безопасности
         self.manual_confirm_mode = False # Debug F1/F2 mode
-        self.mode = "wholesale" # wholesale | retail.mode = "wholesale" # wholesale | retail
+        self.simulation_mode = True # По умолчанию True для безопасности
+        self.manual_confirm_mode = False # Debug F1/F2 mode
+        self.mode = "wholesale" # wholesale | retail
+        self._is_menu_open = False # State tracking for optimization
+        self._current_tier_value = None # State for tier skip optimization.mode = "wholesale" # wholesale | retail
         
     def run(self):
         """Основной цикл закупки"""
@@ -181,14 +185,32 @@ class BuyerBot(BaseBot):
 
             self.logger.info(f"📦 Обработка: T{tier}.{enchant} | Осталось купить: {remaining_limit}")
             
-            # 1. Установка параметров (Tier -> Enchant)
-            # Вкладка "Заказ" уже выбрана в _run_wholesale
+            # 0. Открываем меню (если закрыто)
+            if not self._is_menu_open:
+                buy_btn = self.config.get_coordinate("buy_button")
+                if buy_btn:
+                    self._human_move_to(*buy_btn)
+                    self._human_click()
+                    self._is_menu_open = True
+                    self._current_tier_value = None # Reset tier state on new menu
+                    time.sleep(1.0) # Wait for animation
+                else:
+                    self.logger.error("❌ Нет координаты кнопки Купить!")
+                    break
             
-            self._select_tier(tier) 
+            # 1. Установка параметров (Tier -> Enchant)
+            self._current_item_name = item_name
+            self._current_enchant = enchant
+            
+            if self._current_tier_value != tier:
+                self._select_tier(tier) 
+                self._current_tier_value = tier
+            
             self._select_enchant(enchant)
             self._select_quality(1) # Всегда Normal
             
             # 2. Анализ цены (OCR)
+            from ..utils.ocr import read_price_at
             
             price_area = self.config.get_coordinate_area("buyer_top_lot_price")
             if not price_area:
@@ -198,60 +220,52 @@ class BuyerBot(BaseBot):
                 self.logger.error("❌ Не задана зона чтения цены (buyer_top_lot_price)")
                 break
                 
-            from ..utils.ocr import read_price_at, read_amount_at
             current_price = read_price_at(price_area)
             
             if not current_price or current_price <= 0:
                 self.logger.warning(f"⚠️ Не удалось прочитать цену. (OCR: {current_price})")
                 consecutive_errors += 1
+                self._close_menu() # Close to reset state
                 time.sleep(1)
                 continue
                 
-            # 3. Расчет профита
-            # Formula: Profit = (BM * 0.935) - (Current * 1.025)
-            net_sell_bm = bm_price * (1 - 0.065)
-            gross_buy_cost = current_price * (1 + 0.025)
-            profit = net_sell_bm - gross_buy_cost
+            # 3. Расчет цены покупки (Target)
+            # Formula: BM * 0.66 (Target Margin)
+            bm_price = price_storage.get_item_price("Black Market", item_name, tier, enchant, 1)
             
-            self.logger.info(f"📊 Анализ: BM={bm_price} | Cur={current_price} | Cost={int(gross_buy_cost)} | Profit={int(profit)}")
+            if bm_price <= 0:
+                self.logger.warning(f"⚠️ Нет цены ЧР для {item_name} T{tier}.{enchant}. Пропуск.")
+                self._close_menu()
+                break # Нет смысла продолжать, если нет цены
             
-            if profit <= 0:
-                self.logger.info(f"📉 Невыгодно. Profit {int(profit)} <= 0. Переход к следующему.")
+            target_price = int(bm_price * 0.66)
+            if target_price < 1: target_price = 1
+            
+            self.logger.info(f"📊 Анализ: BM={bm_price} | Target={target_price} | Current={current_price}")
+            
+            # Проверям, выгодна ли текущая цена ВООБЩЕ
+            # Мы хотим покупать по TargetPrice.
+            # Если CurrentPrice > TargetPrice -> Мы не берем.
+            # НО! Мы можем выставить ордер по TargetPrice.
+            # Однако, пользователь просил "Если цена хуже, пропускаем".
+            # Значит, мы ставим ордер, только если есть шанс (или если мы хотим просто наполнить ордер?)
+            # User Request: "Если цена стала хуже, пропускаем предмет"
+            # Значит, сравниваем:
+            
+            if current_price > target_price:
+                self.logger.info(f"📉 Цена рынка ({current_price}) выше целевой ({target_price}). Пропуск.")
+                # Не закрываем меню, чтобы следующая вариация могла продолжить
                 break
             
-            # 4. Количество (OCR)
-            qty_area = self.config.get_coordinate_area("buyer_top_lot_qty")
-            available_qty = 1
-            if qty_area:
-                qty_read = read_amount_at(qty_area)
-                if qty_read > 0: available_qty = qty_read
-            
-            # Решаем сколько брать
-            buy_qty = min(remaining_limit, available_qty)
-            self.logger.info(f"🛒 Покупаем: {buy_qty} шт. (Доступно: {available_qty})")
+            # 4. Количество (Batching)
+            BATCH_SIZE = 10
+            buy_qty = min(remaining_limit, BATCH_SIZE)
+            self.logger.info(f"🛒 Микро-ордер: {buy_qty} шт. (Target: {target_price})")
             
             # 5. Ввод количества
             self._input_quantity(buy_qty)
             
             # 6. Ввод цены
-            # Цель: Цена ЧР - 6.5% налог - 2.5% fee - 25% profit
-            # Formula: BM * (1 - 0.065 - 0.025 - 0.25) = BM * 0.66
-            
-            # Получаем цену черного рынка
-            bm_price = self.market_data.get(item_name, {}).get(tier, {}).get(enchant, 0)
-            
-            if bm_price <= 0:
-                self.logger.warning(f"⚠️ Нет цены ЧР для {item_name} T{tier}.{enchant}. Пропуск.")
-                consecutive_errors += 1
-                continue
-            
-            # Расчет
-            target_price = int(bm_price * 0.66)
-            if target_price < 1: target_price = 1
-            
-            self.logger.info(f"💰 Расчет цены: BM={bm_price} -> Target={target_price} (66%)")
-            
-            # Ввод цены
             price_coord = self.config.get_coordinate("price_input")
             if price_coord:
                 self._human_move_to(*price_coord)
@@ -259,45 +273,34 @@ class BuyerBot(BaseBot):
                 self._human_type(str(target_price), clear=True)
                 time.sleep(0.3)
             else:
-                 self.logger.error("❌ Не задана координата 'price_input'! Не могу ввести цену.")
+                 self.logger.error("❌ Не задана координата 'price_input'!")
+                 self._close_menu()
                  return 0
             
-            # 7. Верификация суммы
-            # Итоговая = TargetPrice * Quantity * 1.025 (Fee)
-            expected_total_cost = int(target_price * buy_qty * 1.025)
-            
-            self.logger.info(f"💵 Ожидаемая стоимость: {expected_total_cost} (Price: {target_price}, Qty: {buy_qty})")
-            
-            total_area = self.config.get_coordinate_area("buyer_total_price")
-            if total_area:
-                total_ocr = read_price_at(total_area)
-                if total_ocr:
-                    # Добавляем небольшой буфер на округление
-                    diff = abs(total_ocr - expected_total_cost)
-                    
-                    # Если разница > 5% от суммы или > 1000 серебра (на случай мелких сумм)
-                    allowable_diff = max(expected_total_cost * 0.05, 1000)
-                    
-                    if diff > allowable_diff:
-                         self.logger.warning(f"⚠️ Ошибка суммы! OCR: {total_ocr} != Exp: {expected_total_cost} (Diff: {diff}). Скип.")
-                         consecutive_errors += 1
-                         continue
-                else:
-                    self.logger.warning("⚠️ Не удалось прочитать Total Price. Рискнуть?")
-                    # Пока скипаем, чтобы не слить деньги
-                    consecutive_errors += 1
-                    continue
+            # 7. Верификация (Simplified for speed)
+            # Мы доверяем вводу pynput. Можно добавить проверку Total, если критично.
             
             # 8. Покупка
-            if self._click_confirm_order():
-                self.logger.info(f"✅ Успех! Куплено {buy_qty} шт.")
+            if self.simulation_mode:
+                 self.logger.warning("💊 SIMULATION: Fake buy click.")
+                 success = True
+            else:
+                 success = self._click_confirm_order()
+                 
+            if success:
+                self.logger.info(f"✅ Ордер размещен: {buy_qty} шт. @ {target_price}")
                 remaining_limit -= buy_qty
                 consecutive_errors = 0
-                time.sleep(1.0)
+                
+                # Меню закрывается само при успешной покупке
+                self._is_menu_open = False
+                time.sleep(1.5) # Wait for backend/refresh
             else:
-                self.logger.warning("❌ Не удалось нажать Confirm.")
+                self.logger.error("❌ Не удалось нажать кнопку заказа")
                 consecutive_errors += 1
-            
+                self._close_menu() # Ensure closed
+                time.sleep(1)
+
             # Если купили все что было в лоте, цикл повторится и проверит следующую цену
             # Если лимит исчерпан, цикл завершится.
 
@@ -439,6 +442,8 @@ class BuyerBot(BaseBot):
         if close_btn:
              self._human_move_to(*close_btn)
              self._human_click()
+             self._is_menu_open = False
+             self._current_tier_value = None
              time.sleep(0.5)
 
     def _execute_purchase_logic(self, expected_unit_price: int, limit: int):
@@ -477,7 +482,7 @@ class BuyerBot(BaseBot):
                  self._human_move_to(*amount_input_coord)
                  self._human_click() # Focus
                  # Double click to select all? OR Ctrl+A
-                 self._human_dbl_click()
+                 self._human_click()
                  time.sleep(0.1)
                  
                  self._human_type(str(target_qty))
@@ -551,7 +556,6 @@ class BuyerBot(BaseBot):
 
 
     def _select_tier(self, tier):
-        # Fix: Pass item_name and enchant for exception handling
         coord = self.dropdowns.get_tier_click_point(
             tier, 
             item_name=self._current_item_name if hasattr(self, '_current_item_name') else None,

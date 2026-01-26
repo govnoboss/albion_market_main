@@ -16,8 +16,8 @@
             "type": "point"
         },
         "item_expand": {
-            "x": 1256,
-            "y": 326,
+            "x": 1252,
+            "y": 323,
             "type": "point"
         },
         "tier_dropdown": {
@@ -41,17 +41,10 @@
             "type": "point"
         },
         "quality_text_region": {
-            "x": 762,
-            "y": 383,
-            "w": 70,
-            "h": 24,
-            "type": "area"
-        },
-        "market_menu_check": {
-            "x": 653,
-            "y": 196,
-            "w": 216,
-            "h": 36,
+            "x": 764,
+            "y": 385,
+            "w": 105,
+            "h": 21,
             "type": "area"
         },
         "item_icon_check": {
@@ -63,9 +56,9 @@
         },
         "best_price_area": {
             "x": 1018,
-            "y": 357,
-            "w": 79,
-            "h": 25,
+            "y": 360,
+            "w": 81,
+            "h": 21,
             "type": "area"
         },
         "create_buy_order": {
@@ -82,8 +75,8 @@
         },
         "market_name_area": {
             "x": 651,
-            "y": 192,
-            "w": 219,
+            "y": 191,
+            "w": 208,
             "h": 43,
             "type": "area"
         },
@@ -245,6 +238,21 @@
         "buyer_tab_buy": {
             "x": 569,
             "y": 479,
+            "type": "point"
+        },
+        "price_input": {
+            "x": 627,
+            "y": 631,
+            "type": "point"
+        },
+        "market_pixel_check": {
+            "x": 560,
+            "y": 310,
+            "color": [
+                205,
+                152,
+                111
+            ],
             "type": "point"
         }
     },

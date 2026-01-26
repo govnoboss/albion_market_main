@@ -109,7 +109,6 @@ class MarketBot(BaseBot):
         self._recovery_attempts = 0
         self._safe_menu_snapshot = None
         
-        self._check_market_safe_state()
         if self._stop_requested: return
 
         # 1. Clear Search
@@ -127,8 +126,7 @@ class MarketBot(BaseBot):
                 time.sleep(random.uniform(0.2, 0.4))
                 
         # 2. Search Input
-        self._check_market_safe_state()
-        if self._stop_requested: return
+
 
         search_coord = self.config.get_coordinate("search_input")
         if not search_coord:
@@ -143,7 +141,6 @@ class MarketBot(BaseBot):
         self.logger.debug("Нажат Enter...")
         
         # 4. Wait Result
-        self._check_market_safe_state()
         buy_coord = self.config.get_coordinate("buy_button")
         
         if buy_coord:
@@ -171,13 +168,13 @@ class MarketBot(BaseBot):
         if not self._verify_item_name_with_retry(name):
             return
 
-        # 5.1 BM Check logic (Skip 'Buy Order' tab click for Scanner if BM?)
+        # 5.1 BM Check logic
         if not self._is_black_market:
             order_tab_coord = self.config.get_coordinate("create_buy_order")
             if order_tab_coord:
                 self._human_move_to(*order_tab_coord)
                 self._human_click()
-                time.sleep(0.5)
+                time.sleep(0.2)
                 
         self._capture_item_menu_state()
         
@@ -375,9 +372,6 @@ class MarketBot(BaseBot):
         return is_open
 
     def _check_market_safe_state(self):
-        # Отключаем вызов super(), так как он делает только простую проверку, 
-        # которую мы здесь расширяем.
-        # super()._check_market_is_open() 
         
         if self._stop_requested: return
         if self._is_paused: return
@@ -387,9 +381,7 @@ class MarketBot(BaseBot):
             return
 
         # 2. Если нет (заголовок не виден), проверяем, открыто ли Меню Предмета
-        # (Если открыто меню предмета, значит рынок тоже технически открыт)
         if self._is_item_menu_open():
-            # self.logger.debug("Market header hidden, but Item Menu is open. Proceeding.")
             return
 
         # 3. Ничего не открыто -> Пауза
@@ -452,7 +444,6 @@ class MarketBot(BaseBot):
                      self.logger.info(f"📸 Opportunistic: {key}")
                      
                      # Wait for price
-                     # Увеличиваем таймаут, так как 0.8 сек мало для прогрузки после смены тира
                      timeout_val = 5 if last_price == 0 else 3.0
                      price = self._wait_for_price_update(last_price, timeout=timeout_val)
                      
@@ -481,7 +472,7 @@ class MarketBot(BaseBot):
                  self._select_quality(1)
                  
                  # READ PRICE
-                 timeout_val = 0.8 if last_price == 0 else 3.0
+                 timeout_val = 2.5 if last_price == 0 else 3.0
                  price = self._wait_for_price_update(last_price, timeout=timeout_val)
                  
                  # Save
@@ -505,7 +496,6 @@ class MarketBot(BaseBot):
     def _select_tier(self, tier: int):
         if self._current_tier == tier: return
         
-        self._check_market_safe_state()
         # Передаем имя и энчант для корректного расчета смещения (исключения)
         coord = self.dropdowns.get_tier_click_point(
             tier, 
@@ -523,7 +513,6 @@ class MarketBot(BaseBot):
     def _select_enchant(self, enchant: int):
         if self._current_enchant == enchant: return
         
-        self._check_market_safe_state()
         coord = self.dropdowns.get_enchant_click_point(enchant)
         if coord:
             self.dropdowns.open_enchant_menu(self)

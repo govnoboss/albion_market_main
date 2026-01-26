@@ -17,20 +17,21 @@ class ScreenValidator:
         if not area:
             return True, "Зона проверки названия рынка не задана (Skip)"
 
-        # 2. OCR Only (Pixel Check removed by user request)
         if not is_ocr_available():
             return True, "OCR N/A (Skip Check)"
 
         try:
-            # Читаем текст (Eng)
-            text = read_screen_text(area['x'], area['y'], area['w'], area['h'], lang='eng')
+            # Читаем текст (Rus+Eng для поддержки обоих языков)
+            text = read_screen_text(area['x'], area['y'], area['w'], area['h'], lang='rus+eng')
             text_clean = text.strip().lower()
             
-            # Список городов (и ключевых слов заголовка, если вдруг Black Market)
+            # Список городов (English + Russian)
             valid_indicators = [
                 "bridgewatch", "martlock", "lymhurst", "thetford", 
                 "fort sterling", "caerleon", "brecilien", "black market", 
-                "market" # Fallback если "Market" есть в названии
+                "market", # Fallback если "Market" есть в названии
+                # Russian names
+                "черный рынок", "рынок"
             ]
             
             # Проверяем нечеткое вхождение
@@ -59,32 +60,9 @@ class ScreenValidator:
             # Если зона не задана, считаем что проверка отключена (True), но с warn
             return True, "Зона item_menu_check не задана (Skip)"
 
-        # 1. Pixel Match
-        resources_dir = os.path.join(os.getcwd(), "resources")
-        ref_path = os.path.join(resources_dir, "ref_item_menu_check.png")
-        
-        if os.path.exists(ref_path):
-            try:
-                ref_img = Image.open(ref_path)
-                bbox = (area['x'], area['y'], area['x'] + area['w'], area['y'] + area['h'])
-                current_img = ImageGrab.grab(bbox=bbox)
-                
-                if ref_img.size != current_img.size:
-                     current_img = current_img.resize(ref_img.size)
-
-                rms = compare_images_rms(ref_img, current_img)
-                threshold = 30.0
-                
-                if rms < threshold:
-                    return True, f"Image Match OK (RMS: {rms:.2f})"
-                else:
-                    return False, f"Image Mismatch (RMS: {rms:.2f} > {threshold})"
-            except Exception as e:
-                 get_logger().error(f"Image Method Error (ItemMenu): {e}")
-        
-        # 2. OCR Fallback
+        # 1. OCR Check
         if not is_ocr_available():
-            return True, "OCR N/A, Ref Missing"
+            return True, "OCR N/A (Skip Check)"
 
         try:
             text = read_screen_text(area['x'], area['y'], area['w'], area['h'])

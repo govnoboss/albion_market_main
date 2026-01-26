@@ -102,14 +102,24 @@ class BaseBot(QThread):
         pyautogui.doubleClick()
         self._record_time("Мышь: Двойной клик", (time.time() - start_time) * 1000)
 
-    def _human_type(self, text: str):
+    def _human_type(self, text: str, clear: bool = False):
         """Ввод текста (pynput)"""
         if self._stop_requested: return
         self._check_pause()
         
         start_time = time.time()
-        from pynput.keyboard import Controller
+        from pynput.keyboard import Controller, Key
         keyboard = Controller()
+        
+        if clear:
+             # Ctrl + A -> Backspace
+             with keyboard.pressed(Key.ctrl):
+                 keyboard.press('a')
+                 keyboard.release('a')
+             time.sleep(0.05)
+             keyboard.press(Key.backspace)
+             keyboard.release(Key.backspace)
+             time.sleep(0.05)
         
         for char in text:
             if self._stop_requested: return
@@ -129,7 +139,6 @@ class BaseBot(QThread):
     def _check_market_is_open(self) -> bool:
         """Проверка, что окно рынка открыто (OCR Name)"""
         start_time = time.time()
-        # Changed from 'market_menu_check' to 'market_name_area' as per user request
         area = self.config.get_coordinate_area("market_name_area")
         
         from .validator import ScreenValidator

@@ -12,7 +12,6 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QFont, QIcon
 
 from .styles import MAIN_STYLE, COLORS
-from .coordinate_panel import CoordinatePanel
 from .control_panel import ControlPanel
 from .items_panel import ItemsPanel
 from .settings_panel import SettingsPanel  # Панель настроек

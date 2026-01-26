@@ -9,12 +9,14 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSlot
 
 from ..utils.config import get_config
+from ..utils.logger import get_logger
 from ..core.coordinate_capture import get_capture_manager
 
 class CoordinatesTab(QWidget):
     def __init__(self):
         super().__init__()
         self.config = get_config()
+        self.logger = get_logger()
         self.capture = get_capture_manager()
         
         self._setup_ui()
@@ -69,7 +71,6 @@ class CoordinatesTab(QWidget):
             ],
             "OCR (Распознавание / Валидация)": [
                 ("quality_text_region", "Название текущего качество", "area"),
-                ("market_menu_check", "Заголовок Рынка (Меню)", "area"),
                 ("item_menu_check", "Заказы на продажу", "area"),
                 ("market_name_area", "Название текущего рынка", "area"),
                 ("item_name_area", "Область названия предмета", "area"),
@@ -78,6 +79,7 @@ class CoordinatesTab(QWidget):
             "Закупщик (Ордера)": [
                 ("buyer_minus_btn", "Кнопка Минус", "point"),
                 ("buyer_amount_input", "Кнопка Количество (Ввод)", "point"),
+                ("price_input", "💰 Ввод цены", "point"),
                 ("buyer_create_order_confirm", "Кнопка Заказать (Confirm)", "point"),
                 ("buyer_tab_buy", "Вкладка 'Купить' (Direct)", "point"),
                 ("buyer_top_lot_qty", "OCR: Кол-во в топ лоте", "area"),

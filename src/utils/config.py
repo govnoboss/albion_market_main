@@ -98,6 +98,26 @@ class ConfigManager:
         
         self._config["coordinates"][key] = {"x": x, "y": y, "w": w, "h": h, "type": "area"}
         self.save()
+
+    def get_coordinate_color(self, key: str) -> Optional[tuple]:
+        """Получить цвет пикселя (r, g, b)"""
+        coord = self._config.get("coordinates", {}).get(key)
+        if coord and isinstance(coord, dict) and "color" in coord:
+            return tuple(coord["color"])
+        return None
+
+    def set_coordinate_color(self, key: str, x: int, y: int, color: tuple) -> None:
+        """Установить координату и цвет пикселя"""
+        if "coordinates" not in self._config:
+            self._config["coordinates"] = {}
+        
+        self._config["coordinates"][key] = {
+            "x": x, 
+            "y": y, 
+            "color": list(color), 
+            "type": "point"
+        }
+        self.save()
     
     def get_all_coordinates(self) -> dict:
         """Получить все координаты"""
