@@ -244,7 +244,7 @@ class CoordinatesTab(QWidget):
             return
         
         # 2.5. Спец. проверка для Проверки UI (Avatar Pixel Match)
-        if key == "ui_avatar_check":
+        if key in ["ui_avatar_check", "bm_char1_area", "bm_char2_area"]:
             import os
             import numpy as np
             from PIL import Image, ImageGrab, ImageChops
@@ -260,21 +260,44 @@ class CoordinatesTab(QWidget):
             ref_img = Image.open(ref_path).convert('RGB')
             current_img = current_img.resize(ref_img.size) # На всякий случай
             
-            # Сравнение
-            diff = ImageChops.difference(ref_img, current_img)
-            diff_np = np.array(diff)
-            mean_diff = np.mean(diff_np)
+            # Сравнение (Standardized)
+            from ..utils.image_utils import compare_images
+            mean_diff = compare_images(ref_img, current_img)
+            
+            # Разница для генерации debug изображения (визуализации)
+            if ref_img.size != current_img.size:
+                current_img_resized = current_img.resize(ref_img.size)
+                diff = ImageChops.difference(ref_img, current_img_resized)
+            else:
+                 diff = ImageChops.difference(ref_img, current_img)
             
             # Чем меньше mean_diff, тем больше похожесть
             # E.g. 0 = копия. > 50 = сильно отличается.
             
             is_match = mean_diff < 15.0 # Порог
             
-            status = "👁️ Аватар на месте (UI Visible)" if is_match else "🕶️ Аватар скрыт (UI Hidden) или изменен"
-            color = "red" if is_match else "green" # Для Travel Mode нам нужно чтобы он ИСЧЕЗ
+            # --- DEBUG SAVE ---
+            debug_curr_path = os.path.join(os.getcwd(), "resources", f"debug_current_{key}.png")
+            debug_diff_path = os.path.join(os.getcwd(), "resources", f"debug_diff_{key}.png")
             
-            QMessageBox.information(self, "Pixel Check", 
-                f"Статус: {status}\n\nРазличие (Mean Diff): {mean_diff:.2f}\n(Порог < 15.0 -> Match)")
+            try:
+                current_img.save(debug_curr_path)
+                diff.save(debug_diff_path)
+            except Exception as e:
+                print(f"Debug save error: {e}")
+
+            status = "👁️ Аватар на месте (UI Visible)" if is_match else "🕶️ Аватар скрыт (UI Hidden) или изменен"
+            
+            msg = (
+                f"Статус: {status}\n"
+                f"Различие (Mean Diff): {mean_diff:.2f}\n"
+                f"(Порог < 15.0 -> Match)\n\n"
+                f"Дебаг файлы сохранены в resources/:\n"
+                f"- debug_current_{key}.png (То что видим сейчас)\n"
+                f"- debug_diff_{key}.png (Разница с эталоном)"
+            )
+            
+            QMessageBox.information(self, "Pixel Check", msg)
             return
 
         # 2.6. Спец. проверка для текста (Travel Mode -> RUS, Market Name -> ENG)

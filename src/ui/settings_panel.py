@@ -5,7 +5,7 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-    QSpinBox, QGroupBox, QFormLayout, QCheckBox,
+    QSpinBox, QDoubleSpinBox, QGroupBox, QFormLayout, QCheckBox,
     QScrollArea
 )
 from ..utils.config import get_config
@@ -62,6 +62,21 @@ class SettingsPanel(QScrollArea):
         general_layout.addRow("Интервал сканирования:", self.scan_interval_spin)
         
         layout.addWidget(general_group)
+
+        # === Таймауты сканирования ===
+        timeouts_group = QGroupBox("⏳ Таймауты сканирования")
+        timeouts_layout = QFormLayout(timeouts_group)
+        timeouts_layout.setSpacing(15)
+
+        # Timeout
+        self.timeout_spin = QDoubleSpinBox()
+        self.timeout_spin.setRange(0.5, 60.0)
+        self.timeout_spin.setSuffix(" сек")
+        self.timeout_spin.setSingleStep(0.5)
+        self.timeout_spin.valueChanged.connect(self._on_timeout_changed)
+        timeouts_layout.addRow("Ожидание обновления цены:", self.timeout_spin)
+
+        layout.addWidget(timeouts_group)
         
         # === Калибровка меню ===
         dropdown_group = QGroupBox("📏 Калибровка выпадающих меню")
@@ -156,7 +171,11 @@ class SettingsPanel(QScrollArea):
         
         # General
         self.click_delay_spin.setValue(config.get_setting("click_delay", 100))
+        self.click_delay_spin.setValue(config.get_setting("click_delay", 100))
         self.scan_interval_spin.setValue(config.get_setting("scan_interval", 500))
+        
+        # Timeouts
+        self.timeout_spin.setValue(config.get_setting("price_update_timeout", 5.0))
         
         # Dropdowns
         self.row_height_spin.setValue(config.get_dropdown_setting("row_height", 28))
@@ -184,6 +203,9 @@ class SettingsPanel(QScrollArea):
         
     def _on_scan_interval_changed(self, value):
         get_config().set_setting("scan_interval", value)
+
+    def _on_timeout_changed(self, value):
+        get_config().set_setting("price_update_timeout", value)
         
     def _on_row_height_changed(self, value):
         get_config().set_dropdown_setting("row_height", value)

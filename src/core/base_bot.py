@@ -211,7 +211,9 @@ class BaseBot(QThread):
         expected_clean = expected_name.strip().lower()
         
         for attempt in range(max_retries + 1):
+            if self._stop_requested: return False
             self._check_pause()
+            if self._stop_requested: return False
             
             ocr_name = read_screen_text(
                 item_name_area['x'], item_name_area['y'],

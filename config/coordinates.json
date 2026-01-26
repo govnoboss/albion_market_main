@@ -195,15 +195,15 @@
             "type": "area"
         },
         "bm_char2_area": {
-            "x": 63,
-            "y": 474,
-            "w": 42,
-            "h": 67,
+            "x": 65,
+            "y": 480,
+            "w": 38,
+            "h": 37,
             "type": "area"
         },
         "bm_open_market_btn": {
-            "x": 683,
-            "y": 349,
+            "x": 762,
+            "y": 392,
             "type": "point"
         },
         "buyer_minus_btn": {
@@ -260,10 +260,11 @@
         "click_delay": 100,
         "scan_interval": 100,
         "char_1_name": "GIGAESHKERE",
-        "char_2_name": "Mambaloid"
+        "char_2_name": "Mambaloid",
+        "price_update_timeout": 10.0
     },
     "dropdowns": {
-        "row_height": 22,
+        "row_height": 25,
         "list_start_offset": 30
     },
     "scan_filters": {

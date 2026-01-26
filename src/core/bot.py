@@ -27,6 +27,9 @@ class MarketBot(BaseBot):
         self._recovery_attempts = 0
         self._safe_menu_snapshot = None
         
+        # Отчет о подозрительных ценах (Collision Report)
+        self._suspicious_reports = []
+        
     def run(self):
         """Основной цикл сканирования"""
         self._is_running = True
@@ -50,7 +53,8 @@ class MarketBot(BaseBot):
             
         self.logger.info(f"Запуск сканирования {total_items} предметов...")
         
-        for i, item_name in enumerate(items):
+        # TEST MODE: Start from 48 to test switch
+        for i, item_name in enumerate(items[48:], start=48):
             if self._stop_requested: break
             
             while self._is_paused:
@@ -179,13 +183,8 @@ class MarketBot(BaseBot):
         self._capture_item_menu_state()
         
         # 6. Reset Filters
-        initial_garbage_price = 0
-        if area:
-             p = read_price_at(area)
-             if p: initial_garbage_price = p
-             
         self._reset_filters()
-        self._scan_variations(initial_last_price=initial_garbage_price)
+        self._scan_variations(initial_last_price=0)
         
         # 8. Close
         close_coord = self.config.get_coordinate("menu_close")
@@ -408,6 +407,9 @@ class MarketBot(BaseBot):
         
         scanned_variants = set()
         last_price = initial_last_price
+
+        # Локальный трекер цен для обнаружения коллизий: { "TX.Y": price }
+        detected_prices = {}
         
         # Текущий энчант на экране (после reset_filters = 0)
         current_screen_enchant = 0
@@ -434,6 +436,11 @@ class MarketBot(BaseBot):
              tier_changed = (self._current_tier != tier)
              self._select_tier(tier)
              
+             # === T4.0 SPECIFIC WAIT ===
+             # Если это самый первый шаг (T4.0), ждем 1 сек по требованию
+             if tier == 4 and self._current_enchant == 0:
+                 time.sleep(1.0)
+             
              # === OPPORTUNISTIC CAPTURE ===
              # Если Tier изменился и текущий энчант на экране входит в фильтры
              if tier_changed and current_screen_enchant in enchants:
@@ -444,7 +451,8 @@ class MarketBot(BaseBot):
                      self.logger.info(f"📸 Opportunistic: {key}")
                      
                      # Wait for price
-                     timeout_val = 5 if last_price == 0 else 3.0
+                     base_timeout = self.config.get_setting("price_update_timeout", 5.0)
+                     timeout_val = (base_timeout + 1.0) if last_price == 0 else base_timeout
                      price = self._wait_for_price_update(last_price, timeout=timeout_val)
                      
                      if price > 0:
@@ -472,7 +480,8 @@ class MarketBot(BaseBot):
                  self._select_quality(1)
                  
                  # READ PRICE
-                 timeout_val = 2.5 if last_price == 0 else 3.0
+                 base_timeout = self.config.get_setting("price_update_timeout", 5.0)
+                 timeout_val = 2.0 if last_price == 0 else base_timeout
                  price = self._wait_for_price_update(last_price, timeout=timeout_val)
                  
                  # Save
@@ -489,7 +498,16 @@ class MarketBot(BaseBot):
                      )
                      last_price = price
                      
+                     # --- TRACKING ---
+                     detected_prices[key] = price
+                     
+                     # --- STUCK PRICE CHECK (T4.0) - REMOVED (Replaced by Collision Check) ---
+
+                     
                  scanned_variants.add(key)
+                 
+        # === POST-SCAN ANALYSIS (Collision Check) ===
+        self._verify_price_collisions(detected_prices)
                  
     # === Helper Selectors ===
     
@@ -650,19 +668,135 @@ class MarketBot(BaseBot):
         return False
             
     def _perform_character_switch(self, target_char_index: int) -> bool:
-        """Логика смены персонажа (Scanner Specific)"""
-        # ... (Simplified placeholder, real logic was complex string of clicks)
-        # Assuming we don't need full implementation in this refactor step unless it was critical.
-        # It IS critical for 2-char logic.
-        # Ideally I should have kept it. I will return True for now to avoid breaking imports, 
-        # or copy it if I can remember/access it.
-        # I can access the old file content from previous turns in thought process...
-        # Wait, I have to be careful. If I delete it, existing logic breaks.
-        # Let's verify if _perform_character_switch was used in run(). Yes.
-        # I should try to preserve it logic if possible.
-        # Logic: Logout -> Wait -> Select Char -> Login.
-        self.logger.warning("Character Switch trigger! (Logic placeholder in refactor)")
-        return True # Mock for now to prevent crash
+        """
+        Логика смены персонажа (Scanner Specific)
+        Sequence: Settings -> Logout -> Wait 11s -> Select 2nd Char -> Login -> Wait 1s -> Open Market Loop
+        """
+        self.logger.info("🔄 Запуск процедуры смены персонажа...")
+        
+        # 1. Logout Sequence
+        settings_btn = self.config.get_coordinate("bm_settings_btn")
+        if not settings_btn:
+             self.logger.error("Нет координат 'bm_settings_btn'!")
+             return False
+             
+        logout_btn = self.config.get_coordinate("bm_logout_btn")
+        if not logout_btn:
+             self.logger.error("Нет координат 'bm_logout_btn'!")
+             return False
+             
+        # Click Settings
+        self._human_move_to(*settings_btn)
+        self._human_click()
+        time.sleep(1.0)
+        
+        # Click Logout
+        self._human_move_to(*logout_btn)
+        self._human_click()
+        self.logger.info("⏳ Ожидание выхода из игры (11 сек)...")
+        time.sleep(11.0)
+        
+        # 2. Select Character
+        # Note: target_char_index arg is unused, we strictly use 'bm_char2_area' config per user request
+        char_area = self.config.get_coordinate_area("bm_char2_area")
+        if not char_area:
+             self.logger.error("Нет координат 'bm_char2_area' (Area)!")
+             return False
+        
+        # Calculate center for clicking
+        char_icon_click = (char_area['x'] + char_area['w']//2, char_area['y'] + char_area['h']//2)
+        
+        # --- Visual Check Loop ---
+        self.logger.info("Поиск Аватара 2-го персонажа...")
+        
+        import os
+        from PIL import Image, ImageGrab
+        from ..utils.image_utils import compare_images_rms
+        
+        ref_path = os.path.join(os.getcwd(), "resources", "ref_bm_char2_area.png")
+        if not os.path.exists(ref_path):
+            self.logger.warning(f"⚠️ Нет эталона: {ref_path}. Кликаем вслепую...")
+            time.sleep(1.0)
+        else:
+            # Loop check
+            found_char = False
+            ref_img = Image.open(ref_path).convert('RGB')
+            
+            for attempt in range(600):
+                if self._stop_requested: return False
+                
+                # Capture current
+                bbox = (char_area['x'], char_area['y'], char_area['x'] + char_area['w'], char_area['y'] + char_area['h'])
+                current_img = ImageGrab.grab(bbox=bbox)
+                
+                rms = compare_images_rms(ref_img, current_img)
+                self.logger.debug(f"Char2 Check ({attempt+1}): RMS={rms:.2f}")
+                
+                if rms < 20.0: # Threshold
+                    found_char = True
+                    self.logger.info("✅ Аватар найден!")
+                    break
+                    
+                time.sleep(1.0)
+                
+            if not found_char:
+                self.logger.error("❌ Аватар 2-го персонажа не появился (Таймаут)!")
+                return False
+
+        # Клик по иконке персонажа
+        self.logger.info("Выбор 2-го персонажа...")
+        self._human_move_to(*char_icon_click)
+        self._human_click()
+        time.sleep(1.0)
+        
+        # 3. Login
+        login_btn = self.config.get_coordinate("bm_login_btn")
+        if not login_btn:
+             self.logger.error("Нет координат 'bm_login_btn'!")
+             return False
+             
+        self.logger.info("Вход в игру...")
+        self._human_move_to(*login_btn)
+        self._human_click()
+        
+        self.logger.info("⏳ Быстрое ожидание прогрузки (1 сек)...")
+        time.sleep(1.0)
+        
+        # 4. Re-open Market Loop
+        return self._wait_for_market_reopen()
+
+    def _wait_for_market_reopen(self) -> bool:
+        """
+        Цикл открытия рынка: Кликаем NPC раз в секунду, пока рынок не откроется.
+        """
+        npc_coord = self.config.get_coordinate("bm_open_market_btn")
+        if not npc_coord:
+             self.logger.error("Нет координат 'bm_open_market_btn'!")
+             return False
+             
+        self.logger.info("🔄 Ожидание открытия рынка (Клик по NPC)...")
+        
+        max_attempts = 60 # 60 секунд попыток (можно увеличить)
+        
+        for i in range(max_attempts):
+            if self._stop_requested: return False
+            self._check_pause()
+            
+            # 1. Проверка: Уже открыт?
+            if self._check_market_is_open():
+                self.logger.info("✅ Рынок успешно открыт!")
+                time.sleep(1.0) # Даем прогрузиться интерфейсу
+                return True
+                
+            # 2. Клик по NPC
+            self._human_move_to(*npc_coord)
+            self._human_click()
+            
+            # 3. Ждем секунду
+            time.sleep(1.0)
+            
+        self.logger.error("❌ Не удалось открыть рынок за 60 секунд!")
+        return False
         
     def _wait_for_search_result(self, timeout: float = 15.0, initial_pixels=None):
          # Helper moved from BaseBot but heavily used here? 
@@ -709,7 +843,6 @@ class MarketBot(BaseBot):
             return 0
 
         start_time = time.time()
-        same_price_start = None # Время начала стабильного совпадения цены
         
         while time.time() - start_time < timeout:
             if self._stop_requested: return 0
@@ -721,7 +854,6 @@ class MarketBot(BaseBot):
             # 1. Если цена None (не распозналась или пусто) -> Ждем
             if price is None:
                 # self.logger.debug("Цена: None (Loading...)")
-                same_price_start = None # Сброс стабильности
                 time.sleep(0.1)
                 continue
                 
@@ -732,15 +864,7 @@ class MarketBot(BaseBot):
                 
             # 3. Если цена совпадает со старой
             if price == old_price:
-                # Если мы видим одну и ту же цену уже более 10 секунды -> считаем что она 0
-                current_time = time.time()
-                if same_price_start is None:
-                    same_price_start = current_time
-                
-                if current_time - same_price_start > 10:
-                    self.logger.warning(f"⚠️ Цена не обновилась (зависла на {old_price}). Возвращаем 0.")
-                    return 0
-                    
+                # Цены разных предметов не могут совпадать. Ждем обновления.
                 time.sleep(0.1)
                 continue
             
@@ -789,4 +913,91 @@ class MarketBot(BaseBot):
         self.logger.info("─" * 60)
         self.logger.info(f"{'ИТОГО':<25} {total_time/1000:.2f} сек")
         self.logger.info("─" * 60)
+        
+        if self._suspicious_reports:
+             self.logger.warning("\n⚠️ ОТЧЕТ О ПОДОЗРИТЕЛЬНЫХ ПРЕДМЕТАХ (COLLISIONS):")
+             self.logger.warning("Возможно, цены не обновились корректно для:")
+             for item, variants, price in self._suspicious_reports:
+                 self.logger.warning(f"  • {item}: {variants} (Цена: {price})")
+        
         self.logger.info("Сканирование завершено.")
+
+    def _verify_price_collisions(self, prices_map: dict):
+        """
+        Проверка на коллизии цен (одинаковая цена у разных тиров/энчантов).
+        Если обнаружено -> Re-scan.
+        """
+        # 1. Invert map: price -> [variants]
+        price_groups = {}
+        for variant, price in prices_map.items():
+            if price <= 0: continue
+            if price not in price_groups:
+                price_groups[price] = []
+            price_groups[price].append(variant)
+            
+        # 2. Find collisions
+        collisions = {p: v for p, v in price_groups.items() if len(v) > 1}
+        
+        if not collisions:
+            return
+
+        self.logger.warning(f"⚠️ Обнаружены коллизии цен для '{self._current_item_name}':")
+        
+        # 3. Process collisions
+        for price, variants in collisions.items():
+            self.logger.warning(f"  💰 Цена {price} у вариантов: {variants}. Запуск перепроверки...")
+            
+            # Re-scan loop
+            confirmed_variants = []
+            
+            for variant_key in variants:
+                if self._stop_requested: return
+                
+                # Parse Key "T{tier}.{enchant}"
+                try:
+                    t_str, e_str = variant_key.replace("T", "").split(".")
+                    tier = int(t_str)
+                    enchant = int(e_str)
+                except ValueError:
+                    continue
+                    
+                self.logger.info(f"🔄 Re-verifying {variant_key}...")
+                
+                # Select
+                self._select_tier(tier)
+                self._select_enchant(enchant)
+                self._select_quality(1)
+                
+                # Wait & Read
+                # Force wait full timeout to be sure
+                time.sleep(0.5) 
+                base_timeout = self.config.get_setting("price_update_timeout", 5.0)
+                # Передаем last_price=0, чтобы не "схватить" старую цену моментально, 
+                # а честно подождать если она такая же (но мы надеемся что изменится)
+                # Хотя стоп, если она РЕАЛЬНО такая же, мы будем ждать 5 сек зря?
+                # Нет, мы хотим убедиться. Лучше подождать.
+                
+                new_price = self._wait_for_price_update(0, timeout=base_timeout)
+                
+                if new_price > 0:
+                     # Update storage if changed (or confirmed)
+                     # (price_storage handles updates)
+                     from ..utils.price_storage import price_storage
+                     price_storage.save_price(
+                         self._current_city, self._current_item_name,
+                         tier, enchant, 1, new_price
+                     )
+                     
+                     if new_price != price:
+                         self.logger.info(f"✅ Цена исправлена: {variant_key} {price} -> {new_price}")
+                     else:
+                         self.logger.info(f"ℹ️ Цена подтверждена: {variant_key} {new_price}")
+                         confirmed_variants.append(variant_key)
+                else:
+                     self.logger.warning(f"❌ Не удалось получить цену при перепроверке {variant_key}")
+            
+            # 4. Final Report Check
+            # Если после перепроверки у нас все еще есть группа с одинаковой ценой > 1
+            if len(confirmed_variants) > 1:
+                self._suspicious_reports.append((self._current_item_name, confirmed_variants, price))
+
