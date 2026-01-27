@@ -228,7 +228,7 @@ class MarketBot(BaseBot):
         # 1. Динамическая проверка (по снимку)
         if self._safe_menu_snapshot:
             from PIL import ImageGrab
-            from ..utils.image_utils import compare_images
+            from ..utils.image_utils import find_image_on_screens
             
             bbox = (area['x'], area['y'], area['x'] + area['w'], area['y'] + area['h'])
             current_img = ImageGrab.grab(bbox=bbox)
@@ -236,7 +236,7 @@ class MarketBot(BaseBot):
             if self._safe_menu_snapshot.size != current_img.size:
                  current_img = current_img.resize(self._safe_menu_snapshot.size)
 
-            rms = compare_images(self._safe_menu_snapshot, current_img)
+            rms = find_image_on_screens(self._safe_menu_snapshot, current_img)
             threshold = 30.0
             
             if rms > threshold:
@@ -705,42 +705,41 @@ class MarketBot(BaseBot):
         # Calculate center for clicking
         char_icon_click = (char_area['x'] + char_area['w']//2, char_area['y'] + char_area['h']//2)
         
-        # --- Visual Check Loop ---
-        self.logger.info("Поиск Аватара 2-го персонажа...")
+        # --- Visual Check Loop (Template Match) ---
+        self.logger.info("Поиск Аватара 2-го персонажа (Template Finding)...")
         
         import os
-        from PIL import Image, ImageGrab
-        from ..utils.image_utils import compare_images
+        from ..utils.image_utils import find_image_on_screen
         
         ref_path = os.path.join(os.getcwd(), "resources", "ref_bm_char2_area.png")
         if not os.path.exists(ref_path):
-            self.logger.warning(f"⚠️ Нет эталона: {ref_path}. Кликаем вслепую...")
-            time.sleep(1.0)
+            self.logger.error(f"❌ Нет эталона: {ref_path}. Невозможно найти персонажа!")
+            if not self.config.get_coordinate("bm_char2_area"): 
+                 return False
+            self.logger.warning("Пробуем кликнуть по старой координате (Fallback)...")
+            char_icon_click = self.config.get_coordinate("bm_char2_area")
         else:
             # Loop check
-            found_char = False
-            ref_img = Image.open(ref_path).convert('RGB')
+            found_point = None
             
-            for attempt in range(600):
+            for attempt in range(15): # 15 seconds wait max
                 if self._stop_requested: return False
                 
-                # Capture current
-                bbox = (char_area['x'], char_area['y'], char_area['x'] + char_area['w'], char_area['y'] + char_area['h'])
-                current_img = ImageGrab.grab(bbox=bbox)
+                # Ищем по всему экрану (region=None)
+                # confidence=0.85 (нужен opencv, иначе fallback на tochnoe)
+                found_point = find_image_on_screen(ref_path, confidence=0.85)
                 
-                rms = compare_images(ref_img, current_img)
-                self.logger.debug(f"Char2 Check ({attempt+1}): RMS={rms:.2f}")
-                
-                if rms < 20.0: # Threshold
-                    found_char = True
-                    self.logger.info("✅ Аватар найден!")
+                if found_point:
+                    self.logger.info(f"✅ Аватар найден в {found_point}!")
                     break
                     
                 time.sleep(1.0)
                 
-            if not found_char:
-                self.logger.error("❌ Аватар 2-го персонажа не появился (Таймаут)!")
+            if not found_point:
+                self.logger.error("❌ Аватар 2-го персонажа не найден на экране (Таймаут)!")
                 return False
+                
+            char_icon_click = found_point
 
         # Клик по иконке персонажа
         self.logger.info("Выбор 2-го персонажа...")

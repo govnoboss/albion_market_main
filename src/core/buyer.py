@@ -30,6 +30,10 @@ class BuyerBot(BaseBot):
         self._is_menu_open = False # State tracking for optimization
         self._current_tier_value = None # State for tier skip optimization.mode = "wholesale" # wholesale | retail
         
+        # Current Item State (Context for specific tier logic)
+        self._current_item_name = None
+        self._current_enchant = 0
+        
     def run(self):
         """Основной цикл закупки"""
         self._is_running = True
@@ -143,6 +147,9 @@ class BuyerBot(BaseBot):
                     continue
 
                 # 3. Выставляем T/E
+                self._current_item_name = item_name
+                self._current_enchant = 0 # Fresh menu state
+                
                 self._select_tier(tier)
                 self._select_enchant(enchant)
                 
@@ -193,6 +200,7 @@ class BuyerBot(BaseBot):
                     self._human_click()
                     self._is_menu_open = True
                     self._current_tier_value = None # Reset tier state on new menu
+                    self._current_enchant = 0 # Reset enchant state on new menu
                     time.sleep(1.0) # Wait for animation
                 else:
                     self.logger.error("❌ Нет координаты кнопки Купить!")
@@ -200,7 +208,7 @@ class BuyerBot(BaseBot):
             
             # 1. Установка параметров (Tier -> Enchant)
             self._current_item_name = item_name
-            self._current_enchant = enchant
+            # self._current_enchant SHOULD track actual screen state, do not overwrite with target here!
             
             if self._current_tier_value != tier:
                 self._select_tier(tier) 
@@ -222,13 +230,17 @@ class BuyerBot(BaseBot):
                 
             current_price = read_price_at(price_area)
             
-            if not current_price or current_price <= 0:
-                self.logger.warning(f"⚠️ Не удалось прочитать цену. (OCR: {current_price})")
+            if current_price is None:
+                self.logger.warning(f"⚠️ Ошибка чтения цены (None).")
                 consecutive_errors += 1
-                self._close_menu() # Close to reset state
+                self._close_menu()
                 time.sleep(1)
                 continue
                 
+            # If price is 0, we assume market is empty or OCR failed but it's SAFE to place a BUY order at Target.
+            if current_price == 0:
+                 self.logger.info("⚠️ Цена 0 (Пусто/Ошибка). Пробуем выставить ордер (Safe).")
+            
             # 3. Расчет цены покупки (Target)
             # Formula: (BM * 0.935) / (1.025 * (1 + Margin))
             bm_price = price_storage.get_item_price("Black Market", item_name, tier, enchant, 1)
@@ -257,8 +269,9 @@ class BuyerBot(BaseBot):
             # Проверям, выгодна ли текущая цена ВООБЩЕ
             # Мы хотим покупать по TargetPrice.
             # Если CurrentPrice > TargetPrice -> Мы не берем.
+            # EXCEPTION: If CurrentPrice == 0 (Empty), we proceed.
             
-            if current_price > target_price:
+            if current_price > 0 and current_price > target_price:
                 self.logger.info(f"📉 Цена рынка ({current_price}) выше целевой ({target_price}). Пропуск.")
                 # Не закрываем меню, чтобы следующая вариация могла продолжить
                 break
@@ -569,8 +582,8 @@ class BuyerBot(BaseBot):
     def _select_tier(self, tier):
         coord = self.dropdowns.get_tier_click_point(
             tier, 
-            item_name=self._current_item_name if hasattr(self, '_current_item_name') else None,
-            current_enchant=self._current_enchant if hasattr(self, '_current_enchant') else 0
+            item_name=self._current_item_name,
+            current_enchant=self._current_enchant
         )
         if coord:
             self.dropdowns.open_tier_menu(self)

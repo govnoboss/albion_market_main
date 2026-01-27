@@ -188,17 +188,17 @@
             "type": "point"
         },
         "bm_char1_area": {
-            "x": 62,
-            "y": 189,
-            "w": 45,
-            "h": 62,
+            "x": 56,
+            "y": 405,
+            "w": 50,
+            "h": 49,
             "type": "area"
         },
         "bm_char2_area": {
-            "x": 65,
-            "y": 480,
-            "w": 38,
-            "h": 37,
+            "x": 66,
+            "y": 301,
+            "w": 39,
+            "h": 38,
             "type": "area"
         },
         "bm_open_market_btn": {
@@ -9733,5 +9733,20 @@
                 "enabled": true
             }
         }
+    },
+    "buyer_filters": {
+        "tiers": [
+            4,
+            5,
+            6,
+            7,
+            8
+        ],
+        "enchants": [
+            0
+        ],
+        "qualities": [
+            5
+        ]
     }
 }

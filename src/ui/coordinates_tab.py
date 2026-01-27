@@ -242,9 +242,30 @@ class CoordinatesTab(QWidget):
                 QMessageBox.warning(self, "⚠️ Не удалось распознать", 
                     "Результат: None\n\nПроверьте, что в зоне только цифры.")
             return
-        
-        # 2.5. Спец. проверка для Проверки UI (Avatar Pixel Match)
-        if key in ["ui_avatar_check", "bm_char1_area", "bm_char2_area"]:
+
+        # 2.4 TEMPLATE MATCH TEST (BM Char)
+        if key in ["bm_char1_area", "bm_char2_area"]:
+            import os
+            from ..utils.image_utils import find_image_on_screen
+            
+            ref_path = os.path.join(os.getcwd(), "resources", f"ref_{key}.png")
+            if not os.path.exists(ref_path):
+                 QMessageBox.warning(self, "Ошибка", f"Нет эталона: {ref_path}\nСначала задайте область!")
+                 return
+                 
+            # Search
+            found = find_image_on_screen(ref_path, confidence=0.85)
+            
+            if found:
+                 QMessageBox.information(self, "✅ Template Match", 
+                     f"Изображение НАЙДЕНО!\n\nКоординаты центра: {found}\n(Поиск по всему экрану)")
+            else:
+                 QMessageBox.warning(self, "❌ Template Match", 
+                     "Изображение НЕ НАЙДЕНО на экране.\n\nПроверьте, что оно видимо и не перекрыто.")
+            return
+
+        # 2.5. Спец. проверка для Проверки UI (Avatar Pixel Match - Fixed Area)
+        if key in ["ui_avatar_check"]:
             import os
             import numpy as np
             from PIL import Image, ImageGrab, ImageChops
@@ -261,8 +282,8 @@ class CoordinatesTab(QWidget):
             current_img = current_img.resize(ref_img.size) # На всякий случай
             
             # Сравнение (Standardized)
-            from ..utils.image_utils import compare_images
-            mean_diff = compare_images(ref_img, current_img)
+            from ..utils.image_utils import find_image_on_screens
+            mean_diff = find_image_on_screens(ref_img, current_img)
             
             # Разница для генерации debug изображения (визуализации)
             if ref_img.size != current_img.size:

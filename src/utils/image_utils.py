@@ -28,4 +28,32 @@ def compare_images(img1: Image.Image, img2: Image.Image) -> float:
     # stat.mean returns [r, g, b]. We take average of them.
     mean_diff = sum(stat.mean) / len(stat.mean)
     
+    stat = ImageStat.Stat(diff)
+    # stat.mean returns [r, g, b]. We take average of them.
+    mean_diff = sum(stat.mean) / len(stat.mean)
+    
     return mean_diff
+
+def find_image_on_screen(template_path: str, confidence: float = 0.8, region=None):
+    """
+    Поиск изображения на экране (Template Matching).
+    Возвращает координаты центра (x, y) или None.
+    
+    Uses pyautogui.locateCenterOnScreen
+    """
+    import pyautogui
+    try:
+        # Pyscreeze/PyAutoGUI requires opencv-python for confidence support.
+        # If strict match, confidence is ignored by some versions or defaults to exact.
+        # We try with confidence first.
+        point = pyautogui.locateCenterOnScreen(template_path, confidence=confidence, region=region, grayscale=True)
+        return point
+    except Exception as e:
+        # Fallback without confidence if it fails (e.g. no opencv)
+        # print(f"Template match error (first try): {e}")
+        try:
+             point = pyautogui.locateCenterOnScreen(template_path, region=region, grayscale=True)
+             return point
+        except Exception as e2:
+             print(f"Template match error: {e2}")
+             return None
