@@ -4,7 +4,8 @@
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QTabWidget, QTableWidget, 
-    QTableWidgetItem, QHeaderView, QLabel, QPushButton, QHBoxLayout
+    QTableWidgetItem, QHeaderView, QLabel, QPushButton, QHBoxLayout,
+    QLineEdit, QMessageBox
 )
 from PyQt6.QtCore import Qt, QTimer
 
@@ -28,7 +29,60 @@ class PricesTab(QWidget):
         
         top_layout.addStretch()
         
+        # Поиск
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("🔍 Поиск предмета...")
+        self.search_input.setFixedWidth(200)
+        self.search_input.setStyleSheet("""
+            QLineEdit {
+                background-color: #161b22;
+                color: #c9d1d9;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                padding: 5px;
+            }
+        """)
+        self.search_input.textChanged.connect(self.filter_table)
+        top_layout.addWidget(self.search_input)
+        
+        # Кнопка удаления
+        self.delete_btn = QPushButton("🗑️ Удалить запись")
+        self.delete_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #21262d;
+                color: #c9d1d9;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                padding: 5px 15px;
+            }
+            QPushButton:hover {
+                background-color: #b33e3e; /* Red hover */
+                color: white;
+                border-color: #b33e3e;
+            }
+            QPushButton:disabled {
+                background-color: #161b22;
+                color: #484f58;
+                border-color: #30363d;
+            }
+        """)
+        self.delete_btn.setEnabled(False)
+        self.delete_btn.clicked.connect(self.delete_selected_record)
+        top_layout.addWidget(self.delete_btn)
+        
         refresh_btn = QPushButton("Обновить")
+        refresh_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #21262d;
+                color: #c9d1d9;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                padding: 5px 15px;
+            }
+            QPushButton:hover {
+                background-color: #30363d;
+            }
+        """)
         refresh_btn.clicked.connect(self.refresh_data)
         top_layout.addWidget(refresh_btn)
         
@@ -36,6 +90,7 @@ class PricesTab(QWidget):
         
         # Вкладки городов
         self.city_tabs = QTabWidget()
+        self.city_tabs.currentChanged.connect(self.on_tab_changed)
         layout.addWidget(self.city_tabs)
         
         # Инициализация (первая загрузка)
@@ -54,6 +109,7 @@ class PricesTab(QWidget):
         
         if not cities:
             self.city_tabs.addTab(QLabel("Нет данных. Запустите бота для сканирования."), "Пусто")
+            self.delete_btn.setEnabled(False)
             return
             
         cities.sort()
@@ -67,6 +123,10 @@ class PricesTab(QWidget):
                 if self.city_tabs.tabText(i) == current_tab_text:
                     self.city_tabs.setCurrentIndex(i)
                     break
+        
+        # Восстанавливаем фильтр
+        self.filter_table(self.search_input.text())
+        self.update_delete_button_state()
 
     def _create_city_table(self, city):
         """Создать таблицу для конкретного города"""
@@ -77,6 +137,9 @@ class PricesTab(QWidget):
         table = QTableWidget()
         table.setColumnCount(4)
         table.setHorizontalHeaderLabels(["Предмет", "Вариант", "Цена", "Обновлено"])
+        table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         
         # Настройка заголовков
         header = table.horizontalHeader()
@@ -120,5 +183,69 @@ class PricesTab(QWidget):
                 
                 current_row += 1
         
+        table.itemSelectionChanged.connect(self.update_delete_button_state)
         layout.addWidget(table)
         return widget
+
+    def on_tab_changed(self):
+        """При смене вкладки обновляем кнопку и фильтр"""
+        self.filter_table(self.search_input.text())
+        self.update_delete_button_state()
+
+    def get_current_table(self) -> QTableWidget:
+        """Получить таблицу из текущей вкладки"""
+        current_widget = self.city_tabs.currentWidget()
+        if not current_widget:
+            return None
+        # Ищем QTableWidget внутри widget (он там один)
+        return current_widget.findChild(QTableWidget)
+
+    def filter_table(self, text):
+        """Фильтрация таблицы по тексту"""
+        table = self.get_current_table()
+        if not table:
+            return
+            
+        text = text.lower()
+        for i in range(table.rowCount()):
+            item_name = table.item(i, 0).text().lower()
+            if text in item_name:
+                table.setRowHidden(i, False)
+            else:
+                table.setRowHidden(i, True)
+
+    def update_delete_button_state(self):
+        """Активация кнопки удаления при выборе строки"""
+        table = self.get_current_table()
+        if not table:
+            self.delete_btn.setEnabled(False)
+            return
+            
+        self.delete_btn.setEnabled(len(table.selectedItems()) > 0)
+
+    def delete_selected_record(self):
+        """Удаление выбранной записи"""
+        table = self.get_current_table()
+        if not table:
+            return
+            
+        selected_rows = table.selectionModel().selectedRows()
+        if not selected_rows:
+            return
+            
+        row_idx = selected_rows[0].row()
+        
+        item_name = table.item(row_idx, 0).text()
+        variant = table.item(row_idx, 1).text()
+        city = self.city_tabs.tabText(self.city_tabs.currentIndex())
+        
+        confirm = QMessageBox.question(
+            self, 
+            "Удаление записи", 
+            f"Вы уверены, что хотите удалить запись:\n\n{item_name} ({variant}) из {city}?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if confirm == QMessageBox.StandardButton.Yes:
+            self.storage.delete_price(city, item_name, variant)
+            self.refresh_data() # Перезагружаем UI

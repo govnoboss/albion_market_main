@@ -174,6 +174,11 @@ def parse_price(text: str) -> Optional[int]:
         if result <= 5:
             return 0
             
+        # Исключение для 310 (ложное срабатывание OCR при отсутствии цены)
+        if result == 310:
+            logger.info(" OCR Exception: '310' detected as false positive, recording as 0")
+            return 0
+            
         return result
         
     except ValueError:

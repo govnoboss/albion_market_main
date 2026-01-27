@@ -53,8 +53,7 @@ class MarketBot(BaseBot):
             
         self.logger.info(f"Запуск сканирования {total_items} предметов...")
         
-        # TEST MODE: Start from 48 to test switch
-        for i, item_name in enumerate(items[48:], start=48):
+        for i, item_name in enumerate(items):
             if self._stop_requested: break
             
             while self._is_paused:
@@ -229,7 +228,7 @@ class MarketBot(BaseBot):
         # 1. Динамическая проверка (по снимку)
         if self._safe_menu_snapshot:
             from PIL import ImageGrab
-            from ..utils.image_utils import compare_images_rms
+            from ..utils.image_utils import compare_images
             
             bbox = (area['x'], area['y'], area['x'] + area['w'], area['y'] + area['h'])
             current_img = ImageGrab.grab(bbox=bbox)
@@ -237,7 +236,7 @@ class MarketBot(BaseBot):
             if self._safe_menu_snapshot.size != current_img.size:
                  current_img = current_img.resize(self._safe_menu_snapshot.size)
 
-            rms = compare_images_rms(self._safe_menu_snapshot, current_img)
+            rms = compare_images(self._safe_menu_snapshot, current_img)
             threshold = 30.0
             
             if rms > threshold:
@@ -711,7 +710,7 @@ class MarketBot(BaseBot):
         
         import os
         from PIL import Image, ImageGrab
-        from ..utils.image_utils import compare_images_rms
+        from ..utils.image_utils import compare_images
         
         ref_path = os.path.join(os.getcwd(), "resources", "ref_bm_char2_area.png")
         if not os.path.exists(ref_path):
@@ -729,7 +728,7 @@ class MarketBot(BaseBot):
                 bbox = (char_area['x'], char_area['y'], char_area['x'] + char_area['w'], char_area['y'] + char_area['h'])
                 current_img = ImageGrab.grab(bbox=bbox)
                 
-                rms = compare_images_rms(ref_img, current_img)
+                rms = compare_images(ref_img, current_img)
                 self.logger.debug(f"Char2 Check ({attempt+1}): RMS={rms:.2f}")
                 
                 if rms < 20.0: # Threshold

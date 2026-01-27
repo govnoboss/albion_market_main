@@ -178,8 +178,8 @@
             "type": "point"
         },
         "bm_logout_btn": {
-            "x": 1776,
-            "y": 172,
+            "x": 1763,
+            "y": 222,
             "type": "point"
         },
         "bm_settings_btn": {
@@ -677,7 +677,8 @@
             },
             "T5.0": {
                 "limit": 5,
-                "enabled": true
+                "enabled": true,
+                "min_profit": 15
             },
             "T5.1": {
                 "limit": 5,

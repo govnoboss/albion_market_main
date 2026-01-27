@@ -2,7 +2,7 @@ import os
 from typing import Tuple, Dict, Any
 from PIL import Image, ImageGrab
 from ..utils.logger import get_logger
-from ..utils.image_utils import compare_images_rms
+from ..utils.image_utils import compare_images
 from ..utils.ocr import read_screen_text, is_ocr_available
 
 class ScreenValidator:

@@ -230,7 +230,7 @@ class BuyerBot(BaseBot):
                 continue
                 
             # 3. Расчет цены покупки (Target)
-            # Formula: BM * 0.66 (Target Margin)
+            # Formula: (BM * 0.935) / (1.025 * (1 + Margin))
             bm_price = price_storage.get_item_price("Black Market", item_name, tier, enchant, 1)
             
             if bm_price <= 0:
@@ -238,19 +238,25 @@ class BuyerBot(BaseBot):
                 self._close_menu()
                 break # Нет смысла продолжать, если нет цены
             
-            target_price = int(bm_price * 0.66)
+            # Get Min Profit % from config
+            _, _, min_profit_percent = self.config.get_wholesale_limit(item_name, tier, enchant)
+            
+            # Factors
+            sell_tax_factor = 0.935      # 6.5% tax (4% Premium + 2.5% Setup)
+            buy_tax_factor = 1.025       # 2.5% Setup fee
+            margin_factor = 1 + (min_profit_percent / 100.0)
+            
+            # Target Price Calculation
+            target_price = int((bm_price * sell_tax_factor) / (buy_tax_factor * margin_factor))
             if target_price < 1: target_price = 1
             
-            self.logger.info(f"📊 Анализ: BM={bm_price} | Target={target_price} | Current={current_price}")
+            self.logger.info(f"📊 Анализ: BM={bm_price} | MinProfit={min_profit_percent}%")
+            self.logger.info(f"🎯 Target Calculation: ({bm_price} * 0.935) / (1.025 * {margin_factor:.2f}) = {target_price}")
+            self.logger.info(f"💰 Current Price: {current_price} | Target: {target_price}")
             
             # Проверям, выгодна ли текущая цена ВООБЩЕ
             # Мы хотим покупать по TargetPrice.
             # Если CurrentPrice > TargetPrice -> Мы не берем.
-            # НО! Мы можем выставить ордер по TargetPrice.
-            # Однако, пользователь просил "Если цена хуже, пропускаем".
-            # Значит, мы ставим ордер, только если есть шанс (или если мы хотим просто наполнить ордер?)
-            # User Request: "Если цена стала хуже, пропускаем предмет"
-            # Значит, сравниваем:
             
             if current_price > target_price:
                 self.logger.info(f"📉 Цена рынка ({current_price}) выше целевой ({target_price}). Пропуск.")
@@ -352,19 +358,24 @@ class BuyerBot(BaseBot):
                     enchant = int(e_str)
                     
                     # --- Profit Calculation ---
-                    # Tax: 6.5% total deduction logic
+                    # Tax: 6.5% total deduction logic (Retail = Instant Buy, no buy order fee)
                     # Profit = (BM * (1 - 0.065)) - MarketPrice
                     
                     net_bm = bm_price * (1 - 0.065)
                     profit = net_bm - market_price
                     
                     # ROI check
-                    roi = profit / market_price if market_price > 0 else 0
+                    roi = (profit / market_price) * 100 if market_price > 0 else 0
+                    
+                    # Configuration: Min Profit %
+                    # Attempt to get user config for this item (even if limit=0, we respect the profit setting)
+                    _, _, min_profit_percent = self.config.get_wholesale_limit(item_name, tier, enchant)
+                    if min_profit_percent <= 0: min_profit_percent = 15 # Default 15% if not set
                     
                     # Filters: 
-                    # 1. Min Profit > 1000 silver
-                    # 2. ROI > 15% (0.15)
-                    if profit > 1000 and roi > 0.15: 
+                    # 1. Min Profit > 1000 silver (Hardcoded anti-spam)
+                    # 2. ROI > MinProfit%
+                    if profit > 1000 and roi >= min_profit_percent: 
                         # Return (name, tier, enchant, profit, market_price)
                         items.append((item_name, tier, enchant, profit, market_price))
                         

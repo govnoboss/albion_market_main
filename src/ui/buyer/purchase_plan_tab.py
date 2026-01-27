@@ -50,9 +50,10 @@ class PurchasePlanTab(QWidget):
         
         # --- Tree Widget ---
         self.tree = QTreeWidget()
-        self.tree.setHeaderLabels(["Предмет / Вариация", "Лимит (шт.)"])
+        self.tree.setHeaderLabels(["Предмет / Вариация", "Лимит (шт.)", "Мин. Профит %"])
         self.tree.setColumnWidth(0, 300)
         self.tree.setColumnWidth(1, 100)
+        self.tree.setColumnWidth(2, 100)
         self.tree.setAlternatingRowColors(True)
         self.tree.setStyleSheet("""
             QTreeWidget {
@@ -75,7 +76,7 @@ class PurchasePlanTab(QWidget):
         layout.addWidget(self.tree)
         
         # --- Footer Info ---
-        info_lbl = QLabel("ℹ️ Установите лимит > 0, чтобы бот начал скупать эту позицию (если она выгодна).")
+        info_lbl = QLabel("ℹ️ Установите лимит > 0 и минимальный % профита для активации.")
         info_lbl.setStyleSheet("color: #8b949e; font-size: 11px;")
         layout.addWidget(info_lbl)
         
@@ -112,7 +113,7 @@ class PurchasePlanTab(QWidget):
                         if tier <= 6: limit = 5  # T4-T6
                         else: limit = 1          # T7-T8
                         
-                    self.config.set_wholesale_target(item, tier, enchant, limit, True)
+                    self.config.set_wholesale_target(item, tier, enchant, limit, True, min_profit=25)
                     count += 1
         
         if silent:
@@ -156,31 +157,38 @@ class PurchasePlanTab(QWidget):
         node.setText(0, label)
         
         # Загружаем текущие настройки
-        limit, enabled = self.config.get_wholesale_limit(item_name, tier, enchant)
+        limit, enabled, min_profit = self.config.get_wholesale_limit(item_name, tier, enchant)
         
         # 1. SpinBox (Limit)
-        spin = QSpinBox()
-        spin.setRange(0, 9999)
-        spin.setValue(limit)
-        spin.setSingleStep(10)
-        spin.setFixedWidth(80)
-        spin.setStyleSheet("background: #0d1117; color: #f0f6fc; border: 1px solid #30363d;")
-        # Сохранение при изменении
-        spin.valueChanged.connect(lambda val, i=item_name, t=tier, e=enchant: 
+        spin_limit = QSpinBox()
+        spin_limit.setRange(0, 9999)
+        spin_limit.setValue(limit)
+        spin_limit.setSingleStep(10)
+        spin_limit.setFixedWidth(80)
+        spin_limit.setStyleSheet("background: #0d1117; color: #f0f6fc; border: 1px solid #30363d;")
+        spin_limit.valueChanged.connect(lambda val, i=item_name, t=tier, e=enchant: 
                                   self._on_limit_changed(i, t, e, val))
         
-        self.tree.setItemWidget(node, 1, spin)
+        self.tree.setItemWidget(node, 1, spin_limit)
         
-        # Checkbox Enabled удален по просьбе пользователя (Limit > 0 = Enabled)
+        # 2. SpinBox (Min Profit %)
+        spin_profit = QSpinBox()
+        spin_profit.setRange(0, 1000)
+        spin_profit.setValue(min_profit)
+        spin_profit.setSuffix("%")
+        spin_profit.setFixedWidth(80)
+        spin_profit.setStyleSheet("background: #0d1117; color: #f0f6fc; border: 1px solid #30363d;")
+        spin_profit.valueChanged.connect(lambda val, i=item_name, t=tier, e=enchant: 
+                                  self._on_min_profit_changed(i, t, e, val))
         
-        # Храним ссылки на виджеты в user data если нужно (пока через lambda проще)
+        self.tree.setItemWidget(node, 2, spin_profit)
         
     def _on_limit_changed(self, item, tier, enchant, value):
         # Автоматически ставим enabled True если лимит > 0
         is_enabled = (value > 0)
-        self.config.set_wholesale_target(item, tier, enchant, value, is_enabled)
-        
-    # def _on_enabled_changed(self, item, tier, enchant, state):
-    #     # Аналогично читаем лимит
-    #     current_limit, _ = self.config.get_wholesale_limit(item, tier, enchant)
-    #     self.config.set_wholesale_target(item, tier, enchant, current_limit, state)
+        _, _, min_profit = self.config.get_wholesale_limit(item, tier, enchant)
+        self.config.set_wholesale_target(item, tier, enchant, value, is_enabled, min_profit)
+
+    def _on_min_profit_changed(self, item, tier, enchant, value):
+        limit, enabled, _ = self.config.get_wholesale_limit(item, tier, enchant)
+        self.config.set_wholesale_target(item, tier, enchant, limit, enabled, value)

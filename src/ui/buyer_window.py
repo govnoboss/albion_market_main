@@ -18,6 +18,7 @@ class BuyerWindow(QMainWindow):
     # Signals for thread-safe hotkey handling
     hotkey_stop_sig = pyqtSignal()
     hotkey_pause_sig = pyqtSignal()
+    hotkey_toggle_sig = pyqtSignal() # F5 Toggle
 
     def __init__(self, launcher=None):
         super().__init__()
@@ -25,6 +26,9 @@ class BuyerWindow(QMainWindow):
         self.setWindowTitle("Albion Market - BUYER MODE")
         self.resize(600, 750) 
         self.setStyleSheet(MAIN_STYLE)
+        
+        # State
+        self.last_mode = "wholesale" # Default start mode for F5
         
         # Основной виджет (теперь с вкладками)
         self.tabs = QTabWidget()
@@ -71,6 +75,7 @@ class BuyerWindow(QMainWindow):
         # Connect Hotkey Signals (Thread-Safe)
         self.hotkey_stop_sig.connect(self._on_stop_clicked)
         self.hotkey_pause_sig.connect(self._toggle_pause)
+        self.hotkey_toggle_sig.connect(self._toggle_bot)
 
     def _setup_header(self, layout):
         """Заголовок окна"""
@@ -110,7 +115,7 @@ class BuyerWindow(QMainWindow):
         self.status_card.setObjectName("card")
         card_layout = QVBoxLayout(self.status_card)
         
-        lbl = QLabel("Статус работы")
+        lbl = QLabel("Статус работы (F5)")
         lbl.setStyleSheet("color: #8b949e; font-size: 12px; text-transform: uppercase;")
         card_layout.addWidget(lbl)
         
@@ -178,7 +183,7 @@ class BuyerWindow(QMainWindow):
         
         # Setup Hotkeys
         try:
-            keyboard.add_hotkey("F5", self.hotkey_stop_sig.emit)
+            keyboard.add_hotkey("F5", self.hotkey_toggle_sig.emit) # Changed to TOGGLE
             keyboard.add_hotkey("F6", self.hotkey_pause_sig.emit)
         except Exception as e:
             print(f"Ошибка регистрации хоткеев: {e}")
@@ -191,7 +196,15 @@ class BuyerWindow(QMainWindow):
         self.log_viewer.setPlaceholderText("Лог событий закупки...")
         layout.addWidget(self.log_viewer)
 
+    def _toggle_bot(self):
+        """Переключить состояние бота (Start/Stop)"""
+        if self.bot.isRunning():
+            self._on_stop_clicked()
+        else:
+            self._on_start_clicked(mode=self.last_mode)
+
     def _on_start_clicked(self, mode="wholesale"):
+        self.last_mode = mode # Remember mode logic
         self.log_viewer.clear()
         mode_name = "РОЗНИЦА (Sniper)" if mode == "retail" else "ОПТ (Orders)"
         self.log_viewer.append(f"🚀 Инициализация... Режим: {mode_name}")
@@ -216,6 +229,7 @@ class BuyerWindow(QMainWindow):
         
         self.overlay.show()
         self.overlay.update_status(True, False)
+        self.hide() # Скрываем основное окно
         
     def _on_stop_clicked(self):
         if not self.bot.isRunning(): return
@@ -263,6 +277,10 @@ class BuyerWindow(QMainWindow):
         
         self.overlay.update_status(False, False)
         self.overlay.hide()
+        
+        # Восстанавливаем окно
+        self.show()
+        self.activateWindow()
 
     def _restore_window(self):
         self.show()

@@ -282,7 +282,7 @@ class ConfigManager:
         """
         return self._config.get("wholesale_targets", {})
         
-    def set_wholesale_target(self, item_name: str, tier: int, enchant: int, limit: int, enabled: bool):
+    def set_wholesale_target(self, item_name: str, tier: int, enchant: int, limit: int, enabled: bool, min_profit: int = 15):
         """Сохранить настройку для конкретной вариации"""
         if "wholesale_targets" not in self._config:
             self._config["wholesale_targets"] = {}
@@ -295,17 +295,18 @@ class ConfigManager:
         key = f"T{tier}.{enchant}"
         targets[item_name][key] = {
             "limit": limit,
-            "enabled": enabled
+            "enabled": enabled,
+            "min_profit": min_profit
         }
         self.save()
         
-    def get_wholesale_limit(self, item_name: str, tier: int, enchant: int) -> tuple[int, bool]:
-        """Получить (limit, enabled) для вариации. Возвращает (0, False) если не задано."""
+    def get_wholesale_limit(self, item_name: str, tier: int, enchant: int) -> tuple[int, bool, int]:
+        """Получить (limit, enabled, min_profit) для вариации. Возвращает (0, False, 15) если не задано."""
         targets = self._config.get("wholesale_targets", {})
         key = f"T{tier}.{enchant}"
         
         data = targets.get(item_name, {}).get(key, {})
-        return (data.get("limit", 0), data.get("enabled", False))
+        return (data.get("limit", 0), data.get("enabled", False), data.get("min_profit", 15))
 
 
     # === Profiles ===

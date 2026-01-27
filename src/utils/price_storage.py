@@ -112,6 +112,16 @@ class PriceStorage:
             del self._data[city]
             self._save()
     
+    def delete_price(self, city: str, item_name: str, variant: str):
+        """Удалить конкретную запись о цене"""
+        if city in self._data and item_name in self._data[city]:
+            if variant in self._data[city][item_name]:
+                del self._data[city][item_name][variant]
+                # Clean up empty dicts
+                if not self._data[city][item_name]:
+                    del self._data[city][item_name]
+                self._save()
+
     def reload(self):
         """Перезагрузить данные из файла"""
         self._load()
