@@ -122,6 +122,121 @@ class PriceStorage:
                     del self._data[city][item_name]
                 self._save()
 
+    def clean_history(self, gap_minutes: int = 30) -> int:
+        """
+        Удалить записи старых сессий.
+        Оставляет только последнюю непрерывную сессию сканирования.
+        
+        Args:
+            gap_minutes: Максимальный разрыв в минутах внутри одной сессии.
+            
+        Returns:
+            Количество удаленных записей.
+        """
+        all_records = []
+        # 1. Собираем все записи
+        for city, items in self._data.items():
+            for item_name, variants in items.items():
+                for variant, info in variants.items():
+                    try:
+                        dt = datetime.fromisoformat(info['updated'])
+                        all_records.append({
+                            'dt': dt,
+                            'city': city,
+                            'item': item_name,
+                            'variant': variant
+                        })
+                    except (ValueError, KeyError):
+                        continue
+        
+        if not all_records:
+            return 0
+
+        # 2. Сортируем: новые -> старые
+        all_records.sort(key=lambda x: x['dt'], reverse=True)
+        
+        # 3. Находим границу сессии
+        cutoff_index = len(all_records) # По умолчанию оставляем всё
+        
+        for i in range(len(all_records) - 1):
+            current_time = all_records[i]['dt']
+            prev_time = all_records[i+1]['dt']
+            
+            diff = (current_time - prev_time).total_seconds() / 60
+            
+            if diff > gap_minutes:
+                # Нашли разрыв!
+                # prev_time и всё что после него - это старая сессия
+                cutoff_index = i + 1
+                self.logger.info(f"Найдена граница сессии: {current_time} -> {prev_time} (Diff: {diff:.1f} min)")
+                break
+        
+        if cutoff_index == len(all_records):
+            self.logger.info("Разрывов сессий не найдено. Удалять нечего.")
+            return 0
+            
+        # 4. Удаляем старые записи
+        to_delete = all_records[cutoff_index:]
+        count = 0
+        
+        for rec in to_delete:
+            city, item, variant = rec['city'], rec['item'], rec['variant']
+            if city in self._data and item in self._data[city] and variant in self._data[city][item]:
+                del self._data[city][item][variant]
+                count += 1
+                
+                # Чистим пустые словари
+                if not self._data[city][item]:
+                    del self._data[city][item]
+        
+        # Чистим пустые города
+        cities_to_drop = [c for c, items in self._data.items() if not items]
+        for c in cities_to_drop:
+            del self._data[c]
+            
+        self._save()
+        self.logger.info(f"Очищена история: удалено {count} записей")
+        return count
+
+    def remove_older_than(self, hours: int) -> int:
+        """
+        Удалить записи старее чем records_age, относительно текущего времени.
+        
+        Args:
+            hours: Возраст в часах, после которого запись считается устаревшей.
+            
+        Returns:
+            Количество удаленных записей.
+        """
+        now = datetime.now()
+        count = 0
+        
+        for city, items in list(self._data.items()):
+            for item_name, variants in list(items.items()):
+                for variant, info in list(variants.items()):
+                    try:
+                        record_dt = datetime.fromisoformat(info['updated'])
+                        age_hours = (now - record_dt).total_seconds() / 3600
+                        
+                        if age_hours > hours:
+                            del self._data[city][item_name][variant]
+                            count += 1
+                    except (ValueError, KeyError):
+                        continue
+                        
+                # Убираем пустые
+                if not self._data[city][item_name]:
+                    del self._data[city][item_name]
+            
+            if not self._data[city]:
+                del self._data[city]
+                
+        if count > 0:
+            self._save()
+            self.logger.info(f"Очищены устаревшие записи (> {hours} ч.): {count} шт.")
+            
+        return count
+
     def reload(self):
         """Перезагрузить данные из файла"""
         self._load()

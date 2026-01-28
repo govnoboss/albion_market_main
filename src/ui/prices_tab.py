@@ -5,7 +5,7 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QTabWidget, QTableWidget, 
     QTableWidgetItem, QHeaderView, QLabel, QPushButton, QHBoxLayout,
-    QLineEdit, QMessageBox
+    QLineEdit, QMessageBox, QInputDialog
 )
 from PyQt6.QtCore import Qt, QTimer
 
@@ -68,7 +68,27 @@ class PricesTab(QWidget):
         """)
         self.delete_btn.setEnabled(False)
         self.delete_btn.clicked.connect(self.delete_selected_record)
+        self.delete_btn.clicked.connect(self.delete_selected_record)
         top_layout.addWidget(self.delete_btn)
+        
+        # Кнопка очистки старых
+        clean_old_btn = QPushButton("🧹 Очистить старые")
+        clean_old_btn.setToolTip("Удалить цены, которым больше X часов")
+        clean_old_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #21262d;
+                color: #f85149;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                padding: 5px 15px;
+            }
+            QPushButton:hover {
+                background-color: #b31d28;
+                color: #ffffff;
+            }
+        """)
+        clean_old_btn.clicked.connect(self.clean_old_records)
+        top_layout.addWidget(clean_old_btn)
         
         refresh_btn = QPushButton("Обновить")
         refresh_btn.setStyleSheet("""
@@ -249,3 +269,22 @@ class PricesTab(QWidget):
         if confirm == QMessageBox.StandardButton.Yes:
             self.storage.delete_price(city, item_name, variant)
             self.refresh_data() # Перезагружаем UI
+            
+    def clean_old_records(self):
+        """Удаление записей старше N часов"""
+        hours, ok = QInputDialog.getInt(
+            self, 
+            "Очистка старых цен", 
+            "Удалить цены старше (часов):", 
+            value=3, 
+            min=1, 
+            max=168
+        )
+        
+        if ok:
+            count = self.storage.remove_older_than(hours)
+            if count > 0:
+                QMessageBox.information(self, "Очистка завершена", f"Удалено устаревших записей: {count}")
+                self.refresh_data()
+            else:
+                QMessageBox.information(self, "Очистка", f"Нет записей старше {hours} ч.")

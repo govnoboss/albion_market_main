@@ -13,9 +13,9 @@ from ..utils.price_storage import price_storage
 class BuyerBot(BaseBot):
     """
     Режим покупателя (Buyer Mode)
-    Поддерживает два режима:
-    1. wholesale (Опт): Работает по списку из конфига (лимиты), ставит ордера.
-    2. retail (Розница): Работает по таблице профитов (Sniper), покупает мгновенно.
+    Поддерживает режимы:
+    1. wholesale (Опт): Работает по списку из конфига.
+    2. smart (Умный): Работает по таблице профитов с батчами.
     """
     
     def __init__(self):
@@ -26,9 +26,9 @@ class BuyerBot(BaseBot):
         self.manual_confirm_mode = False # Debug F1/F2 mode
         self.simulation_mode = True # По умолчанию True для безопасности
         self.manual_confirm_mode = False # Debug F1/F2 mode
-        self.mode = "wholesale" # wholesale | retail
+        self.mode = "wholesale" # wholesale | smart
         self._is_menu_open = False # State tracking for optimization
-        self._current_tier_value = None # State for tier skip optimization.mode = "wholesale" # wholesale | retail
+        self._current_tier_value = None # State for tier skip optimization
         
         # Current Item State (Context for specific tier logic)
         self._current_item_name = None
@@ -40,15 +40,16 @@ class BuyerBot(BaseBot):
         self._stop_requested = False
         self._is_paused = False
         
-        mode_name = "РОЗНИЦА (Sniper)" if self.mode == "retail" else "ОПТ (Orders)"
-        self.logger.info(f"💰 ЗАПУСК РЕЖИМА: {mode_name} 💰")
+        self.logger.info(f"💰 ЗАПУСК РЕЖИМА: ОПТ (Orders) 💰")
         self.logger.info("⏳ Задержка старта 1 сек...")
         time.sleep(1.0)
         
         self._detect_current_city()
         
-        if self.mode == "retail":
-            self._run_retail()
+        self._detect_current_city()
+        
+        if self.mode == "smart":
+            self._run_smart_buyer()
         else:
             self._run_wholesale()
             
@@ -111,61 +112,136 @@ class BuyerBot(BaseBot):
                 self.logger.error(f"Ошибка при обработке {item_name}: {e}")
                 self._close_menu()
 
-    def _run_retail(self):
-        """Логика РОЗНИЧНОЙ закупки (Sniper по таблице профитов)"""
-        if self.simulation_mode:
-            self.logger.warning("💊 РЕЖИМ СИМУЛЯЦИИ: Покупка не будет совершена.")
-
-        # 1. Получаем и сортируем профиты
-        # Нам нужны: City, Item, Tier, Enchant, ProfitSilver (Net)
-        # Алгоритм сортировки по профиту за 1 шт.
-        # Цена BM берется из price_storage (там данные ЧР, если есть)
-        # Цена CurrentMarket берется тоже из price_storage (последний скан) 
-        #   ИЛИ мы просто итерируем по всему, что есть в базе ЧР и сканим текущее?
-        #   ТЗ: "Смотрим в таблицу профиты в нашем сканере. Сортируем таблицу всех городов..."
-        # Значит, мы берем данные, которые УЖЕ собраны сканером.
+    def _run_smart_buyer(self):
+        """
+        Логика УМНОГО закупщика (Smart Batch).
+        - Берет самые выгодные предметы из сканирования.
+        - Если предмета нет в конфиге -> покупает по 10 шт (DEFAULT_BATCH).
+        - Если есть в конфиге -> уважает лимит конфига.
+        """
+        DEFAULT_BATCH = 10
         
+        # 1. Получаем список выгодных (sorted by profit)
         items_to_check = self._get_profitable_items_sorted()
         total_items = len(items_to_check)
         
         if total_items == 0:
-            self.logger.warning("Нет выгодных предметов в базе! (Сначала запустите Сканер)")
+            self.logger.warning("Нет подходящих предметов! (Сначала запустите Сканер или цены ЧР отсутствуют)")
             return
 
-        self.logger.info(f"Найдено {total_items} кандидатов с потенциальным профитом.")
+        self.logger.info(f"🧠 SMART: Найдено {total_items} выгодных предметов.")
+        
+        # 2. Итерация
+        processed_count = 0
+        
+        # Чтобы не покупать миллион раз одно и то же, запоминаем что купили?
+        # Пока просто идем по списку.
         
         for i, (item_name, tier, enchant, profit_est, market_price) in enumerate(items_to_check):
             if self._stop_requested: break
             self._check_pause()
             
-            self.progress_updated.emit(i + 1, total_items, f"{item_name} (+{int(profit_est)} s.)")
-            self.logger.info(f"🔎 Candidate [{i+1}/{total_items}]: {item_name} T{tier}.{enchant} (Est. Profit: {int(profit_est)})")
+            processed_count += 1 
+            self.progress_updated.emit(processed_count, total_items, f"{item_name} (+{int(profit_est)} s.)")
             
+            # 3. Определяем лимит (Batch)
+            # Пробуем найти лимит в конфиге
+            config_limit = 0
             try:
-                # 2. Поиск и открытие
+                # get_wholesale_limit returns (min_price, max_price, limit) -> Wait, method signature?
+                # config.get_wholesale_limit(item, t, e) -> returns (min_profit, max_quantity, step_qty?) 
+                # Let's check config.py... actually get_wholesale_limit usually returns profit percent.
+                # Let's check existing usage: "_, _, min_profit_percent = self.config.get_wholesale_limit..."
+                
+                # We need separate check for configured LIMIT in 'wholesale_targets'
+                targets = self.config.get_wholesale_targets()
+                variant_key = f"T{tier}.{enchant}"
+                
+                if item_name in targets and variant_key in targets[item_name]:
+                    data = targets[item_name][variant_key]
+                    if data.get("enabled", False):
+                        config_limit = data.get("limit", 0)
+            except: pass
+            
+            final_limit = config_limit if config_limit > 0 else DEFAULT_BATCH
+            
+            self.logger.info(f"🧠 Smart Item: {item_name} T{tier}.{enchant} | Profit: {int(profit_est)} | Limit: {final_limit} {'(Config)' if config_limit > 0 else '(Default)'}")
+            
+            # 4. Выполняем закупку (Reusing Wholesale Logic)
+            try:
+                # Открываем предмет
                 if not self._search_item_and_open(item_name):
                     continue
+                
+                # Переход на вкладку Заказа
+                if not self._is_black_market:
+                     buy_order_tab = self.config.get_coordinate("create_buy_order") 
+                     if buy_order_tab:
+                         # self._human_move_to... wait, wholesale logic does this ONCE per item group.
+                         # Here we do it per item. OK.
+                        self._human_move_to(*buy_order_tab)
+                        self._human_click()
+                        time.sleep(0.5)
 
-                # 3. Выставляем T/E
-                self._current_item_name = item_name
-                self._current_enchant = 0 # Fresh menu state
-                
-                self._select_tier(tier)
-                self._select_enchant(enchant)
-                
-                # 4. Проверяем качество (Normal only)
-                self._select_quality(1) 
-                
-                # 5. Выполняем логику закупки (Instant Buy)
-                # Покупаем 1 шт (Sniper logic) по ожидаемой цене.
-                # Функция сама проверит OCR Total Price и подтвердит.
-                self._execute_purchase_logic(expected_unit_price=market_price, limit=1)
+                # Запускаем процессор вариации
+                self._process_variant_wholesale(item_name, tier, enchant, final_limit)
                 
                 self._close_menu()
                 
             except Exception as e:
-                self.logger.error(f"Error retail loop: {e}")
+                self.logger.error(f"Error smart loop: {e}")
                 self._close_menu()
+                
+    def _get_profitable_items_sorted(self):
+        """
+        Возвращает список [(name, tier, enchant, profit, market_price), ...]
+        отсортированный по profit (desc).
+        """
+        if not self._current_city:
+            self.logger.warning("Город не определен, сортировка невозможна.")
+            return []
+            
+        items = [] 
+        city_prices = price_storage.get_city_prices(self._current_city)
+        bm_prices = price_storage.get_city_prices("Black Market")
+        
+        if not city_prices or not bm_prices: return []
+            
+        for item_name, variants in city_prices.items():
+            if item_name not in bm_prices: continue
+            
+            bm_variants = bm_prices[item_name]
+            
+            for key, data in variants.items():
+                market_price = data.get("price", 0)
+                if market_price <= 0: continue
+                
+                # Ищем пару на ЧР
+                if key not in bm_variants: continue
+                bm_price = bm_variants[key].get("price", 0)
+                if bm_price <= 0: continue
+                
+                try:
+                    t_str, e_str = key.replace("T", "").split(".")
+                    tier = int(t_str)
+                    enchant = int(e_str)
+                    
+                    # Profit Calc (Tax 6.5%)
+                    # Profit = (BM * 0.935) - Market
+                    net_bm = bm_price * 0.935
+                    profit = net_bm - market_price
+                    
+                    # Basic filters
+                    if profit > 500: # Min safe profit hardcoded
+                        items.append((item_name, tier, enchant, profit, market_price))
+                        
+                except Exception: continue
+                    
+        # Sort DESC
+        items.sort(key=lambda x: x[3], reverse=True)
+        return items
+
+
 
     def _process_variant_wholesale(self, item_name, tier, enchant, limit):
         """
@@ -267,9 +343,6 @@ class BuyerBot(BaseBot):
             self.logger.info(f"💰 Current Price: {current_price} | Target: {target_price}")
             
             # Проверям, выгодна ли текущая цена ВООБЩЕ
-            # Мы хотим покупать по TargetPrice.
-            # Если CurrentPrice > TargetPrice -> Мы не берем.
-            # EXCEPTION: If CurrentPrice == 0 (Empty), we proceed.
             
             if current_price > 0 and current_price > target_price:
                 self.logger.info(f"📉 Цена рынка ({current_price}) выше целевой ({target_price}). Пропуск.")
@@ -324,81 +397,7 @@ class BuyerBot(BaseBot):
             # Если лимит исчерпан, цикл завершится.
 
 
-    def _get_profitable_items_sorted(self):
-        """
-        Возвращает список [(name, tier, enchant, profit), ...]
-        отсортированный по profit (desc).
-        Данные берем из price_storage (Market vs Black Market).
-        """
-        if not self._current_city:
-            self.logger.warning("Город не определен, сортировка невозможна.")
-            return []
-            
-        items = [] # (name, tier, enchant, profit)
-        
-        # Получаем все цены для текущего города (Market Prices)
-        city_prices = price_storage.get_city_prices(self._current_city)
-        if not city_prices:
-            self.logger.warning(f"Нет данных о ценах в {self._current_city}")
-            return []
-            
-        # Проходим по всем предметам, для которых есть цена на ЧР
-        bm_prices = price_storage.get_city_prices("Black Market")
-        if not bm_prices:
-             self.logger.warning("Нет данных с Черного Рынка (Black Market empty)")
-             return []
-             
-        for item_name, variants in city_prices.items():
-            if item_name not in bm_prices: continue
-            
-            bm_variants = bm_prices[item_name]
-            
-            for key, data in variants.items():
-                market_price = data.get("price", 0)
-                if market_price <= 0: continue
-                
-                # Ищем пару на ЧР
-                if key not in bm_variants: continue
-                
-                bm_price_data = bm_variants[key]
-                bm_price = bm_price_data.get("price", 0)
-                
-                if bm_price <= 0: continue
-                
-                try:
-                    t_str, e_str = key.replace("T", "").split(".")
-                    tier = int(t_str)
-                    enchant = int(e_str)
-                    
-                    # --- Profit Calculation ---
-                    # Tax: 6.5% total deduction logic (Retail = Instant Buy, no buy order fee)
-                    # Profit = (BM * (1 - 0.065)) - MarketPrice
-                    
-                    net_bm = bm_price * (1 - 0.065)
-                    profit = net_bm - market_price
-                    
-                    # ROI check
-                    roi = (profit / market_price) * 100 if market_price > 0 else 0
-                    
-                    # Configuration: Min Profit %
-                    # Attempt to get user config for this item (even if limit=0, we respect the profit setting)
-                    _, _, min_profit_percent = self.config.get_wholesale_limit(item_name, tier, enchant)
-                    if min_profit_percent <= 0: min_profit_percent = 15 # Default 15% if not set
-                    
-                    # Filters: 
-                    # 1. Min Profit > 1000 silver (Hardcoded anti-spam)
-                    # 2. ROI > MinProfit%
-                    if profit > 1000 and roi >= min_profit_percent: 
-                        # Return (name, tier, enchant, profit, market_price)
-                        items.append((item_name, tier, enchant, profit, market_price))
-                        
-                except Exception as e:
-                    continue
-                    
-        # Sort by Profit (Descending)
-        items.sort(key=lambda x: x[3], reverse=True)
-        
-        return items
+
 
     def _build_purchase_list(self):
         targets = self.config.get_wholesale_targets()
@@ -470,113 +469,7 @@ class BuyerBot(BaseBot):
              self._current_tier_value = None
              time.sleep(0.5)
 
-    def _execute_purchase_logic(self, expected_unit_price: int, limit: int):
-        """
-        Физическое выполнение закупки.
-        Ожидаем, что окно предмета уже открыто и мы выбрали T/E/Q.
-        """
 
-
-        # 1. Переход на вкладку "Купить" (Instant)
-        buy_tab = self.config.get_coordinate("buyer_tab_buy")
-        if buy_tab:
-            self._human_move_to(*buy_tab)
-            self._human_click()
-            time.sleep(0.5)
-        
-        # 2. Проверяем количество в топ лоте (OCR)
-        
-        qty_area = self.config.get_coordinate_area("buyer_top_lot_qty")
-        available_qty = 1 
-        
-        if qty_area:
-            from ..utils.ocr import read_amount_at
-            scanned_qty = read_amount_at(qty_area)
-            if scanned_qty and scanned_qty > 0:
-                available_qty = scanned_qty
-        
-        # Target Qty = min(limit, available)
-        target_qty = min(limit, available_qty)
-        
-        # 3. Ввод количества
-        if target_qty > 1:
-             # Click Amount Input
-             amount_input_coord = self.config.get_coordinate("buyer_amount_input")
-             if amount_input_coord:
-                 self._human_move_to(*amount_input_coord)
-                 self._human_click() # Focus
-                 # Double click to select all? OR Ctrl+A
-                 self._human_click()
-                 time.sleep(0.1)
-                 
-                 self._human_type(str(target_qty))
-                 
-                 # Click Offset (20px left) to unfocus and trigger calc
-                 # X - 20, Y
-                 self._human_move_to(amount_input_coord[0] - 40, amount_input_coord[1])
-                 self._human_click()
-                 time.sleep(0.5) 
-        
-        # 4. Проверка итоговой суммы (OCR Total Price)
-        # ТЗ: "Проверяем OCR: Итоговая стоимость"
-        total_price_area = self.config.get_coordinate_area("buyer_total_price")
-        if total_price_area:
-            from ..utils.ocr import read_price_at
-            total_price_ocr = read_price_at(total_price_area)
-            
-            # Expected Max = target_qty * (expected_unit_price * 1.05) ? 
-            # Allow small variance? Or exact match?
-            # User: "Совпадает ли итоговая стоимость с отсканированной * количество? Совпадает -> Жмем"
-            # Strict logic:
-            
-            # Since market price fluctuates, the unit price might be slightly diff from what we saw 1 sec ago.
-            # But we want to ensure we don't pay 10x.
-            
-            expected_total = target_qty * expected_unit_price
-            
-            # Allow 1-2% deviation? NO, User said SAFE. 
-            # If price changed Up, we skip.
-            # If price changed Down, we ok.
-            
-            if total_price_ocr:
-                if total_price_ocr > expected_total:
-                    # Цена выросла!
-                    self.logger.warning(f"❌ Цена изменилась! OCR Total: {total_price_ocr} > Exp: {expected_total}. СКИП.")
-                    return
-                # else: Good.
-            else:
-                self.logger.error("❌ Не удалось прочитать Итоговую сумму. СКИП.")
-                return
-
-        if self.manual_confirm_mode:
-            self.logger.critical(f"🛑 [DEBUG CONFIRM] Готов купить {target_qty} шт. за {total_price_ocr}")
-            self.logger.critical("👉 Нажмите F1 для ПОДТВЕРЖДЕНИЯ")
-            self.logger.critical("👉 Нажмите F2 для ОТМЕНЫ")
-            
-            import keyboard
-            while True:
-                if self._stop_requested: return
-                
-                if keyboard.is_pressed('F1'):
-                    self.logger.info("✅ F1 нажата -> ПОКУПАЕМ!")
-                    time.sleep(0.5) # Wait for release
-                    break
-                    
-                if keyboard.is_pressed('F2'):
-                    self.logger.warning("🚫 F2 нажата -> ОТМЕНА.")
-                    return
-                
-                time.sleep(0.1)
-
-        # 5. Нажать "Заказать" (Confirm)
-        confirm_btn = self.config.get_coordinate("buyer_create_order_confirm")
-        if confirm_btn:
-            self._human_move_to(*confirm_btn)
-            self._human_click()
-            time.sleep(0.5)
-            
-            # 6. Проверка popups (TODO)
-             # "Item Sold" check
 
 
     def _select_tier(self, tier):

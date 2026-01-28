@@ -6,7 +6,7 @@ import re
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
     QTableWidget, QTableWidgetItem, QHeaderView, 
-    QComboBox, QPushButton
+    QComboBox, QPushButton, QMessageBox
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from ..utils.price_storage import get_price_storage
@@ -161,6 +161,25 @@ class ProfitsTab(QWidget):
         self.refresh_btn.clicked.connect(self.refresh_data)
         controls_layout.addWidget(self.refresh_btn)
         
+        self.clean_btn = QPushButton("🗑️ Очистить старые")
+        self.clean_btn.setToolTip("Удалить записи предыдущих сканирований (оставить только текущие)")
+        self.clean_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #21262d;
+                color: #f85149;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                padding: 5px 15px;
+            }
+            QPushButton:hover {
+                background-color: #30363d;
+                background-color: #b31d28;
+                color: #ffffff;
+            }
+        """)
+        self.clean_btn.clicked.connect(self.request_clean_history)
+        controls_layout.addWidget(self.clean_btn)
+        
         controls_layout.addStretch()
         layout.addLayout(controls_layout)
         
@@ -299,6 +318,24 @@ class ProfitsTab(QWidget):
             self.table.setSortingEnabled(True)
         finally:
             self._is_updating = False
+
+    def request_clean_history(self):
+        """Handle history cleanup request"""
+        reply = QMessageBox.question(
+            self, 
+            'Подтверждение очистки', 
+            "Вы уверены, что хотите удалить записи прошлых сессий?\n\nБудут удалены все цены, кроме полученных в последнем сеансе сканирования.\nЭто действие нельзя отменить.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            count = self.storage.clean_history(gap_minutes=30)
+            if count > 0:
+                QMessageBox.information(self, "Очистка завершена", f"Удалено старых записей: {count}")
+                self.refresh_data()
+            else:
+                QMessageBox.information(self, "Очистка", "Нет старых записей для удаления.")
 
     def on_item_changed(self, item):
         """Handle price editing in real-time"""

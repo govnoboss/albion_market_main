@@ -131,21 +131,22 @@ class BuyerWindow(QMainWindow):
         ctrl_layout = QVBoxLayout(control_group)
         ctrl_layout.setSpacing(10)
         
-        # Кнопка СТАРТ РОЗНИЦА (Retail/Sniper)
-        self.start_retail_btn = QPushButton("🛒 СТАРТ: РОЗНИЦА (Sniper)")
-        self.start_retail_btn.setObjectName("primary")
-        self.start_retail_btn.setMinimumHeight(45)
-        self.start_retail_btn.setStyleSheet("font-size: 14px; font-weight: bold; background-color: #d29922; border-color: #d29922;")
-        self.start_retail_btn.clicked.connect(lambda: self._on_start_clicked(mode="retail"))
-        ctrl_layout.addWidget(self.start_retail_btn)
+        # Кнопка СТАРТ (Standard/Wholesale)
+        self.start_btn = QPushButton("🚀 ЗАПУСТИТЬ ЗАКУПЩИК")
+        self.start_btn.setObjectName("primary")
+        self.start_btn.setMinimumHeight(45)
+        self.start_btn.setStyleSheet("font-size: 14px; font-weight: bold; background-color: #238636;")
+        self.start_btn.clicked.connect(self._on_start_clicked)
+        ctrl_layout.addWidget(self.start_btn)
+        
+        # Чекбокс "Умный закупщик"
+        from PyQt6.QtWidgets import QCheckBox
+        self.smart_mode_check = QCheckBox("🧠 Умный закупщик (Smart Buyer)")
+        self.smart_mode_check.setToolTip("Покупать самые выгодные товары на основе сканирования,\nа не по фиксированному списку.")
+        self.smart_mode_check.setStyleSheet("color: #d29922; font-weight: bold;")
+        ctrl_layout.addWidget(self.smart_mode_check)
 
-        # Кнопка СТАРТ ОПТ (Wholesale/Order)
-        self.start_wholesale_btn = QPushButton("📦 СТАРТ: ОПТ (Orders)")
-        self.start_wholesale_btn.setObjectName("primary")
-        self.start_wholesale_btn.setMinimumHeight(45)
-        self.start_wholesale_btn.setStyleSheet("font-size: 14px; font-weight: bold; background-color: #238636;")
-        self.start_wholesale_btn.clicked.connect(lambda: self._on_start_clicked(mode="wholesale"))
-        ctrl_layout.addWidget(self.start_wholesale_btn)
+
         
         # Кнопка СТОП
         self.stop_btn = QPushButton("⏹ ОСТАНОВИТЬ (F5)")
@@ -201,22 +202,69 @@ class BuyerWindow(QMainWindow):
         if self.bot.isRunning():
             self._on_stop_clicked()
         else:
-            self._on_start_clicked(mode=self.last_mode)
+            self._on_start_clicked()
 
-    def _on_start_clicked(self, mode="wholesale"):
-        self.last_mode = mode # Remember mode logic
-        self.log_viewer.clear()
-        mode_name = "РОЗНИЦА (Sniper)" if mode == "retail" else "ОПТ (Orders)"
-        self.log_viewer.append(f"🚀 Инициализация... Режим: {mode_name}")
+    def _on_start_clicked(self):
+        # 0. Проверка свежести данных (если включен Smart Mode)
+        is_smart = self.smart_mode_check.isChecked()
         
-        self.start_retail_btn.setVisible(False)
-        self.start_wholesale_btn.setVisible(False)
+        if is_smart:
+            # Check warnings
+            from ..utils.price_storage import price_storage
+            from datetime import datetime
+            
+            # Simple check: Iterate valid items in current config city (if known) or just all cities
+            # Since we don't know the city yet (bot detects it), we check ALL data?
+            # Or assume Config uses current location?
+            # Let's check "Any stale data" in the storage.
+            
+            has_stale = False
+            
+            # Helper to check
+            now = datetime.now()
+            hours_threshold = 10
+            
+            # Direct access to verify (Optimization: backend execution)
+            # We can use a simple logic: Check ALL items.
+            cities = price_storage.get_cities()
+            for city in cities:
+                if city == "Black Market": continue 
+                
+                prices = price_storage.get_city_prices(city)
+                for item, variants in prices.items():
+                    for variant, data in variants.items():
+                        try:
+                            updated = datetime.fromisoformat(data['updated'])
+                            age = (now - updated).total_seconds() / 3600
+                            if age > hours_threshold:
+                                has_stale = True
+                                break
+                        except: pass
+                    if has_stale: break
+                if has_stale: break
+            
+            if has_stale:
+                reply = QMessageBox.question(
+                    self, 
+                    "⚠️ Данные устарели",
+                    f"Найдена информация о ценах старше {hours_threshold} часов.\n"
+                    "Рынок мог измениться. Продолжить?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                if reply == QMessageBox.StandardButton.No:
+                    return
+
+        self.log_viewer.clear()
+        mode_str = "🧠 УМНЫЙ" if is_smart else "📦 СТАНДАРТНЫЙ"
+        self.log_viewer.append(f"🚀 Инициализация... Режим: {mode_str}")
+        
+        self.start_btn.setVisible(False)
         self.stop_btn.setVisible(True)
-        self.status_val_label.setText(f"РАБОТАЕТ: {mode_name}")
+        self.status_val_label.setText("РАБОТАЕТ")
         self.status_val_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #3fb950;")
         
         # Update Bot configuration
-        self.bot.mode = mode
+        self.bot.mode = "smart" if is_smart else "wholesale"
         self.bot.manual_confirm_mode = self.debug_confirm_check.isChecked()
         self.bot.start()
         
@@ -270,8 +318,7 @@ class BuyerWindow(QMainWindow):
     def _on_finished(self):
         self.status_val_label.setText("ОЖИДАНИЕ")
         self.status_val_label.setStyleSheet("font-size: 24px; font-weight: bold; color: #8b949e;")
-        self.start_retail_btn.setVisible(True)
-        self.start_wholesale_btn.setVisible(True)
+        self.start_btn.setVisible(True)
         self.stop_btn.setVisible(False)
         self.log_viewer.append("🏁 Завершена.")
         
