@@ -131,6 +131,32 @@ class BuyerWindow(QMainWindow):
         ctrl_layout = QVBoxLayout(control_group)
         ctrl_layout.setSpacing(10)
         
+        # Бюджет
+        from PyQt6.QtWidgets import QSpinBox, QLabel
+        budget_layout = QHBoxLayout()
+        budget_lbl = QLabel("Бюджет:")
+        budget_lbl.setStyleSheet("color: #8b949e; font-weight: bold;")
+        
+        self.budget_spin = QSpinBox()
+        self.budget_spin.setRange(0, 999_999_999)
+        self.budget_spin.setSingleStep(100_000)
+        self.budget_spin.setSuffix(" Silver")
+        self.budget_spin.setSpecialValueText("Безлимит")
+        self.budget_spin.setValue(0)
+        self.budget_spin.setStyleSheet("""
+            QSpinBox { 
+                background: #0d1117; 
+                color: #c9d1d9; 
+                border: 1px solid #30363d; 
+                padding: 5px; 
+                font-size: 13px;
+            }
+        """)
+        
+        budget_layout.addWidget(budget_lbl)
+        budget_layout.addWidget(self.budget_spin)
+        ctrl_layout.addLayout(budget_layout)
+
         # Кнопка СТАРТ (Standard/Wholesale)
         self.start_btn = QPushButton("🚀 ЗАПУСТИТЬ ЗАКУПЩИК")
         self.start_btn.setObjectName("primary")
@@ -266,6 +292,7 @@ class BuyerWindow(QMainWindow):
         # Update Bot configuration
         self.bot.mode = "smart" if is_smart else "wholesale"
         self.bot.manual_confirm_mode = self.debug_confirm_check.isChecked()
+        self.bot.max_budget = self.budget_spin.value()
         self.bot.start()
         
         # Show Overlay (Top Center)

@@ -22,10 +22,10 @@ class BuyerBot(BaseBot):
         super().__init__()
         self.dropdowns = DropdownSelector()
         self._items_to_buy = [] # Список задач [(name, tier, enchant, limit)]
-        self.simulation_mode = True # По умолчанию True для безопасности
+        self.simulation_mode = False # По умолчанию True для безопасности
         self.manual_confirm_mode = False # Debug F1/F2 mode
-        self.simulation_mode = True # По умолчанию True для безопасности
-        self.manual_confirm_mode = False # Debug F1/F2 mode
+        self.max_budget = 0 # 0 = Unlimited
+        self.spent_amount = 0 # Отслеживание трат сессии
         self.mode = "wholesale" # wholesale | smart
         self._is_menu_open = False # State tracking for optimization
         self._current_tier_value = None # State for tier skip optimization
@@ -41,6 +41,9 @@ class BuyerBot(BaseBot):
         self._is_paused = False
         
         self.logger.info(f"💰 ЗАПУСК РЕЖИМА: ОПТ (Orders) 💰")
+        budget_str = f"{self.max_budget:,} Silver" if self.max_budget > 0 else "Безлимит"
+        self.logger.info(f"💵 Бюджет на сессию: {budget_str}")
+        self.spent_amount = 0 # Сброс счетчика
         self.logger.info("⏳ Задержка старта 1 сек...")
         time.sleep(1.0)
         
@@ -71,8 +74,10 @@ class BuyerBot(BaseBot):
         if self.simulation_mode:
             self.logger.warning("💊 РЕЖИМ СИМУЛЯЦИИ: Деньги не будут потрачены.")
             
-        # 2. Группируем
+        # 2. Группируем по имени: { "Sword": [ (4,0,10), (4,1,10)... ] }
         tasks_by_item = {}
+        processed_keys = set() # (item_name, tier, enchant)
+
         for name, tier, enchant, limit in self._items_to_buy:
              if name not in tasks_by_item: tasks_by_item[name] = []
              tasks_by_item[name].append((tier, enchant, limit))
@@ -84,6 +89,10 @@ class BuyerBot(BaseBot):
             self._check_pause()
             
             self.logger.info(f"🔎 Проверка предмета: {item_name} ({len(variants)} вариаций)")
+            
+            # Предварительный маппинг вариантов для опортюнистического поиска
+            # {(tier, enchant): limit}
+            variants_map = { (t, e): l for t, e, l in variants }
             
             try:
                 if not self._search_item_and_open(item_name):
@@ -99,12 +108,51 @@ class BuyerBot(BaseBot):
                         self._human_click()
                         time.sleep(0.5)
 
+                # --- OPPORTUNISTIC LOOP ---
+                # Мы идем по списку вариантов.
+                # Если нам нужно сменить Тир, мы проверяем, не попали ли мы удачно на нужный Энчант.
+                
                 for tier, enchant, limit in variants:
                     if self._stop_requested: break
-                    processed_count += 1
-                    self.progress_updated.emit(processed_count, total_tasks, f"{item_name} T{tier}.{enchant}")
                     
-                    self._process_variant_wholesale(item_name, tier, enchant, limit)
+                    # Ключ текущей задачи
+                    task_key = (item_name, tier, enchant)
+                    if task_key in processed_keys: continue
+                    
+                    # 1. Проверяем смену Тира
+                    if self._current_tier_value != tier:
+                        # Запоминаем энчант ДО смены тира (так как игра его сохраняет)
+                        # Если _current_enchant еще не инициализирован (0), считаем 0.
+                        persisted_enchant = self._current_enchant
+                        
+                        # Меняем Тир
+                        self._select_tier(tier)
+                        self._current_tier_value = tier
+                        
+                        # --- OPPORTUNISTIC CHECK ---
+                        # Мы переключились на 'tier'. Энчант остался 'persisted_enchant' (теоретически).
+                        # Проверяем, есть ли такая задача в нашем списке?
+                        
+                        opp_key = (tier, persisted_enchant)
+                        if opp_key in variants_map:
+                            full_opp_key = (item_name, tier, persisted_enchant)
+                            
+                            # Если задача есть и еще НЕ обработана -> ОБРАБАТЫВАЕМ СЕЙЧАС!
+                            if full_opp_key not in processed_keys:
+                                self.logger.info(f"⚡ OPPORTUNISTIC: Попали на {item_name} T{tier}.{persisted_enchant}. Обрабатываем вне очереди!")
+                                
+                                processed_count += 1
+                                limit_opp = variants_map[opp_key]
+                                self._process_variant_wholesale(item_name, tier, persisted_enchant, limit_opp, processed_count, total_tasks)
+                                processed_keys.add(full_opp_key)
+                    
+                    # 2. Обработка основной задачи (если она не была обработана опортюнистически)
+                    if task_key not in processed_keys:
+                        processed_count += 1
+                        # self.progress_updated.emit... REMOVED (Moved to process_variant)
+                        
+                        self._process_variant_wholesale(item_name, tier, enchant, limit, processed_count, total_tasks)
+                        processed_keys.add(task_key)
                     
                 self._close_menu()
                 
@@ -184,7 +232,7 @@ class BuyerBot(BaseBot):
                         time.sleep(0.5)
 
                 # Запускаем процессор вариации
-                self._process_variant_wholesale(item_name, tier, enchant, final_limit)
+                self._process_variant_wholesale(item_name, tier, enchant, final_limit, processed_count, total_items)
                 
                 self._close_menu()
                 
@@ -243,7 +291,7 @@ class BuyerBot(BaseBot):
 
 
 
-    def _process_variant_wholesale(self, item_name, tier, enchant, limit):
+    def _process_variant_wholesale(self, item_name, tier, enchant, limit, prog_curr=0, prog_total=0):
         """
         Обработка одной вариации товара (ОПТ).
         Цикл покупки пока лимит не исчерпан.
@@ -256,6 +304,12 @@ class BuyerBot(BaseBot):
         if not bm_price:
             self.logger.warning(f"⏩ Пропуск {item_name} T{tier}.{enchant}: Нет цены ЧР")
             return
+            
+        # Pre-emit (Before Price)
+        # Format: Item T.E - ... / BM
+        display_name = f"{item_name} T{tier}.{enchant}"
+        # if prog_total > 0:
+        #      self.progress_updated.emit(prog_curr, prog_total, f"{display_name} - ... / {bm_price}")
 
         # Основной цикл покупки (пока нужен товар)
         while remaining_limit > 0:
@@ -276,15 +330,14 @@ class BuyerBot(BaseBot):
                     self._human_click()
                     self._is_menu_open = True
                     self._current_tier_value = None # Reset tier state on new menu
-                    self._current_enchant = 0 # Reset enchant state on new menu
-                    time.sleep(1.0) # Wait for animation
+                    self._current_enchant = None 
+                    time.sleep(0.5) # Wait for animation
                 else:
                     self.logger.error("❌ Нет координаты кнопки Купить!")
                     break
             
             # 1. Установка параметров (Tier -> Enchant)
             self._current_item_name = item_name
-            # self._current_enchant SHOULD track actual screen state, do not overwrite with target here!
             
             if self._current_tier_value != tier:
                 self._select_tier(tier) 
@@ -315,7 +368,9 @@ class BuyerBot(BaseBot):
                 
             # If price is 0, we assume market is empty or OCR failed but it's SAFE to place a BUY order at Target.
             if current_price == 0:
-                 self.logger.info("⚠️ Цена 0 (Пусто/Ошибка). Пробуем выставить ордер (Safe).")
+                  self.logger.warning("⚠️ Цена 0 (Пусто/Ошибка). Пропуск во избежание потерь.")
+                  self._close_menu()
+                  break
             
             # 3. Расчет цены покупки (Target)
             # Formula: (BM * 0.935) / (1.025 * (1 + Margin))
@@ -324,7 +379,7 @@ class BuyerBot(BaseBot):
             if bm_price <= 0:
                 self.logger.warning(f"⚠️ Нет цены ЧР для {item_name} T{tier}.{enchant}. Пропуск.")
                 self._close_menu()
-                break # Нет смысла продолжать, если нет цены
+                break
             
             # Get Min Profit % from config
             _, _, min_profit_percent = self.config.get_wholesale_limit(item_name, tier, enchant)
@@ -342,6 +397,11 @@ class BuyerBot(BaseBot):
             self.logger.info(f"🎯 Target Calculation: ({bm_price} * 0.935) / (1.025 * {margin_factor:.2f}) = {target_price}")
             self.logger.info(f"💰 Current Price: {current_price} | Target: {target_price}")
             
+            # Update Log with Target Price
+            # Format: Item T.E - Market / Target
+            if prog_total > 0:
+                 self.progress_updated.emit(prog_curr, prog_total, f"{display_name} - {current_price} / {target_price}")
+            
             # Проверям, выгодна ли текущая цена ВООБЩЕ
             
             if current_price > 0 and current_price > target_price:
@@ -352,6 +412,37 @@ class BuyerBot(BaseBot):
             # 4. Количество (Batching)
             BATCH_SIZE = 10
             buy_qty = min(remaining_limit, BATCH_SIZE)
+
+            # --- BUDGET CHECK ---
+            if self.max_budget > 0:
+                cost_estimate = target_price * buy_qty
+                if self.spent_amount + cost_estimate > self.max_budget:
+                    remaining_budget = self.max_budget - self.spent_amount
+                    can_afford_qty = remaining_budget // target_price
+                    
+                    if can_afford_qty <= 0:
+                        self.logger.warning(f"🛑 Бюджет исчерпан! (Остаток: {remaining_budget}, Цена: {target_price})")
+                        self._stop_requested = True
+                        break
+                    else:
+                        self.logger.warning(f"⚠️ Корректировка бюджета: {buy_qty} -> {can_afford_qty} шт.")
+                        buy_qty = can_afford_qty
+
+            self.logger.info(f"🛒 Микро-ордер: {buy_qty} шт. (Target: {target_price})")
+            
+            # Re-apply budget check on this final buy_qty
+            if self.max_budget > 0:
+                cost = target_price * buy_qty
+                if self.spent_amount + cost > self.max_budget:
+                     remaining = self.max_budget - self.spent_amount
+                     buy_qty = remaining // target_price
+                     if buy_qty <= 0:
+                         self.logger.warning("🛑 Бюджет исчерпан! Остановка.")
+                         self._stop_requested = True
+                         break
+                     else:
+                        self.logger.info(f"💵 Лимит бюджета. Покупаем: {buy_qty} шт.")
+
             self.logger.info(f"🛒 Микро-ордер: {buy_qty} шт. (Target: {target_price})")
             
             # 5. Ввод количества
@@ -370,7 +461,6 @@ class BuyerBot(BaseBot):
                  return 0
             
             # 7. Верификация (Simplified for speed)
-            # Мы доверяем вводу pynput. Можно добавить проверку Total, если критично.
             
             # 8. Покупка
             if self.simulation_mode:
@@ -381,12 +471,18 @@ class BuyerBot(BaseBot):
                  
             if success:
                 self.logger.info(f"✅ Ордер размещен: {buy_qty} шт. @ {target_price}")
+                
+                total_cost = target_price * buy_qty
+                self.spent_amount += total_cost
+                if self.max_budget > 0:
+                    self.logger.info(f"💰 Расход: {total_cost:,} | Всего: {self.spent_amount:,} / {self.max_budget:,}")
+                
                 remaining_limit -= buy_qty
                 consecutive_errors = 0
                 
                 # Меню закрывается само при успешной покупке
                 self._is_menu_open = False
-                time.sleep(1.5) # Wait for backend/refresh
+                time.sleep(0.2) # Wait for backend/refresh
             else:
                 self.logger.error("❌ Не удалось нажать кнопку заказа")
                 consecutive_errors += 1
@@ -437,7 +533,7 @@ class BuyerBot(BaseBot):
         if not buy_btn: return False
         self._human_move_to(*buy_btn)
         self._human_click()
-        time.sleep(1.0)
+        time.sleep(0.2)
         
         # 4. Раскрыть (Smart Expand)
         need_expand = True
@@ -452,12 +548,13 @@ class BuyerBot(BaseBot):
             if expand_coord:
                 self._human_move_to(*expand_coord)
                 self._human_click()
-                time.sleep(0.5)
+                time.sleep(0.2)
         
         # 5. Проверка имени
         if not self._verify_item_name_with_retry(name):
              return False
              
+        self._is_menu_open = True
         return True
         
     def _close_menu(self):
@@ -465,14 +562,18 @@ class BuyerBot(BaseBot):
         if close_btn:
              self._human_move_to(*close_btn)
              self._human_click()
+             self._human_click()
              self._is_menu_open = False
              self._current_tier_value = None
+             self._current_enchant = None 
+             self._current_quality = None
              time.sleep(0.5)
 
 
 
 
     def _select_tier(self, tier):
+        """Выбор тира (с поддержкой исключений и сбросом качества)"""
         coord = self.dropdowns.get_tier_click_point(
             tier, 
             item_name=self._current_item_name,
@@ -483,8 +584,13 @@ class BuyerBot(BaseBot):
             self._human_move_to(*coord)
             self._human_click()
             time.sleep(0.1)
+            self._current_tier_value = tier
+            self._current_quality = None
+            # !!! Enchant сохраняется игрой (Opportunistic), поэтому self._current_enchant НЕ сбрасываем.
 
     def _select_enchant(self, enchant):
+        if self._current_enchant == enchant: return
+        
         coord = self.dropdowns.get_enchant_click_point(enchant)
         if coord:
             self.dropdowns.open_enchant_menu(self)
@@ -540,11 +646,7 @@ class BuyerBot(BaseBot):
         if amount_input_coord:
              self._human_move_to(*amount_input_coord)
              self._human_click()
-             self._human_dbl_click()
              self._human_type(str(qty))
-             
-             # Клик левее для обновления (как в ТЗ)
-             # x - 60, y
              self._human_move_to(amount_input_coord[0] - 60, amount_input_coord[1])
              self._human_click()
              time.sleep(0.5)
@@ -583,4 +685,35 @@ class BuyerBot(BaseBot):
         # REAL CLICK
         self._human_move_to(*confirm_btn)
         self._human_click()
+        
+        # --- AUTO CONFIRM DIALOG ("YES") ---
+        # Search for "Yes" button image from resources
+        try:
+            import os
+            yes_btn_path = os.path.join(os.getcwd(), 'resources', 'ref_buyer_order_yes.png')
+            
+            # Fallback check
+            if not os.path.exists(yes_btn_path):
+                 # Try to use the uploaded one if local is missing (Temporary Backup)
+                 yes_btn_path = r"C:\Users\Student\.gemini\antigravity\brain\74d48c6a-9f60-478c-86b8-fd8619f2df23\uploaded_media_1_1769681616096.png"
+            
+            # Wait briefly for dialog
+            time.sleep(0.5) 
+            
+            # Simple retry loop for 2 seconds
+            for _ in range(4):
+                try:
+                    yes_center = pyautogui.locateCenterOnScreen(yes_btn_path, confidence=0.8)
+                    if yes_center:
+                        self.logger.info("✅ Обнаружено окно подтверждения. Жму 'Да'.")
+                        self._human_move_to(yes_center.x, yes_center.y)
+                        self._human_click()
+                        break
+                except pyautogui.ImageNotFoundException:
+                    pass
+                time.sleep(0.5)
+                
+        except Exception as e:
+            self.logger.error(f"⚠️ Ошибка поиска кнопки подтверждения: {e}")
+
         return True
