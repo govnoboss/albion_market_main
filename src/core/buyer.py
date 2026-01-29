@@ -125,9 +125,20 @@ class BuyerBot(BaseBot):
                         # Если _current_enchant еще не инициализирован (0), считаем 0.
                         persisted_enchant = self._current_enchant
                         
+                        # Запоминаем цену ДО смены тира
+                        from ..utils.ocr import read_price_at
+                        price_area = self._get_price_area()
+                        old_price = 0
+                        if price_area:
+                             old_price = read_price_at(price_area) or 0
+
                         # Меняем Тир
                         self._select_tier(tier)
                         self._current_tier_value = tier
+                        
+                        # Ждем обновления цены
+                        if old_price > 0:
+                            self._wait_for_price_update(old_price)
                         
                         # --- OPPORTUNISTIC CHECK ---
                         # Мы переключились на 'tier'. Энчант остался 'persisted_enchant' (теоретически).
@@ -339,19 +350,33 @@ class BuyerBot(BaseBot):
             # 1. Установка параметров (Tier -> Enchant)
             self._current_item_name = item_name
             
+            # Определяем зону цены (нужна для проверки обновления)
+            price_area = self._get_price_area()
+            old_price = 0
+            
+            # Проверка изменений
+            state_changed = False
+            
             if self._current_tier_value != tier:
+                if price_area and old_price == 0: old_price = read_price_at(price_area) or 0
                 self._select_tier(tier) 
                 self._current_tier_value = tier
+                state_changed = True
             
-            self._select_enchant(enchant)
+            if self._current_enchant != enchant:
+                if price_area and old_price == 0: old_price = read_price_at(price_area) or 0
+                self._select_enchant(enchant)
+                # self._current_enchant обновляется внутри _select_enchant, но мы знаем что он изменится
+                state_changed = True
+
+            # Если параметры изменились -> Ждем обновления цены
+            if state_changed and old_price > 0:
+                self._wait_for_price_update(old_price)
+
             self._select_quality(1) # Всегда Normal
             
             # 2. Анализ цены (OCR)
-            from ..utils.ocr import read_price_at
-            
-            price_area = self.config.get_coordinate_area("buyer_top_lot_price")
-            if not price_area:
-                 price_area = self.config.get_coordinate_area("best_price_area")
+            # from ..utils.ocr import read_price_at # Already imported
             
             if not price_area:
                 self.logger.error("❌ Не задана зона чтения цены (buyer_top_lot_price)")
@@ -717,3 +742,45 @@ class BuyerBot(BaseBot):
             self.logger.error(f"⚠️ Ошибка поиска кнопки подтверждения: {e}")
 
         return True
+
+    def _get_price_area(self):
+        """Helper to get preferred price area"""
+        price_area = self.config.get_coordinate_area("buyer_top_lot_price")
+        if not price_area:
+             price_area = self.config.get_coordinate_area("best_price_area")
+        return price_area
+
+    def _wait_for_price_update(self, old_price: int, timeout: float = 3.0) -> int:
+        """
+        Ждет, пока цена визуально изменится по сравнению с old_price.
+        """
+        from ..utils.ocr import read_price_at
+        
+        area = self._get_price_area()
+        if not area: return 0
+
+        start_time = time.time()
+        
+        while time.time() - start_time < timeout:
+            if self._stop_requested: return 0
+            self._check_pause()
+            
+            price = read_price_at(area)
+            
+            # 1. Если цена None (не распозналась или пусто) -> Ждем
+            if price is None:
+                time.sleep(0.1)
+                continue
+                
+            # 2. Если цена новая -> УСПЕХ
+            if price != old_price:
+                self.logger.debug(f"✅ Цена обновилась: {old_price} -> {price}")
+                return price
+                
+            # 3. Если цена совпадает со старой
+            if price == old_price:
+                time.sleep(0.1)
+                continue
+            
+        self.logger.warning(f"⏰ Таймаут ожидания цены! (Old: {old_price}).")
+        return 0
