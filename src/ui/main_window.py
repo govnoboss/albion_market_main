@@ -297,6 +297,10 @@ class MainWindow(QMainWindow):
     def _on_start_bot(self):
         """Запуск бота"""
         if not self.bot.isRunning():
+            # Получаем стартовый индекс (spinbox 1-based -> list 0-based)
+            start_index = self.control_panel.start_index_spin.value() - 1
+            self.bot.start_index = start_index
+            
             self.bot.start()
             self.control_panel.set_running_state(True)
             self.mini_overlay.update_status(True, False)

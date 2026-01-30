@@ -15,6 +15,7 @@ class MarketBot(BaseBot):
     def __init__(self):
         super().__init__()
         self.dropdowns = DropdownSelector()
+        self.start_index = 0 # Индекс, с которого начинать (0-based)
         self._first_item_processed = False
         
         # Текущее состояние фильтров
@@ -60,6 +61,11 @@ class MarketBot(BaseBot):
                 if self._stop_requested: break
                 time.sleep(0.1)
                 
+            # --- START INDEX LOGIC ---
+            if i < self.start_index:
+                # Тихо пропускаем, пока не дойдем до нужного
+                continue
+            
             self.progress_updated.emit(i + 1, total_items, item_name)
             self.logger.info(f"[{i+1}/{total_items}] Обработка: {item_name}")
             
@@ -76,6 +82,11 @@ class MarketBot(BaseBot):
             try:
                 self._process_item(item_name)
                 self._first_item_processed = True
+                
+                # Сохраняем прогресс (чтобы можно было продолжить)
+                # Сохраняем ИМЕННО ЭТОТ индекс как последний успешно обработанный
+                self.config.set_setting("last_scan_index", i)
+                
             except Exception as e:
                 self.logger.error(f"Ошибка при обработке '{item_name}': {e}")
                 

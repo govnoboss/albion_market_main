@@ -9,7 +9,9 @@ from PyQt6.QtWidgets import (
     QScrollArea
 )
 from ..utils.config import get_config
+from ..utils.config import get_config
 from ..utils.logger import get_logger
+from .calibration_overlay import CalibrationOverlay
 
 class SettingsPanel(QScrollArea):
     """Панель глобальных настроек"""
@@ -18,6 +20,9 @@ class SettingsPanel(QScrollArea):
         super().__init__()
         self.setWidgetResizable(True)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        
+        # Оверлей калибровки
+        self.overlay = CalibrationOverlay()
         
         # Убираем рамки и ставим фон
         self.setStyleSheet("""
@@ -209,9 +214,35 @@ class SettingsPanel(QScrollArea):
         
     def _on_row_height_changed(self, value):
         get_config().set_dropdown_setting("row_height", value)
+        self._show_calibration_points()
         
     def _on_offset_changed(self, value):
         get_config().set_dropdown_setting("list_start_offset", value)
+        self._show_calibration_points()
+
+    def _show_calibration_points(self):
+        """Показать точки калибровки для текущего Tier Dropdown"""
+        # Берем настройки из UI (так как они еще могут быть не сохранены или просто для live preview)
+        row_height = self.row_height_spin.value()
+        offset = self.offset_spin.value()
+        
+        # Получаем координату "tier_dropdown" через конфиг
+        config = get_config()
+        anchor = config.get_coordinate("tier_dropdown")
+        
+        if not anchor:
+            return
+            
+        x, y = anchor
+        points = []
+        
+        # Генерируем точки для 8 элементов (как пример)
+        for i in range(8):
+            # Формула: anchor_y + offset + (index * row_height)
+            py = y + offset + (i * row_height)
+            points.append((x, py))
+            
+        self.overlay.show_points(points)
  
     def _on_filters_changed(self):
         """Сохранить фильтры при изменении чекбоксов"""

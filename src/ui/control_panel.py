@@ -6,11 +6,13 @@
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-    QPushButton, QGroupBox, QProgressBar, QMessageBox
+    QPushButton, QGroupBox, QProgressBar, QMessageBox,
+    QSpinBox, QStyle
 )
 import os
 import pyautogui
 
+from ..utils.config import get_config
 from ..utils.logger import get_logger
 
 
@@ -56,7 +58,39 @@ class ControlPanel(QWidget):
         
         # === Управление ===
         controls_group = QGroupBox("🎮 Управление")
+        controls_group = QGroupBox("🎮 Управление")
         controls_layout = QVBoxLayout(controls_group)
+        
+        # Row: Start Index & Resume
+        resume_layout = QHBoxLayout()
+        
+        self.start_index_spin = QSpinBox()
+        self.start_index_spin.setRange(1, 9999)
+        self.start_index_spin.setPrefix("№ ")
+        self.start_index_spin.setToolTip("Номер предмета, с которого начать")
+        self.start_index_spin.setFixedWidth(80)
+        resume_layout.addWidget(QLabel("Старт с:"))
+        resume_layout.addWidget(self.start_index_spin)
+        
+        self.resume_btn = QPushButton("Продолжить")
+        self.resume_btn.setToolTip("Продолжить с последнего сохраненного места")
+        self.resume_btn.clicked.connect(self._on_resume_clicked)
+        self.resume_btn.setVisible(False) # Скрыта по умолчанию
+        resume_layout.addWidget(self.resume_btn)
+        
+        resume_layout.addStretch()
+        controls_layout.addLayout(resume_layout)
+
+        # Check for last index
+        try:
+            last_index = get_config().get_setting("last_scan_index", 0)
+            if last_index > 0:
+                self.resume_btn.setText(f"Продолжить ({last_index + 1})")
+                self.resume_btn.setVisible(True)
+                # Стиль для кнопки продолжения (Accent)
+                self.resume_btn.setStyleSheet("background-color: #1f6feb; color: white;")
+        except:
+            pass
         
         self.start_btn = QPushButton("▶ Старт")
         self.start_btn.setObjectName("primary")
@@ -122,3 +156,38 @@ class ControlPanel(QWidget):
             self.progress_bar.setFormat(item_name if item_name else "Ожидание...")
 
 
+            self.progress_bar.setFormat(item_name if item_name else "Ожидание...")
+
+    def _on_resume_clicked(self):
+        """Обработчик кнопки Продолжить"""
+        try:
+            last_index = get_config().get_setting("last_scan_index", 0)
+            # Устанавливаем в спинбокс (UI 1-based, internal 0-based. 
+            # Если мы остановились на 10 (index 9), next is 11 (index 10).
+            # last_scan_index сохраняет индекс ПОСЛЕДНЕГО обработанного.
+            # Значит следующий = last_index + 1.
+            # Spinbox is 1-based index (№ предмета) -> (last_index + 1) + 1?
+            # Нет: items[0] -> Spin=1. 
+            # Processed index 0 (Item 1). Next is Index 1 (Item 2).
+            # Last index = 0. Next Spin = 2.
+            # Next Spin = last_index + 2?
+            
+            # Давайте сохранять в конфиг именно индекс (0..N).
+            # Если last_index = 4 (пятый предмет). Значит надо начать с 5 (шестой).
+            # Spinbox (1-based) должен стать 6.
+            # Spinbox value = last_index + 2.
+            
+            # Wait, logic:
+            # Item 0 processed. last_index = 0. Next item is 1. Spinbox should be 2 ("Start from #2").
+            # Index + 1 = Next Index. 
+            # Spinbox displays (Index + 1).
+            # So Spinbox = (last_index + 1) + 1.
+            
+            next_item_number = last_index + 2
+            self.start_index_spin.setValue(next_item_number)
+            
+            # Auto-start
+            self.start_clicked.emit()
+            
+        except Exception as e:
+            get_logger().error(f"Error resuming: {e}")

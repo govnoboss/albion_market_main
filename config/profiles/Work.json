@@ -1,57 +1,50 @@
 {
     "coordinates": {
         "search_input": {
-            "x": 1138,
-            "y": 553,
+            "x": 626,
+            "y": 268,
             "type": "point"
         },
         "search_clear": {
-            "x": 1225,
-            "y": 584,
+            "x": 722,
+            "y": 273,
             "type": "point"
         },
         "buy_button": {
-            "x": 974,
-            "y": 620,
+            "x": 1274,
+            "y": 436,
             "type": "point"
         },
         "item_expand": {
-            "x": 1258,
+            "x": 1252,
             "y": 323,
             "type": "point"
         },
         "tier_dropdown": {
-            "x": 508,
-            "y": 396,
-            "type": "point"
-        },
-        "enchant_dropdown": {
-            "x": 668,
+            "x": 514,
             "y": 397,
             "type": "point"
         },
+        "enchant_dropdown": {
+            "x": 672,
+            "y": 396,
+            "type": "point"
+        },
         "quality_dropdown": {
-            "x": 813,
-            "y": 398,
+            "x": 812,
+            "y": 393,
             "type": "point"
         },
         "menu_close": {
-            "x": 938,
-            "y": 309,
+            "x": 940,
+            "y": 305,
             "type": "point"
         },
         "quality_text_region": {
-            "x": 762,
-            "y": 383,
-            "w": 70,
-            "h": 24,
-            "type": "area"
-        },
-        "market_menu_check": {
-            "x": 653,
-            "y": 196,
-            "w": 216,
-            "h": 36,
+            "x": 764,
+            "y": 385,
+            "w": 105,
+            "h": 21,
             "type": "area"
         },
         "item_icon_check": {
@@ -63,14 +56,14 @@
         },
         "best_price_area": {
             "x": 1018,
-            "y": 357,
-            "w": 79,
-            "h": 25,
+            "y": 360,
+            "w": 81,
+            "h": 21,
             "type": "area"
         },
         "create_buy_order": {
-            "x": 562,
-            "y": 540,
+            "x": 570,
+            "y": 535,
             "type": "point"
         },
         "item_name_area": {
@@ -82,14 +75,14 @@
         },
         "market_name_area": {
             "x": 651,
-            "y": 192,
-            "w": 219,
+            "y": 191,
+            "w": 208,
             "h": 43,
             "type": "area"
         },
         "item_sort": {
-            "x": 718,
-            "y": 359,
+            "x": 710,
+            "y": 360,
             "type": "point"
         },
         "item_menu_check": {
@@ -185,8 +178,8 @@
             "type": "point"
         },
         "bm_logout_btn": {
-            "x": 1776,
-            "y": 172,
+            "x": 1763,
+            "y": 222,
             "type": "point"
         },
         "bm_settings_btn": {
@@ -195,27 +188,27 @@
             "type": "point"
         },
         "bm_char1_area": {
-            "x": 62,
-            "y": 189,
-            "w": 45,
-            "h": 62,
+            "x": 56,
+            "y": 405,
+            "w": 50,
+            "h": 49,
             "type": "area"
         },
         "bm_char2_area": {
-            "x": 63,
-            "y": 474,
-            "w": 42,
-            "h": 67,
+            "x": 66,
+            "y": 301,
+            "w": 39,
+            "h": 38,
             "type": "area"
         },
         "bm_open_market_btn": {
-            "x": 683,
-            "y": 349,
+            "x": 762,
+            "y": 392,
             "type": "point"
         },
         "buyer_minus_btn": {
-            "x": 567,
-            "y": 632,
+            "x": 556,
+            "y": 627,
             "type": "point"
         },
         "buyer_amount_input": {
@@ -236,15 +229,30 @@
             "type": "area"
         },
         "buyer_total_price": {
-            "x": 563,
-            "y": 712,
-            "w": 90,
-            "h": 31,
+            "x": 567,
+            "y": 711,
+            "w": 87,
+            "h": 32,
             "type": "area"
         },
         "buyer_tab_buy": {
             "x": 569,
             "y": 479,
+            "type": "point"
+        },
+        "price_input": {
+            "x": 627,
+            "y": 631,
+            "type": "point"
+        },
+        "market_pixel_check": {
+            "x": 560,
+            "y": 310,
+            "color": [
+                205,
+                152,
+                111
+            ],
             "type": "point"
         }
     }

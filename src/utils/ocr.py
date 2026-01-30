@@ -2,6 +2,8 @@ import pytesseract
 from PIL import ImageGrab, ImageOps, Image
 import os
 import shutil
+import cv2
+import numpy as np
 from typing import Optional
 from ..utils.logger import get_logger
 
@@ -184,6 +186,48 @@ def parse_price(text: str) -> Optional[int]:
     except ValueError:
         return None
 
+def _check_empty_market(area: dict, threshold: float = 0.8) -> bool:
+    """
+    Проверяет наличие надписи 'Нет товара' методом Template Matching.
+    Возвращает True, если надпись найдена (рынок пуст).
+    """
+    template_path = os.path.join(os.path.dirname(__file__), '..', '..', 'resources', 'ref_empty_market.png')
+    
+    if not os.path.exists(template_path):
+        # Если эталон не найден, пропускаем проверку
+        return False
+        
+    try:
+        # Загружаем шаблон
+        template = cv2.imread(template_path, cv2.IMREAD_GRAYSCALE)
+        if template is None:
+            return False
+            
+        # Делаем скриншот области
+        bbox = (area['x'], area['y'], area['x'] + area['w'], area['y'] + area['h'])
+        screenshot = ImageGrab.grab(bbox=bbox)
+        
+        # Конвертируем в numpy grayscale
+        target = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2GRAY)
+        
+        # Проверка размеров
+        if template.shape[0] > target.shape[0] or template.shape[1] > target.shape[1]:
+            return False
+            
+        # Template Matching
+        result = cv2.matchTemplate(target, template, cv2.TM_CCOEFF_NORMED)
+        _, max_val, _, _ = cv2.minMaxLoc(result)
+        
+        if max_val >= threshold:
+            logger.info(f"🚫 Empty Market detected (Score: {max_val:.2f})")
+            return True
+            
+        return False
+        
+    except Exception as e:
+        logger.warning(f"Template check error: {e}")
+        return False
+
 def read_price_at(area: dict) -> Optional[int]:
     """
     Считывает цену из заданной области экрана.
@@ -191,9 +235,13 @@ def read_price_at(area: dict) -> Optional[int]:
     """
     if not area:
         return None
+    
+    # --- Step 1: Check for Empty Market ---
+    if _check_empty_market(area):
+        return 0
         
+    # --- Step 2: OCR Strict Numeric ---
     # whitelist: Цифры + разделители + суффиксы (k, m, b) + пробел
-    # Запрещаем остальные буквы, чтобы избежать мусора типа "Total" -> "70701"
     whitelist="0123456789.,kKmMBb "
     
     raw_text = read_screen_text(
