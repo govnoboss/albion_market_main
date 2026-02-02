@@ -72,6 +72,11 @@ class BuyerWindow(QMainWindow):
         self.coords_tab = CoordinatesTab()
         self.tabs.addTab(self.coords_tab, "⚙️ Координаты")
         
+        # --- Вкладка 4: Профиты (из сканера) ---
+        from .profits_tab import ProfitsTab
+        self.profit_tab = ProfitsTab()
+        self.tabs.addTab(self.profit_tab, "📊 Профиты")
+        
         # Connect Hotkey Signals (Thread-Safe)
         self.hotkey_stop_sig.connect(self._on_stop_clicked)
         self.hotkey_pause_sig.connect(self._toggle_pause)
@@ -171,7 +176,16 @@ class BuyerWindow(QMainWindow):
         self.smart_mode_check.setToolTip("Покупать самые выгодные товары на основе сканирования,\nа не по фиксированному списку.")
         self.smart_mode_check.setStyleSheet("color: #d29922; font-weight: bold;")
         ctrl_layout.addWidget(self.smart_mode_check)
-
+        
+        # Чекбокс "Сортировать по %"
+        self.sort_by_percent_check = QCheckBox("   📊 Сортировать по % профита")
+        self.sort_by_percent_check.setToolTip("Если включено — приоритет предметам с высоким процентом прибыли.\nЕсли выключено — приоритет предметам с высокой абсолютной прибылью в серебре.")
+        self.sort_by_percent_check.setStyleSheet("color: #8b949e; margin-left: 20px;")
+        self.sort_by_percent_check.setVisible(False)  # Скрыт по умолчанию
+        ctrl_layout.addWidget(self.sort_by_percent_check)
+        
+        # Связываем видимость с smart_mode_check
+        self.smart_mode_check.toggled.connect(self.sort_by_percent_check.setVisible)
 
         
         # Кнопка СТОП
@@ -185,7 +199,7 @@ class BuyerWindow(QMainWindow):
         # Чекбокс Ручное подтверждение (Debug)
         from PyQt6.QtWidgets import QCheckBox
         self.debug_confirm_check = QCheckBox("Ручное подтверждение (F1/F2)")
-        self.debug_confirm_check.setChecked(True) # Default On as requested for testing
+        self.debug_confirm_check.setChecked(False) # Отключено по умолчанию
         self.debug_confirm_check.setStyleSheet("color: #8b949e;")
         ctrl_layout.addWidget(self.debug_confirm_check)
         
@@ -293,6 +307,7 @@ class BuyerWindow(QMainWindow):
         self.bot.mode = "smart" if is_smart else "wholesale"
         self.bot.manual_confirm_mode = self.debug_confirm_check.isChecked()
         self.bot.max_budget = self.budget_spin.value()
+        self.bot.sort_by_percent = self.sort_by_percent_check.isChecked()  # Сортировка по %
         self.bot.start()
         
         # Show Overlay (Top Center)

@@ -212,8 +212,8 @@
             "type": "point"
         },
         "buyer_amount_input": {
-            "x": 774,
-            "y": 768,
+            "x": 768,
+            "y": 764,
             "type": "point"
         },
         "buyer_create_order_confirm": {
@@ -254,10 +254,15 @@
                 111
             ],
             "type": "point"
+        },
+        "buyer_plus_btn": {
+            "x": 1155,
+            "y": 793,
+            "type": "point"
         }
     },
     "settings": {
-        "click_delay": 50,
+        "click_delay": 30,
         "scan_interval": 100,
         "char_1_name": "GIGAESHKERE",
         "char_2_name": "Mambaloid",
@@ -277,9 +282,7 @@
             8
         ],
         "enchants": [
-            0,
-            1,
-            2
+            0
         ],
         "qualities": [
             1,

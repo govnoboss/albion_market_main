@@ -27,6 +27,7 @@ class BuyerBot(BaseBot):
         self.max_budget = 0 # 0 = Unlimited
         self.spent_amount = 0 # Отслеживание трат сессии
         self.mode = "wholesale" # wholesale | smart
+        self.sort_by_percent = False  # Сортировка по % профита (вместо абсолютного серебра)
         self._is_menu_open = False # State tracking for optimization
         self._current_tier_value = None # State for tier skip optimization
         
@@ -196,23 +197,22 @@ class BuyerBot(BaseBot):
         # Чтобы не покупать миллион раз одно и то же, запоминаем что купили?
         # Пока просто идем по списку.
         
-        for i, (item_name, tier, enchant, profit_est, market_price) in enumerate(items_to_check):
+        for i, (item_name, tier, enchant, profit_est, market_price, profit_pct) in enumerate(items_to_check):
             if self._stop_requested: break
             self._check_pause()
             
-            processed_count += 1 
-            self.progress_updated.emit(processed_count, total_items, f"{item_name} (+{int(profit_est)} s.)")
+            processed_count += 1
+            # Отображаем % или серебро в зависимости от режима сортировки
+            if self.sort_by_percent:
+                self.progress_updated.emit(processed_count, total_items, f"{item_name} (+{profit_pct:.1f}%)")
+            else:
+                self.progress_updated.emit(processed_count, total_items, f"{item_name} (+{int(profit_est)} s.)")
             
             # 3. Определяем лимит (Batch)
             # Пробуем найти лимит в конфиге
             config_limit = 0
             try:
-                # get_wholesale_limit returns (min_price, max_price, limit) -> Wait, method signature?
-                # config.get_wholesale_limit(item, t, e) -> returns (min_profit, max_quantity, step_qty?) 
-                # Let's check config.py... actually get_wholesale_limit usually returns profit percent.
-                # Let's check existing usage: "_, _, min_profit_percent = self.config.get_wholesale_limit..."
                 
-                # We need separate check for configured LIMIT in 'wholesale_targets'
                 targets = self.config.get_wholesale_targets()
                 variant_key = f"T{tier}.{enchant}"
                 
@@ -224,20 +224,19 @@ class BuyerBot(BaseBot):
             
             final_limit = config_limit if config_limit > 0 else DEFAULT_BATCH
             
-            self.logger.info(f"🧠 Smart Item: {item_name} T{tier}.{enchant} | Profit: {int(profit_est)} | Limit: {final_limit} {'(Config)' if config_limit > 0 else '(Default)'}")
+            # Логируем с обоими показателями
+            self.logger.info(f"🧠 Smart Item: {item_name} T{tier}.{enchant} | Profit: {int(profit_est)} ({profit_pct:.1f}%) | Limit: {final_limit} {'(Config)' if config_limit > 0 else '(Default)'}")
             
             # 4. Выполняем закупку (Reusing Wholesale Logic)
             try:
-                # Открываем предмет
-                if not self._search_item_and_open(item_name):
+                # Открываем предмет (с tier.enchant в поиске)
+                if not self._search_item_and_open(item_name, tier, enchant):
                     continue
                 
                 # Переход на вкладку Заказа
                 if not self._is_black_market:
                      buy_order_tab = self.config.get_coordinate("create_buy_order") 
                      if buy_order_tab:
-                         # self._human_move_to... wait, wholesale logic does this ONCE per item group.
-                         # Here we do it per item. OK.
                         self._human_move_to(*buy_order_tab)
                         self._human_click()
                         time.sleep(0.5)
@@ -253,8 +252,8 @@ class BuyerBot(BaseBot):
                 
     def _get_profitable_items_sorted(self):
         """
-        Возвращает список [(name, tier, enchant, profit, market_price), ...]
-        отсортированный по profit (desc).
+        Возвращает список [(name, tier, enchant, profit, market_price, profit_percent), ...]
+        отсортированный по profit или profit_percent (в зависимости от self.sort_by_percent).
         """
         if not self._current_city:
             self.logger.warning("Город не определен, сортировка невозможна.")
@@ -290,14 +289,29 @@ class BuyerBot(BaseBot):
                     net_bm = bm_price * 0.935
                     profit = net_bm - market_price
                     
+                    # Profit Percent = ((net_bm - market) / market) * 100
+                    profit_percent = ((net_bm - market_price) / market_price) * 100
+                    
+                    # Фильтр: отсекаем нереалистичные профиты (ошибки OCR)
+                    if profit_percent > 1000:
+                        continue
+                    
                     # Basic filters
                     if profit > 500: # Min safe profit hardcoded
-                        items.append((item_name, tier, enchant, profit, market_price))
+                        items.append((item_name, tier, enchant, profit, market_price, profit_percent))
                         
                 except Exception: continue
-                    
-        # Sort DESC
-        items.sort(key=lambda x: x[3], reverse=True)
+        
+        # Sort by percentage or absolute profit
+        if self.sort_by_percent:
+            # Сортировка по % профита (desc)
+            items.sort(key=lambda x: x[5], reverse=True)
+            self.logger.info("📊 Сортировка: по % профита")
+        else:
+            # Сортировка по абсолютному профиту (desc)
+            items.sort(key=lambda x: x[3], reverse=True)
+            self.logger.info("💰 Сортировка: по серебру")
+            
         return items
 
 
@@ -307,6 +321,8 @@ class BuyerBot(BaseBot):
         Обработка одной вариации товара (ОПТ).
         Цикл покупки пока лимит не исчерпан.
         """
+        from ..utils.ocr import read_price_at  # Импорт для чтения цены
+        
         remaining_limit = limit
         consecutive_errors = 0
         
@@ -343,36 +359,26 @@ class BuyerBot(BaseBot):
                     self._current_tier_value = None # Reset tier state on new menu
                     self._current_enchant = None 
                     time.sleep(0.5) # Wait for animation
+                    
+                    # Кликаем на "Заказ на покупку" после открытия меню
+                    buy_order_tab = self.config.get_coordinate("create_buy_order")
+                    if buy_order_tab and not self._is_black_market:
+                        self._human_move_to(*buy_order_tab)
+                        self._human_click()
+                        time.sleep(0.3)
                 else:
                     self.logger.error("❌ Нет координаты кнопки Купить!")
                     break
             
             # 1. Установка параметров (Tier -> Enchant)
+            # Пропускаем если tier/enchant уже заданы в поисковом запросе (Smart Mode)
             self._current_item_name = item_name
             
-            # Определяем зону цены (нужна для проверки обновления)
+            # Определяем зону цены
             price_area = self._get_price_area()
-            old_price = 0
             
-            # Проверка изменений
-            state_changed = False
-            
-            if self._current_tier_value != tier:
-                if price_area and old_price == 0: old_price = read_price_at(price_area) or 0
-                self._select_tier(tier) 
-                self._current_tier_value = tier
-                state_changed = True
-            
-            if self._current_enchant != enchant:
-                if price_area and old_price == 0: old_price = read_price_at(price_area) or 0
-                self._select_enchant(enchant)
-                # self._current_enchant обновляется внутри _select_enchant, но мы знаем что он изменится
-                state_changed = True
-
-            # Если параметры изменились -> Ждем обновления цены
-            if state_changed and old_price > 0:
-                self._wait_for_price_update(old_price)
-
+            # Пропускаем dropdown'ы — tier/enchant уже в поиске для Smart Mode
+            # Качество всё ещё выставляем
             self._select_quality(1) # Всегда Normal
             
             # 2. Анализ цены (OCR)
@@ -399,12 +405,7 @@ class BuyerBot(BaseBot):
             
             # 3. Расчет цены покупки (Target)
             # Formula: (BM * 0.935) / (1.025 * (1 + Margin))
-            bm_price = price_storage.get_item_price("Black Market", item_name, tier, enchant, 1)
-            
-            if bm_price <= 0:
-                self.logger.warning(f"⚠️ Нет цены ЧР для {item_name} T{tier}.{enchant}. Пропуск.")
-                self._close_menu()
-                break
+            # bm_price уже получен в начале функции
             
             # Get Min Profit % from config
             _, _, min_profit_percent = self.config.get_wholesale_limit(item_name, tier, enchant)
@@ -431,12 +432,12 @@ class BuyerBot(BaseBot):
             
             if current_price > 0 and current_price > target_price:
                 self.logger.info(f"📉 Цена рынка ({current_price}) выше целевой ({target_price}). Пропуск.")
-                # Не закрываем меню, чтобы следующая вариация могла продолжить
+                self._close_menu()
                 break
             
-            # 4. Количество (Batching)
-            BATCH_SIZE = 10
-            buy_qty = min(remaining_limit, BATCH_SIZE)
+            # 4. Количество (Batching) — покупаем половину от ОРИГИНАЛЬНОГО лимита
+            batch_size = max(limit // 2, 1)  # Половина от оригинального лимита
+            buy_qty = min(remaining_limit, batch_size)  # Но не больше чем осталось
 
             # --- BUDGET CHECK ---
             if self.max_budget > 0:
@@ -455,21 +456,6 @@ class BuyerBot(BaseBot):
 
             self.logger.info(f"🛒 Микро-ордер: {buy_qty} шт. (Target: {target_price})")
             
-            # Re-apply budget check on this final buy_qty
-            if self.max_budget > 0:
-                cost = target_price * buy_qty
-                if self.spent_amount + cost > self.max_budget:
-                     remaining = self.max_budget - self.spent_amount
-                     buy_qty = remaining // target_price
-                     if buy_qty <= 0:
-                         self.logger.warning("🛑 Бюджет исчерпан! Остановка.")
-                         self._stop_requested = True
-                         break
-                     else:
-                        self.logger.info(f"💵 Лимит бюджета. Покупаем: {buy_qty} шт.")
-
-            self.logger.info(f"🛒 Микро-ордер: {buy_qty} шт. (Target: {target_price})")
-            
             # 5. Ввод количества
             self._input_quantity(buy_qty)
             
@@ -485,7 +471,55 @@ class BuyerBot(BaseBot):
                  self._close_menu()
                  return 0
             
-            # 7. Верификация (Simplified for speed)
+            # 7. Верификация итоговой суммы (КРИТИЧЕСКАЯ ЗАЩИТА)
+            # Ожидаемая сумма = target_price * qty * 1.025 (+ 2.5% комиссия)
+            expected_total = int(target_price * buy_qty * 1.025)
+            
+            total_price_area = self.config.get_coordinate_area("buyer_total_price")
+            if not total_price_area:
+                # ЗАЩИТА: Нет координаты — нельзя верифицировать, пропускаем!
+                self.logger.error("🛑 Координата 'buyer_total_price' не задана! Покупка отменена для безопасности.")
+                self._close_menu()
+                break
+            
+            time.sleep(0.3)  # Ждём обновления UI
+            actual_total = read_price_at(total_price_area)
+            
+            if actual_total is None or actual_total <= 0:
+                # ЗАЩИТА: OCR не смог прочитать сумму — пропускаем!
+                self.logger.error("🛑 Не удалось прочитать итоговую сумму! Покупка отменена для безопасности.")
+                consecutive_errors += 1
+                self._close_menu()
+                time.sleep(1)
+                continue
+            
+            self.logger.info(f"🔍 Верификация: Ожидаем ≤{expected_total:,} | OCR: {actual_total:,}")
+            
+            if actual_total <= expected_total:
+                # Всё хорошо — итоговая сумма в пределах нормы
+                self.logger.info(f"✅ Верификация пройдена: {actual_total:,} ≤ {expected_total:,}")
+            else:
+                # actual_total > expected_total — реальная цена выше чем мы думали
+                # Вычисляем реальную цену из итоговой суммы
+                real_price = int((actual_total / 1.025) / buy_qty)
+                
+                self.logger.warning(f"⚠️ Реальная цена выше! OCR ошибся: {current_price:,} → {real_price:,}")
+                
+                # Обновляем цену в хранилище
+                price_storage.save_price(
+                    self._current_city, 
+                    item_name, 
+                    tier, 
+                    enchant, 
+                    1,  # quality = Normal
+                    real_price
+                )
+                self.logger.info(f"📊 Цена обновлена в таблице: {item_name} T{tier}.{enchant} = {real_price:,}")
+                
+                # Реальная цена выше целевой — пропускаем
+                self.logger.info(f"📉 Реальная цена ({real_price:,}) выше целевой ({target_price:,}). Пропуск.")
+                self._close_menu()
+                break
             
             # 8. Покупка
             if self.simulation_mode:
@@ -536,7 +570,15 @@ class BuyerBot(BaseBot):
                     continue
         self._items_to_buy.sort(key=lambda x: (x[0], x[1], x[2]))
 
-    def _search_item_and_open(self, name: str) -> bool:
+    def _search_item_and_open(self, name: str, tier: int = None, enchant: int = None) -> bool:
+        # Формируем поисковый запрос
+        if tier is not None and enchant is not None:
+            search_query = f"{name} T{tier}.{enchant}"
+        else:
+            search_query = name
+            
+        self.logger.debug(f"🔍 Поиск: '{search_query}'")
+        
         # 1. Сброс
         search_clear = self.config.get_coordinate("search_clear")
         if search_clear:
@@ -549,9 +591,9 @@ class BuyerBot(BaseBot):
         
         self._human_move_to(*search_input)
         self._human_click()
-        self._human_type(name)
+        self._human_type(search_query)
         pyautogui.press('enter')
-        time.sleep(1.0)
+        time.sleep(0.7)
         
         # 3. Купить (открыть меню)
         buy_btn = self.config.get_coordinate("buy_button")
@@ -655,7 +697,7 @@ class BuyerBot(BaseBot):
                         return 
                         
                 except Exception as e:
-                    pass # Fallback to click
+                    pass # Fallback to click    
 
         # 2. Если не совпало или нет OCR -> Кликаем как раньше
         coord = self.dropdowns.get_quality_click_point(quality)
@@ -666,15 +708,34 @@ class BuyerBot(BaseBot):
             time.sleep(0.1)
 
     def _input_quantity(self, qty: int):
-        """Ввод количества в поле (buyer_amount_input)"""
-        amount_input_coord = self.config.get_coordinate("buyer_amount_input")
-        if amount_input_coord:
-             self._human_move_to(*amount_input_coord)
-             self._human_click()
-             self._human_type(str(qty))
-             self._human_move_to(amount_input_coord[0] - 60, amount_input_coord[1])
-             self._human_click()
-             time.sleep(0.5)
+        """
+        Ввод количества кликами по кнопке Плюс.
+        Изначально стоит 1, поэтому кликаем (qty - 1) раз.
+        """
+        plus_btn_coord = self.config.get_coordinate("buyer_plus_btn")
+        
+        if not plus_btn_coord:
+            self.logger.warning("⚠️ Координата 'buyer_plus_btn' не задана!")
+            return
+            
+        clicks_needed = qty - 1  # Изначально стоит 1
+        
+        if clicks_needed <= 0:
+            self.logger.debug("Количество уже 1, кликать не нужно")
+            return
+            
+        self.logger.debug(f"🔢 Ввод количества: {qty} (кликов: {clicks_needed})")
+        
+        # Кликаем на Плюс нужное количество раз
+        self._human_move_to(*plus_btn_coord)
+        time.sleep(0.1)
+        
+        for i in range(clicks_needed):
+            if self._stop_requested: return
+            pyautogui.click()
+            time.sleep(0.05)  # Минимальная задержка между кликами
+            
+        time.sleep(0.2)  # Ждём обновления UI
 
     def _click_confirm_order(self) -> bool:
         """Нажатие кнопки Создать заказ с проверкой Симуляции и Подтверждения"""
@@ -717,26 +778,38 @@ class BuyerBot(BaseBot):
             import os
             yes_btn_path = os.path.join(os.getcwd(), 'resources', 'ref_buyer_order_yes.png')
             
+            # Debug: проверяем путь
+            self.logger.debug(f"🔍 Путь к кнопке 'Да': {yes_btn_path}")
+            self.logger.debug(f"🔍 Файл существует: {os.path.exists(yes_btn_path)}")
+            
             # Fallback check
             if not os.path.exists(yes_btn_path):
-                 # Try to use the uploaded one if local is missing (Temporary Backup)
-                 yes_btn_path = r"C:\Users\Student\.gemini\antigravity\brain\74d48c6a-9f60-478c-86b8-fd8619f2df23\uploaded_media_1_1769681616096.png"
+                 self.logger.warning(f"⚠️ Файл кнопки не найден: {yes_btn_path}")
+                 return True  # Продолжаем без подтверждения
             
             # Wait briefly for dialog
             time.sleep(0.5) 
             
             # Simple retry loop for 2 seconds
-            for _ in range(4):
+            self.logger.info("🔍 Ищу кнопку подтверждения 'Да'...")
+            for attempt in range(4):
                 try:
-                    yes_center = pyautogui.locateCenterOnScreen(yes_btn_path, confidence=0.8)
+                    self.logger.debug(f"🔍 Попытка {attempt + 1}/4...")
+                    yes_center = pyautogui.locateCenterOnScreen(yes_btn_path, confidence=0.7)
                     if yes_center:
-                        self.logger.info("✅ Обнаружено окно подтверждения. Жму 'Да'.")
+                        self.logger.info(f"✅ Кнопка найдена на ({yes_center.x}, {yes_center.y}). Жму 'Да'.")
                         self._human_move_to(yes_center.x, yes_center.y)
                         self._human_click()
                         break
+                    else:
+                        self.logger.debug(f"🔍 Кнопка не найдена (попытка {attempt + 1})")
                 except pyautogui.ImageNotFoundException:
-                    pass
+                    self.logger.debug(f"🔍 ImageNotFoundException (попытка {attempt + 1})")
+                except Exception as e:
+                    self.logger.debug(f"🔍 Ошибка поиска: {e}")
                 time.sleep(0.5)
+            else:
+                self.logger.warning("⚠️ Кнопка 'Да' не найдена после 4 попыток")
                 
         except Exception as e:
             self.logger.error(f"⚠️ Ошибка поиска кнопки подтверждения: {e}")
@@ -750,7 +823,7 @@ class BuyerBot(BaseBot):
              price_area = self.config.get_coordinate_area("best_price_area")
         return price_area
 
-    def _wait_for_price_update(self, old_price: int, timeout: float = 3.0) -> int:
+    def _wait_for_price_update(self, old_price: int, timeout: float = 0.5) -> int:
         """
         Ждет, пока цена визуально изменится по сравнению с old_price.
         """

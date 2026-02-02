@@ -407,7 +407,7 @@ class MarketBot(BaseBot):
         
         self._select_enchant(0)
         self._select_tier(4)
-        self._select_quality(1)
+        self._select_quality(1, force=True)  # Принудительный клик при сбросе
 
     def _scan_variations(self, initial_last_price: int = 0):
         """Перебор вариантов согласно фильтрам сканирования."""
@@ -550,10 +550,33 @@ class MarketBot(BaseBot):
             self._current_quality = None # Сброс подтвержденного качества
             time.sleep(random.uniform(0.1, 0.2))
 
-    def _select_quality(self, quality: int) -> bool:
+    def _select_quality(self, quality: int, force: bool = False) -> bool:
         """
         Выбрать качество с проверкой OCR и эвристикой.
+        
+        Args:
+            quality: Целевое качество (1-5)
+            force: Если True, пропустить оптимизации и всегда кликать по дропдауну
         """
+        # === BLACK MARKET OPTIMIZATION ===
+        # На Черном Рынке качество ВСЕГДА "Normal" (1), проверка не нужна
+        if self._is_black_market:
+            self._current_quality = 1
+            return True
+        
+        # === NORMAL MARKET OPTIMIZATION ===
+        # Проверка качества нужна только для T7/T8 с зачарованиями (enchant > 0)
+        # Для T4-T6 и T7/T8.0 качество можно оставить по умолчанию
+        # НО: при force=True (сброс фильтров) всегда кликаем
+        if not force:
+            current_tier = self._current_tier or 4
+            current_enchant = self._current_enchant or 0
+            needs_quality_check = (current_tier >= 7 and current_enchant > 0)
+            
+            if not needs_quality_check:
+                self._current_quality = quality
+                return True
+        
         # Если состояние уже верное (и мы в нем уверены)
         if self._current_quality == quality:
             self._consecutive_excellent_streak = 0 # Сброс стрика

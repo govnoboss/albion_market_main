@@ -79,6 +79,7 @@ class CoordinatesTab(QWidget):
             "Закупщик (Ордера)": [
                 ("buyer_minus_btn", "Кнопка Минус", "point"),
                 ("buyer_amount_input", "Кнопка Количество (Ввод)", "point"),
+                ("buyer_plus_btn", "Кнопка Плюс (+1)", "point"),
                 ("price_input", "💰 Ввод цены", "point"),
                 ("buyer_create_order_confirm", "Кнопка Заказать (Confirm)", "point"),
                 ("buyer_tab_buy", "Вкладка 'Купить' (Direct)", "point"),

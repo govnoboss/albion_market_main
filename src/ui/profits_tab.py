@@ -50,7 +50,9 @@ class ProfitLoader(QThread):
                     source_info = source_variants[variant_key]
                     source_price = source_info['price']
                     
-                    if source_price <= 0: continue
+                    # Пропускаем вариации с нулевой ценой на любом рынке (невалидные данные)
+                    if bm_price <= 0 or source_price <= 0: 
+                        continue
                     
                     # Taxes: 6.5%
                     tax_rate = 0.065
@@ -372,12 +374,23 @@ class ProfitsTab(QWidget):
             
             # Определяем город
             target_city = "Black Market" if col == 2 else self.city_combo.currentText()
+            variant_key = f"T{tier}.{enchant}"
             
-            # 1. Сохраняем новую цену
+            # 1. Если цена 0 — удаляем запись из БД и строку из таблицы
+            if new_price <= 0:
+                self.storage.delete_price(target_city, item_name, variant_key)
+                self._is_updating = True
+                try:
+                    self.table.removeRow(row)
+                finally:
+                    self._is_updating = False
+                return
+            
+            # 2. Сохраняем новую цену
             # Качество считаем 1 (Normal), т.к. таблица агрегирует
             self.storage.save_price(target_city, item_name, tier, enchant, 1, new_price)
             
-            # 2. Мгновенный пересчет профита для этой строки
+            # 3. Мгновенный пересчет профита для этой строки
             # Считываем актуальные данные из ячеек (учитывая что другую цену могли не менять)
             bm_text = table.item(row, 2).text().replace(',', '')
             source_text = table.item(row, 3).text().replace(',', '')
@@ -395,7 +408,7 @@ class ProfitsTab(QWidget):
             profit = int(revenue - src_p)
             percent = (profit / src_p) * 100 if src_p > 0 else 0
             
-            # 3. Обновляем UI (Profit & %)
+            # 4. Обновляем UI (Profit & %)
             self._is_updating = True # Блокируем сигналы, т.к. меняем ячейки
             try:
                 # Обновляем форматирование текущей ячейки (вернуть запятые)
