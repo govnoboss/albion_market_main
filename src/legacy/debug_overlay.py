@@ -24,8 +24,6 @@ class DebugOverlay(QWidget):
         self.status_text = ""
         self.shapes = [] # list of (type, args, color)
         
-        # Auto-clear shapes after some time? Or manual?
-        # Manual is better for "current state".
         
     def set_status(self, text: str):
         self.status_text = text

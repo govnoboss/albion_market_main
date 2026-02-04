@@ -56,28 +56,22 @@ def read_screen_text(x: int, y: int, w: int, h: int, lang: str = 'rus', whitelis
         new_size = (screenshot.width * scale, screenshot.height * scale)
         processed = screenshot.resize(new_size, Image.Resampling.LANCZOS)
         
-        from PIL import ImageStat # Import needed
-
-        # Конвертация в Grayscale
-        gray = ImageOps.grayscale(processed)
-        
-        # --- OTSU THRESHOLDING ---
-        # Автоматическое определение порога (лучше чем фиксированный 140)
+        # --- OTSU THRESHOLDING (Implicit Grayscale) ---
         import cv2
         import numpy as np
         
-        # Convert PIL to Numpy
-        img_np = np.array(gray)
+        # Convert PIL to Numpy (RGB)
+        img_np = np.array(processed)
+        
+        # Convert to Grayscale for Otsu
+        if len(img_np.shape) == 3:
+            img_np = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
         
         # Otsu's thresholding
-        # Returns (ret, thresh). ret is the optimal threshold value.
         _, thresh_np = cv2.threshold(img_np, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         
         # Convert back to PIL
         binarized = Image.fromarray(thresh_np)
-        
-        # --- SMART INVERSION ---
-        # User requested to REMOVE ImageOps.invert and ImageOps.expand
         
         # 3. Распознавание
         # --psm 6: Assume a single uniform block of text.
