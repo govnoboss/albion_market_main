@@ -5,9 +5,12 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QIcon
 
+
 from .styles import MAIN_STYLE, COLORS
 from .main_window import MainWindow as ScannerWindow
 from .buyer_window import BuyerWindow
+from .login_window import LoginWindow
+from ..core.license import license_manager
 
 class LauncherWindow(QMainWindow):
     """
@@ -18,6 +21,31 @@ class LauncherWindow(QMainWindow):
     
     def __init__(self):
         super().__init__()
+        # --- License Check ---
+        self.login_window = None
+
+        if not self._check_license_silent():
+            # Show Login Window instead of Launcher
+            self.hide() # Ensure hidden
+            self.login_window = LoginWindow(on_success_callback=self._show_launcher)
+            self.login_window.show()
+            return
+
+        self._init_launcher_ui()
+        self.show()
+
+    def _check_license_silent(self):
+        """Silently checks if we have a stored valid key"""
+        res = license_manager.validate_key() # Load from file
+        return res.get('success', False)
+
+    def _show_launcher(self):
+        """Called when login is successful"""
+        self._init_launcher_ui()
+        self.show()
+
+    def _init_launcher_ui(self):
+        self.setWindowTitle("GBot - Launcher")
         self.setWindowTitle("Albion Market Tool - Launcher")
         self.resize(600, 400)
         self.setStyleSheet(MAIN_STYLE)
@@ -69,7 +97,7 @@ class LauncherWindow(QMainWindow):
         layout.addStretch()
         
         # Footer
-        footer = QLabel("v2.0 • 2024")
+        footer = QLabel("v2.0 • 2026")
         footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
         footer.setStyleSheet("color: #30363d;")
         layout.addWidget(footer)

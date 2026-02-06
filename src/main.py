@@ -24,8 +24,8 @@ def run_app():
     app.setFont(font)
     
     # Запускаем Лаунчер
-    window = LauncherWindow()
-    window.show()
+    # Он сам решит, показать себя или окно входа
+    _ = LauncherWindow()
     
     sys.exit(app.exec())
 
