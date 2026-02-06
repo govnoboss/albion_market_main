@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, 
     QScrollArea, QFrame, QGroupBox, QMessageBox, QComboBox, QInputDialog
 )
-from PyQt6.QtCore import Qt, pyqtSlot
+from PyQt6.QtCore import Qt, pyqtSlot, QTimer
 
 from ..utils.config import get_config
 from ..utils.logger import get_logger
@@ -55,36 +55,40 @@ class CoordinatesTab(QWidget):
         
         # Define categories
         self.categories = {
-            "Поиск и Покупка": [
+            "Основное меню рынка": [
                 ("search_input", "Поле поиска", "point"),
                 ("search_clear", "Очистка поиска", "point"),
-                ("buy_button", "Кнопка Купить Предмет", "point"),
-                ("item_sort", "Кнопка Сортировки Предмета", "point"),
-                ("item_expand", "Кнопка Раскрыть цены предмета", "point"),
-                ("create_buy_order", "Кнопка Заказ на покупку", "point"),
-                ("menu_close", "Крестик закрытия меню предмета", "point"),
+                ("buy_button", "Купить предмет", "point"),
+                ("item_sort", "Сортировка предмета", "point"),
+                # OCR
+                ("market_name_area", "Название Рынка (OCR)", "area"),
             ],
-            "Фильтры": [
-                ("tier_dropdown", "Выпадающий список Тира", "point"),
+            "Окно меню предмета": [
+                # Основные кнопки
+                ("item_expand", "Раскрыть цену предмета", "point"),
+                ("create_buy_order", "Заказ на покупку", "point"),
+                
+                # Выпадающие списки
+                ("tier_dropdown", "Выпадающий список Тиров", "point"),
                 ("enchant_dropdown", "Выпадающий список Чары", "point"),
                 ("quality_dropdown", "Выпадающий список Качества", "point"),
-            ],
-            "OCR (Распознавание / Валидация)": [
-                ("quality_text_region", "Название текущего качество", "area"),
-                ("item_menu_check", "Заказы на продажу", "area"),
-                ("market_name_area", "Название текущего рынка", "area"),
-                ("item_name_area", "Область названия предмета", "area"),
-                ("best_price_area", "Цена (Топ лот)", "area"),
-            ],
-            "Закупщик (Ордера)": [
+                
+                # Элементы ордера
                 ("buyer_minus_btn", "Кнопка Минус", "point"),
+                ("buyer_plus_btn", "Кнопка Плюс", "point"),
                 ("buyer_amount_input", "Кнопка Количество (Ввод)", "point"),
-                ("buyer_plus_btn", "Кнопка Плюс (+1)", "point"),
-                ("price_input", "💰 Ввод цены", "point"),
-                ("buyer_create_order_confirm", "Кнопка Заказать (Confirm)", "point"),
-                ("buyer_tab_buy", "Вкладка 'Купить' (Direct)", "point"),
-                ("buyer_top_lot_qty", "OCR: Кол-во в топ лоте", "area"),
-                ("buyer_total_price", "OCR: Итоговая стоимость", "area"),
+                ("price_input", "Ввод цены", "point"),
+                ("buyer_create_order_confirm", "Кнопка Заказать (confirm)", "point"),
+                ("buyer_tab_buy", "Вкладка 'Купить' (direct)", "point"),
+                ("menu_close", "Крестик закрытия меню предмета", "point"),
+
+                # OCR зоны
+                ("item_name_area", "Название предмета (OCR)", "area"),
+                ("quality_text_region", "Название текущего качества (OCR)", "area"),
+                ("best_price_area", "Цена за 1шт предмета (OCR)", "area"),
+                ("item_menu_check", "Надпись 'Заказы на продажу' (Check)", "area"),
+                ("buyer_top_lot_qty", "Кол-во в топ лоте (OCR)", "area"),
+                ("buyer_total_price", "Итоговая стоимость (OCR)", "area"),
             ],
             "Black Market (New)": [
                 ("bm_sell_tab", "Вкладка 'Продать'", "point"),
@@ -95,17 +99,55 @@ class CoordinatesTab(QWidget):
                 ("bm_char1_area", "👤 Аватарка Персонаж 1 (Area/Ref)", "area"),
                 ("bm_char2_area", "👤 Аватарка Персонаж 2 (Area/Ref)", "area"),
             ],
-
         }
         
         self.coord_widgets = {}  # key -> value_label
         
         for category, items in self.categories.items():
-            group = QGroupBox(category)
+            group = QGroupBox() # Без заголовка, делаем свой
             group_layout = QVBoxLayout(group)
             
-            for key, name, mode in items:
-                row = self._create_coord_row(key, name, mode)
+            # --- Заголовок Раздела ---
+            header_layout = QHBoxLayout()
+            cat_label = QLabel(category)
+            cat_label.setStyleSheet("font-weight: bold; font-size: 14px; color: #58a6ff;")
+            
+            # Кнопка помощи раздела
+            help_btn = QPushButton("?")
+            help_btn.setFixedSize(24, 24)
+            help_btn.setCursor(Qt.CursorShape.WhatsThisCursor)
+            help_btn.setToolTip(f"Показать справку для раздела '{category}'")
+            help_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: #238636;
+                    color: white;
+                    border: 1px solid #2ea043;
+                    border-radius: 12px;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background-color: #2ea043;
+                }
+            """)
+            # Передаем category как key для поиска картинки
+            help_btn.clicked.connect(lambda checked, c=category: self._show_help_image(c, c)) # key=category name
+            
+            header_layout.addWidget(cat_label)
+            header_layout.addWidget(help_btn)
+            header_layout.addStretch()
+            
+            group_layout.addLayout(header_layout)
+            
+            # Разделитель
+            line = QFrame()
+            line.setFrameShape(QFrame.Shape.HLine)
+            line.setFrameShadow(QFrame.Shadow.Sunken)
+            line.setStyleSheet("background-color: #30363d; margin-bottom: 5px;")
+            group_layout.addWidget(line)
+            
+            # --- Элементы (с нумерацией) ---
+            for i, (key, name, mode) in enumerate(items, 1):
+                row = self._create_coord_row(key, name, mode, i)
                 group_layout.addLayout(row)
                 
             self.content_layout.addWidget(group)
@@ -115,18 +157,20 @@ class CoordinatesTab(QWidget):
         scroll.setWidget(content)
         layout.addWidget(scroll)
 
-    def _create_coord_row(self, key, name, mode):
+    def _create_coord_row(self, key, name, mode, index):
         layout = QHBoxLayout()
         
-        name_lbl = QLabel(name)
-        name_lbl.setMinimumWidth(120)
+        # Нумерация: "1. Название"
+        numbered_name = f"{index}. {name}"
+        name_lbl = QLabel(numbered_name)
+        name_lbl.setMinimumWidth(150)
         
         val_lbl = QLabel("Не задано")
         val_lbl.setStyleSheet("color: #666;")
         self.coord_widgets[key] = val_lbl
         
         set_btn = QPushButton("Задать")
-        set_btn.setFixedWidth(70)
+        set_btn.setFixedWidth(80)
         set_btn.clicked.connect(lambda checked, k=key, n=name, m=mode: self._start_capture(k, n, m))
         
         layout.addWidget(name_lbl)
@@ -143,7 +187,7 @@ class CoordinatesTab(QWidget):
                 test_label = "Test OCR"
                 
             test_btn = QPushButton(test_label)
-            test_btn.setFixedWidth(80)
+            test_btn.setFixedWidth(90)
             test_btn.setStyleSheet("""
                 QPushButton { background-color: #238636; }
                 QPushButton:hover { background-color: #2ea043; }
@@ -152,7 +196,7 @@ class CoordinatesTab(QWidget):
             layout.addWidget(test_btn)
         
         clear_btn = QPushButton("Сброс")
-        clear_btn.setFixedWidth(60)
+        clear_btn.setFixedWidth(70)
         # Style for clear button
         clear_btn.setStyleSheet("""
             QPushButton { background-color: #4a3b3b; }
@@ -167,6 +211,107 @@ class CoordinatesTab(QWidget):
     def _connect_signals(self):
         self.capture.coordinate_captured.connect(self._on_captured)
         self.capture.area_captured.connect(self._on_area_captured)
+
+    def _show_help_image(self, key, name):
+        """Показать картинку-подсказку для координаты"""
+        import os
+        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QMessageBox
+        from PyQt6.QtGui import QPixmap
+        
+        # Путь к картинке подсказки
+        help_dir = os.path.join(os.getcwd(), "resources", "help")
+        os.makedirs(help_dir, exist_ok=True)
+        image_path = os.path.join(help_dir, f"{key}.png")
+        
+        # Если картинки нет — предлагаем создать
+        if not os.path.exists(image_path):
+            reply = QMessageBox.question(
+                self, "Картинка не найдена",
+                f"Картинка-подсказка для '{name}' отсутствует.\n\nХотите сделать скриншот области сейчас?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            
+            if reply == QMessageBox.StandardButton.Yes:
+                self._start_help_capture(key, name)
+            return
+
+        # Создаем диалог (сохраняем в self, чтобы не удалился сборщиком мусора)
+        if hasattr(self, '_help_dialog') and self._help_dialog:
+            self._help_dialog.close()
+            
+        self._help_dialog = QDialog(self)
+        self._help_dialog.setWindowTitle(f"📖 {name}")
+        # WindowStaysOnTopHint чтобы окно плавало поверх, но не блокировало
+        self._help_dialog.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)
+        self._help_dialog.setStyleSheet("""
+            QDialog {
+                background-color: #0d1117;
+            }
+            QLabel {
+                color: #f0f6fc;
+            }
+        """)
+        
+        layout = QVBoxLayout(self._help_dialog)
+        layout.setContentsMargins(15, 15, 15, 15)
+        
+        # Показываем картинку
+        img_label = QLabel()
+        pixmap = QPixmap(image_path)
+        # Масштабируем если слишком большая (увеличили лимит до 1200x900)
+        if pixmap.width() > 1200 or pixmap.height() > 900:
+            pixmap = pixmap.scaled(1200, 900, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        img_label.setPixmap(pixmap)
+        layout.addWidget(img_label)
+        
+        self._help_dialog.adjustSize()
+        self._help_dialog.show()
+
+    def _start_help_capture(self, key, name):
+        """Запуск захвата области для справки"""
+        from .overlay import AreaSelectionOverlay
+        
+        # Сохраняем контекст
+        self._help_capture_key = key
+        self._help_capture_name = name
+        
+        self._help_overlay = AreaSelectionOverlay()
+        self._help_overlay.area_selected.connect(self._on_help_captured)
+        self._help_overlay.show()
+        
+    def _on_help_captured(self, x, y, w, h):
+        """Обработка захваченной области справки"""
+        import os
+        from PIL import ImageGrab
+        
+        key = getattr(self, '_help_capture_key', None)
+        name = getattr(self, '_help_capture_name', None)
+        
+        if not key:
+            return
+            
+        try:
+            # Скриншот
+            bbox = (x, y, x + w, y + h)
+            img = ImageGrab.grab(bbox=bbox)
+            
+            # Путь
+            help_dir = os.path.join(os.getcwd(), "resources", "help")
+            os.makedirs(help_dir, exist_ok=True)
+            save_path = os.path.join(help_dir, f"{key}.png")
+            
+            img.save(save_path)
+            
+            # Показываем результат с небольшой задержкой, чтобы оверлей успел закрыться
+            QTimer.singleShot(100, lambda: self._show_help_image(key, name))
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить скриншот:\n{e}")
+        
+        finally:
+            if self._help_overlay:
+                self._help_overlay.close()
+            self._help_overlay = None # Cleanup
 
     def _start_capture(self, key, name, mode):
         # Disable all buttons temporarily could be added here
@@ -373,6 +518,28 @@ class CoordinatesTab(QWidget):
         self.profiles_combo = QComboBox()
         self.profiles_combo.setPlaceholderText("Выберите профиль...")
         self.profiles_combo.setMinimumWidth(150)
+        self.profiles_combo.setStyleSheet("""
+            QComboBox {
+                background-color: #161b22;
+                color: #f0f6fc;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                padding: 5px 10px;
+            }
+            QComboBox:hover {
+                border-color: #58a6ff;
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #161b22;
+                color: #f0f6fc;
+                border: 1px solid #30363d;
+                selection-background-color: #30363d;
+            }
+        """)
         
         load_btn = QPushButton("Загрузить")
         load_btn.clicked.connect(self._on_load_profile)
@@ -409,66 +576,93 @@ class CoordinatesTab(QWidget):
             self.profiles_combo.setCurrentIndex(index)
 
     def _on_save_profile(self):
-        name, ok = QInputDialog.getText(self, "Сохранить профиль", "Введите название профиля:")
-        if ok and name:
-            if self.config.save_profile(name):
-                QMessageBox.information(self, "Успех", f"Профиль '{name}' сохранен!")
-                self._refresh_profiles()
-                # Select the new profile
-                self.profiles_combo.setCurrentText(name)
-            else:
-                QMessageBox.warning(self, "Ошибка", "Не удалось сохранить профиль.\nПроверьте имя и права доступа.")
+        dialog = QInputDialog(self)
+        dialog.setWindowTitle("Сохранить профиль")
+        dialog.setLabelText("Введите название профиля:")
+        dialog.setStyleSheet(self._get_dialog_style())
+        
+        if dialog.exec():
+            name = dialog.textValue()
+            if name:
+                if self.config.save_profile(name):
+                    self._show_message("Успех", f"Профиль '{name}' сохранен!")
+                    self._refresh_profiles()
+                    self.profiles_combo.setCurrentText(name)
+                else:
+                    self._show_message("Ошибка", "Не удалось сохранить профиль.\nПроверьте имя и права доступа.", is_warning=True)
 
     def _on_load_profile(self):
         name = self.profiles_combo.currentText()
         if not name:
             return
             
-        reply = QMessageBox.question(
-            self, "Подтверждение", 
-            f"Загрузить профиль '{name}'?\nТекущие координаты будут перезаписаны!",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-        
-        if reply == QMessageBox.StandardButton.Yes:
+        if self._show_question("Подтверждение", f"Загрузить профиль '{name}'?\nТекущие координаты будут перезаписаны!"):
             if self.config.load_profile(name):
-                QMessageBox.information(self, "Успех", f"Профиль '{name}' загружен!")
-                self._refresh_values() # Update UI
+                self._show_message("Успех", f"Профиль '{name}' загружен!")
+                self._refresh_values()
             else:
-                QMessageBox.warning(self, "Ошибка", f"Не удалось загрузить профиль '{name}'.")
+                self._show_message("Ошибка", f"Не удалось загрузить профиль '{name}'.", is_warning=True)
 
     def _on_delete_profile(self):
         name = self.profiles_combo.currentText()
         if not name:
             return
             
-        reply = QMessageBox.question(
-            self, "Подтверждение", 
-            f"Удалить профиль '{name}' навсегда?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-        )
-        
-        if reply == QMessageBox.StandardButton.Yes:
+        if self._show_question("Подтверждение", f"Удалить профиль '{name}' навсегда?"):
             if self.config.delete_profile(name):
-                QMessageBox.information(self, "Успех", f"Профиль '{name}' удален.")
+                self._show_message("Успех", f"Профиль '{name}' удален.")
                 self._refresh_profiles()
             else:
-                QMessageBox.warning(self, "Ошибка", f"Не удалось удалить профиль '{name}'.")
+                self._show_message("Ошибка", f"Не удалось удалить профиль '{name}'.", is_warning=True)
 
-    def _refresh_values(self):
-        coords = self.config.get_all_coordinates()
-        for key, label in self.coord_widgets.items():
-            if key in coords:
-                data = coords[key]
-                if data.get('type') == 'area':
-                    text = f"X: {data['x']}, Y: {data['y']} [W: {data['w']}, H: {data['h']}]"
-                else:
-                    text = f"X: {data['x']}, Y: {data['y']}"
-                label.setText(text)
-                label.setStyleSheet("color: #0f0;") # Green for set
-            else:
-                label.setText("Не задано")
-                label.setStyleSheet("color: #888;")
+    def _get_dialog_style(self):
+        """Темная тема для диалогов"""
+        return """
+            QInputDialog, QMessageBox {
+                background-color: #0d1117;
+                color: #f0f6fc;
+            }
+            QLabel {
+                color: #f0f6fc;
+            }
+            QLineEdit, QSpinBox {
+                background-color: #161b22;
+                color: #f0f6fc;
+                border: 1px solid #30363d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+            QPushButton {
+                background-color: #21262d;
+                color: #f0f6fc;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                padding: 5px 15px;
+                min-width: 60px;
+            }
+            QPushButton:hover {
+                background-color: #30363d;
+            }
+        """
+
+    def _show_message(self, title, text, is_warning=False):
+        """Показать сообщение с темной темой"""
+        msg = QMessageBox(self)
+        msg.setWindowTitle(title)
+        msg.setText(text)
+        msg.setIcon(QMessageBox.Icon.Warning if is_warning else QMessageBox.Icon.Information)
+        msg.setStyleSheet(self._get_dialog_style())
+        msg.exec()
+
+    def _show_question(self, title, text):
+        """Показать диалог подтверждения с темной темой"""
+        msg = QMessageBox(self)
+        msg.setWindowTitle(title)
+        msg.setText(text)
+        msg.setIcon(QMessageBox.Icon.Question)
+        msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        msg.setStyleSheet(self._get_dialog_style())
+        return msg.exec() == QMessageBox.StandardButton.Yes
 
     def _refresh_values(self):
         coords = self.config.get_all_coordinates()

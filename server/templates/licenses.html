@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Ключи - GBot Admin{% endblock %}
+
+{% block content %}
+<h1>📋 Все ключи</h1>
+
+<div class="filters">
+    <form method="GET" class="filter-form">
+        <input type="text" name="search" placeholder="Поиск по ключу или HWID..." value="{{ search }}">
+        <select name="status">
+            <option value="">Все статусы</option>
+            <option value="active" {% if status_filter=='active' %}selected{% endif %}>Активные</option>
+            <option value="expired" {% if status_filter=='expired' %}selected{% endif %}>Истёкшие</option>
+            <option value="unbound" {% if status_filter=='unbound' %}selected{% endif %}>Не активированы</option>
+        </select>
+        <button type="submit" class="btn btn-secondary">Фильтр</button>
+    </form>
+</div>
+
+<table class="licenses-table">
+    <thead>
+        <tr>
+            <th>Ключ</th>
+            <th>HWID</th>
+            <th>Истекает</th>
+            <th>Статус</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for license in licenses %}
+        <tr class="{% if not license.is_active %}row-disabled{% endif %}">
+            <td class="key-cell">
+                <code class="full-key">{{ license.key }}</code>
+                <button class="btn btn-sm btn-copy"
+                    onclick="navigator.clipboard.writeText('{{ license.key }}'); this.textContent='✓'; setTimeout(() => this.textContent='📋', 1000)">📋</button>
+            </td>
+            <td class="hwid-cell">
+                {% if license.hwid %}
+                <code class="full-hwid">{{ license.hwid }}</code>
+                {% else %}
+                <span class="text-muted">—</span>
+                {% endif %}
+            </td>
+            <td>{{ license.expires_at.strftime('%d.%m.%Y %H:%M') }}</td>
+            <td>
+                {% if not license.is_active %}
+                <span class="badge badge-disabled">Отключён</span>
+                {% elif license.is_expired %}
+                <span class="badge badge-expired">Истёк</span>
+                {% elif not license.hwid %}
+                <span class="badge badge-unbound">Новый</span>
+                {% else %}
+                <span class="badge badge-active">Активен</span>
+                {% endif %}
+            </td>
+            <td class="actions-cell">
+                {% if license.is_active %}
+                <form method="POST" action="/admin/deactivate/{{ license.key }}" style="display:inline">
+                    <button type="submit" class="btn btn-warning btn-sm" title="Отключить">⏸</button>
+                </form>
+                {% endif %}
+                <form method="POST" action="/admin/delete/{{ license.key }}" style="display:inline"
+                    onsubmit="return confirm('Удалить ключ {{ license.key[:8] }}...?')">
+                    <button type="submit" class="btn btn-danger btn-sm" title="Удалить навсегда">🗑</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

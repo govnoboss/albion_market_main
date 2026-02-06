@@ -320,6 +320,7 @@ class MainWindow(QMainWindow):
             self.bot.stop()
             self.bot.wait()
             self.control_panel.set_running_state(False)
+            self.control_panel.refresh_resume_button()  # Обновляем кнопку "Продолжить"
             self.mini_overlay.update_status(False, False)
             # Автоматический возврат в обычный режим
             self._switch_to_normal_mode()
@@ -328,6 +329,7 @@ class MainWindow(QMainWindow):
         """Бот завершил работу"""
         self.control_panel.set_running_state(False)
         self.control_panel.update_progress(0, 0, "Завершено")
+        self.control_panel.refresh_resume_button()  # Обновляем кнопку "Продолжить"
         self.mini_overlay.update_status(False, False)
         self.mini_overlay.update_progress(0, 0, "Завершено")
         # Автоматический возврат в обычный режим

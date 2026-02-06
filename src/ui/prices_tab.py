@@ -272,19 +272,72 @@ class PricesTab(QWidget):
             
     def clean_old_records(self):
         """Удаление записей старше N часов"""
-        hours, ok = QInputDialog.getInt(
-            self, 
-            "Очистка старых цен", 
-            "Удалить цены старше (часов):", 
-            value=3, 
-            min=1, 
-            max=168
-        )
+        dialog = QInputDialog(self)
+        dialog.setWindowTitle("Очистка старых цен")
+        dialog.setLabelText("Удалить цены старше (часов):")
+        dialog.setIntValue(3)
+        dialog.setIntRange(1, 168)
+        dialog.setStyleSheet("""
+            QInputDialog {
+                background-color: #0d1117;
+                color: #f0f6fc;
+            }
+            QLabel {
+                color: #f0f6fc;
+            }
+            QSpinBox {
+                background-color: #161b22;
+                color: #f0f6fc;
+                border: 1px solid #30363d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+            QPushButton {
+                background-color: #21262d;
+                color: #f0f6fc;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                padding: 5px 15px;
+                min-width: 60px;
+            }
+            QPushButton:hover {
+                background-color: #30363d;
+            }
+        """)
         
-        if ok:
+        if dialog.exec():
+            hours = dialog.intValue()
             count = self.storage.remove_older_than(hours)
+            
+            # Создаем кастомный QMessageBox с темной темой
+            msg = QMessageBox(self)
+            msg.setStyleSheet("""
+                QMessageBox {
+                    background-color: #0d1117;
+                }
+                QLabel {
+                    color: #f0f6fc;
+                }
+                QPushButton {
+                    background-color: #21262d;
+                    color: #f0f6fc;
+                    border: 1px solid #30363d;
+                    border-radius: 6px;
+                    padding: 5px 15px;
+                    min-width: 60px;
+                }
+                QPushButton:hover {
+                    background-color: #30363d;
+                }
+            """)
+            msg.setIcon(QMessageBox.Icon.Information)
+            
             if count > 0:
-                QMessageBox.information(self, "Очистка завершена", f"Удалено устаревших записей: {count}")
+                msg.setWindowTitle("Очистка завершена")
+                msg.setText(f"Удалено устаревших записей: {count}")
                 self.refresh_data()
             else:
-                QMessageBox.information(self, "Очистка", f"Нет записей старше {hours} ч.")
+                msg.setWindowTitle("Очистка")
+                msg.setText(f"Нет записей старше {hours} ч.")
+            
+            msg.exec()

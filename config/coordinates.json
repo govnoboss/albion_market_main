@@ -1,50 +1,50 @@
 {
     "coordinates": {
         "search_input": {
-            "x": 850,
-            "y": 359,
+            "x": 1020,
+            "y": 582,
             "type": "point"
         },
         "search_clear": {
-            "x": 966,
-            "y": 360,
+            "x": 722,
+            "y": 273,
             "type": "point"
         },
         "buy_button": {
-            "x": 1664,
-            "y": 577,
+            "x": 1274,
+            "y": 436,
             "type": "point"
         },
         "item_expand": {
-            "x": 1676,
-            "y": 435,
+            "x": 882,
+            "y": 460,
             "type": "point"
         },
         "tier_dropdown": {
-            "x": 680,
-            "y": 527,
+            "x": 514,
+            "y": 397,
             "type": "point"
         },
         "enchant_dropdown": {
-            "x": 894,
-            "y": 528,
+            "x": 672,
+            "y": 396,
             "type": "point"
         },
         "quality_dropdown": {
-            "x": 1096,
-            "y": 530,
+            "x": 812,
+            "y": 393,
             "type": "point"
         },
         "menu_close": {
-            "x": 1240,
-            "y": 404,
+            "x": 940,
+            "y": 305,
             "type": "point"
         },
         "quality_text_region": {
-            "x": 1018,
-            "y": 514,
-            "w": 133,
-            "h": 27,
+            "x": 764,
+            "y": 385,
+            "w": 105,
+            "h": 21,
             "type": "area"
         },
         "item_icon_check": {
@@ -55,41 +55,41 @@
             "type": "area"
         },
         "best_price_area": {
-            "x": 1359,
-            "y": 478,
-            "w": 92,
-            "h": 33,
+            "x": 1018,
+            "y": 360,
+            "w": 81,
+            "h": 21,
             "type": "area"
         },
         "create_buy_order": {
-            "x": 750,
-            "y": 710,
+            "x": 570,
+            "y": 535,
             "type": "point"
         },
         "item_name_area": {
-            "x": 724,
-            "y": 390,
-            "w": 431,
-            "h": 46,
+            "x": 544,
+            "y": 294,
+            "w": 316,
+            "h": 34,
             "type": "area"
         },
         "market_name_area": {
-            "x": 866,
-            "y": 253,
-            "w": 279,
-            "h": 65,
+            "x": 651,
+            "y": 191,
+            "w": 208,
+            "h": 43,
             "type": "area"
         },
         "item_sort": {
-            "x": 975,
-            "y": 481,
+            "x": 710,
+            "y": 360,
             "type": "point"
         },
         "item_menu_check": {
-            "x": 1299,
-            "y": 413,
-            "w": 248,
-            "h": 35,
+            "x": 971,
+            "y": 303,
+            "w": 206,
+            "h": 33,
             "type": "area"
         },
         "ui_avatar_check": {
@@ -161,8 +161,8 @@
             "type": "point"
         },
         "bm_sell_tab": {
-            "x": 1862,
-            "y": 553,
+            "x": 1391,
+            "y": 412,
             "type": "point"
         },
         "character_list_area": {
@@ -173,76 +173,76 @@
             "type": "area"
         },
         "bm_login_btn": {
-            "x": 1547,
-            "y": 1231,
+            "x": 1157,
+            "y": 924,
             "type": "point"
         },
         "bm_logout_btn": {
-            "x": 2421,
-            "y": 201,
+            "x": 1763,
+            "y": 222,
             "type": "point"
         },
         "bm_settings_btn": {
-            "x": 2525,
-            "y": 29,
+            "x": 1892,
+            "y": 25,
             "type": "point"
         },
         "bm_char1_area": {
-            "x": 89,
-            "y": 258,
-            "w": 45,
-            "h": 56,
+            "x": 56,
+            "y": 405,
+            "w": 50,
+            "h": 49,
             "type": "area"
         },
         "bm_char2_area": {
-            "x": 85,
-            "y": 641,
-            "w": 56,
-            "h": 65,
+            "x": 66,
+            "y": 301,
+            "w": 39,
+            "h": 38,
             "type": "area"
         },
         "bm_open_market_btn": {
-            "x": 853,
-            "y": 476,
+            "x": 762,
+            "y": 392,
             "type": "point"
         },
         "buyer_minus_btn": {
-            "x": 745,
-            "y": 838,
+            "x": 556,
+            "y": 627,
             "type": "point"
         },
         "buyer_amount_input": {
-            "x": 768,
-            "y": 764,
+            "x": 576,
+            "y": 574,
             "type": "point"
         },
         "buyer_create_order_confirm": {
-            "x": 1220,
-            "y": 977,
+            "x": 885,
+            "y": 732,
             "type": "point"
         },
         "buyer_top_lot_qty": {
-            "x": 1465,
-            "y": 483,
-            "w": 79,
-            "h": 24,
+            "x": 1102,
+            "y": 362,
+            "w": 39,
+            "h": 20,
             "type": "area"
         },
         "buyer_total_price": {
-            "x": 753,
-            "y": 951,
-            "w": 133,
-            "h": 39,
+            "x": 567,
+            "y": 711,
+            "w": 87,
+            "h": 32,
             "type": "area"
         },
         "buyer_tab_buy": {
-            "x": 749,
-            "y": 604,
+            "x": 569,
+            "y": 479,
             "type": "point"
         },
         "price_input": {
-            "x": 833,
-            "y": 842,
+            "x": 627,
+            "y": 631,
             "type": "point"
         },
         "market_pixel_check": {
@@ -254,11 +254,6 @@
                 111
             ],
             "type": "point"
-        },
-        "buyer_plus_btn": {
-            "x": 1155,
-            "y": 793,
-            "type": "point"
         }
     },
     "settings": {
@@ -267,7 +262,7 @@
         "char_1_name": "GIGAESHKERE",
         "char_2_name": "Mambaloid",
         "price_update_timeout": 9.5,
-        "last_scan_index": 90
+        "last_scan_index": 21
     },
     "dropdowns": {
         "row_height": 37,

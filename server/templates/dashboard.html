@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Дашборд - GBot Admin{% endblock %}
+
+{% block content %}
+<h1>📊 Дашборд</h1>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-number">{{ total_keys }}</div>
+        <div class="stat-label">Всего ключей</div>
+    </div>
+    <div class="stat-card stat-active">
+        <div class="stat-number">{{ active_keys }}</div>
+        <div class="stat-label">Активных</div>
+    </div>
+    <div class="stat-card stat-expired">
+        <div class="stat-number">{{ expired_keys }}</div>
+        <div class="stat-label">Истёкших</div>
+    </div>
+    <div class="stat-card stat-unbound">
+        <div class="stat-number">{{ unbound_keys }}</div>
+        <div class="stat-label">Не активировано</div>
+    </div>
+</div>
+
+<div class="quick-actions">
+    <h2>Быстрые действия</h2>
+    <a href="/admin/generate" class="btn btn-primary">➕ Создать ключи</a>
+    <a href="/admin/licenses" class="btn btn-secondary">📋 Все ключи</a>
+</div>
+{% endblock %}

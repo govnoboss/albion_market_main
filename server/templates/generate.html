@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Создать ключи - GBot Admin{% endblock %}
+
+{% block content %}
+<h1>➕ Создать новые ключи</h1>
+
+<div class="generate-card">
+    <form method="POST" action="/admin/generate">
+        <div class="form-group">
+            <label for="count">Количество ключей</label>
+            <input type="number" id="count" name="count" value="1" min="1" max="100" required>
+        </div>
+        <div class="form-group">
+            <label for="days">Срок действия (дней)</label>
+            <input type="number" id="days" name="days" value="30" min="1" max="365" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Создать</button>
+    </form>
+</div>
+
+{% if generated_keys %}
+<div class="generated-result">
+    <h2>✅ Созданные ключи</h2>
+    <p>Срок действия: до {{ expires_at }}</p>
+    <div class="keys-list">
+        {% for key in generated_keys %}
+        <div class="key-item">
+            <code>{{ key }}</code>
+            <button class="btn btn-sm" onclick="navigator.clipboard.writeText('{{ key }}')">📋</button>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

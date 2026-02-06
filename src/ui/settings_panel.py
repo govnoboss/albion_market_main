@@ -182,9 +182,13 @@ class SettingsPanel(QScrollArea):
         # Timeouts
         self.timeout_spin.setValue(config.get_setting("price_update_timeout", 5.0))
         
-        # Dropdowns
+        # Dropdowns (block signals to prevent calibration overlay on startup)
+        self.row_height_spin.blockSignals(True)
+        self.offset_spin.blockSignals(True)
         self.row_height_spin.setValue(config.get_dropdown_setting("row_height", 28))
         self.offset_spin.setValue(config.get_dropdown_setting("list_start_offset", 30))
+        self.row_height_spin.blockSignals(False)
+        self.offset_spin.blockSignals(False)
         
         # Filters
         filters = config.get_scan_filters()
