@@ -398,16 +398,42 @@ class MarketBot(BaseBot):
         self._is_paused = True
 
     def _reset_filters(self):
-        """Сброс фильтров в базовое состояние: T4, En0, Normal"""
-        self.logger.info("Сброс фильтров в T4.0 Normal")
+        """Сброс фильтров в базовое состояние (динамическое)"""
+        filters = self.config.get_scan_filters()
+        
+        # 1. Tier
+        tiers = filters.get("tiers", [])
+        if not tiers: 
+            target_tier = 4
+        else:
+            target_tier = min(tiers)
+            
+        # 2. Enchant
+        enchants = filters.get("enchants", [])
+        if not enchants:
+            target_enchant = 0
+        else:
+            target_enchant = min(enchants)
+            
+        # 3. Quality
+        qualities = filters.get("qualities", [])
+        if not qualities:
+            target_quality = 1
+        else:
+            target_quality = min(qualities)
+            
+        self.logger.info(f"Сброс фильтров в T{target_tier}.{target_enchant} Q{target_quality}")
+        
         self._current_tier = None
         self._current_enchant = None
         self._current_quality = None
         self._last_detected_quality = None
         
-        self._select_enchant(0)
-        self._select_tier(4)
-        self._select_quality(1, force=True)  # Принудительный клик при сбросе
+        # Важно: Сначала Enchant, потом Tier, потом Quality
+        # (Некоторые игры сбрасывают Tier при смене Enchant, но здесь мы все равно кликаем все)
+        self._select_enchant(target_enchant)
+        self._select_tier(target_tier)
+        self._select_quality(target_quality, force=True)
 
     def _scan_variations(self, initial_last_price: int = 0):
         """Перебор вариантов согласно фильтрам сканирования."""

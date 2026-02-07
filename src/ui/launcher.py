@@ -1,15 +1,13 @@
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-    QPushButton, QLabel, QFrame
+    QPushButton, QLabel, QFrame, QApplication
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont, QIcon
 
 
 from .styles import MAIN_STYLE, COLORS
-from .main_window import MainWindow as ScannerWindow
-from .buyer_window import BuyerWindow
-from .login_window import LoginWindow
+from .splash_screen import SplashScreen
 from ..core.license import license_manager
 
 class LauncherWindow(QMainWindow):
@@ -21,17 +19,25 @@ class LauncherWindow(QMainWindow):
     
     def __init__(self):
         super().__init__()
+        # --- Splash Screen ---
+        self.splash = SplashScreen()
+        self.splash.show()
+        self.splash.set_status("Проверка лицензии...")
+        QApplication.processEvents()
+        
         # --- License Check ---
         self.login_window = None
 
         if not self._check_license_silent():
             # Show Login Window instead of Launcher
-            self.hide() # Ensure hidden
+            self.splash.close()
+            from .login_window import LoginWindow
             self.login_window = LoginWindow(on_success_callback=self._show_launcher)
             self.login_window.show()
             return
 
         self._init_launcher_ui()
+        self.splash.close()
         self.show()
 
     def _check_license_silent(self):
@@ -46,7 +52,7 @@ class LauncherWindow(QMainWindow):
 
     def _init_launcher_ui(self):
         self.setWindowTitle("GBot - Launcher")
-        self.setWindowTitle("Albion Market Tool - Launcher")
+        self.setWindowTitle("GBot Launcher")
         self.resize(600, 400)
         self.setStyleSheet(MAIN_STYLE)
         
@@ -61,7 +67,7 @@ class LauncherWindow(QMainWindow):
         layout.setContentsMargins(40, 40, 40, 40)
         
         # Заголовок
-        title_lbl = QLabel("Albion Market Tool")
+        title_lbl = QLabel("GBOT Albion")
         title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_lbl.setStyleSheet("font-size: 28px; font-weight: bold; color: #f0f6fc;")
         layout.addWidget(title_lbl)
@@ -78,7 +84,7 @@ class LauncherWindow(QMainWindow):
         # SCANNNER
         self.btn_scanner = self._create_mode_button(
             "🔍 СКАНЕР", 
-            "Сбор цен и анализ рынка\n(OCR, Статистика)", 
+            "Сбор цен и анализ рынка", 
             "#1f6feb"
         )
         self.btn_scanner.clicked.connect(self._launch_scanner)
@@ -101,6 +107,9 @@ class LauncherWindow(QMainWindow):
         footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
         footer.setStyleSheet("color: #30363d;")
         layout.addWidget(footer)
+        
+        # Предзагрузка окон для быстрого переключения
+        self._preload_windows()
 
     def _create_mode_button(self, title, desc, color):
         btn = QPushButton()
@@ -138,13 +147,25 @@ class LauncherWindow(QMainWindow):
         btn_layout.addWidget(lbl_desc)
         
         return btn
+    
+    def _preload_windows(self):
+        """Предзагрузка окон для быстрого переключения"""
+        # Статус в splash
+        self.splash.set_status("Загрузка Сканера...")
+        
+        # Ленивые импорты (тяжёлые модули)
+        from .main_window import MainWindow as ScannerWindow
+        self.scanner_window = ScannerWindow(launcher=self)
+        
+        self.splash.set_status("Загрузка Закупщика...")
+        from .buyer_window import BuyerWindow
+        self.buyer_window = BuyerWindow(launcher=self)
 
     def _launch_scanner(self):
-        self.scanner_window = ScannerWindow(launcher=self)
         self.scanner_window.show()
         self.hide()
         
     def _launch_buyer(self):
-        self.buyer_window = BuyerWindow(launcher=self)
         self.buyer_window.show()
         self.hide()
+

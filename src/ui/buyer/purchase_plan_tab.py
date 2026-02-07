@@ -32,11 +32,6 @@ class PurchasePlanTab(QWidget):
         # --- Toolbar ---
         toolbar = QHBoxLayout()
         
-        refresh_btn = QPushButton("🔄 Обновить список")
-        refresh_btn.setToolTip("Загрузить предметы из базы сканера")
-        refresh_btn.clicked.connect(self.refresh_data)
-        toolbar.addWidget(refresh_btn)
-        
         expand_btn = QPushButton("Развернуть всё")
         expand_btn.clicked.connect(lambda: self.tree.expandAll())
         toolbar.addWidget(expand_btn)

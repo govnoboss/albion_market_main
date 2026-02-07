@@ -66,6 +66,7 @@ class MainWindow(QMainWindow):
         
         # Инициализация оверлея перед UI, чтобы можно было подключить логгер
         self.mini_overlay = MiniOverlay()
+        self.mini_overlay.start_clicked.connect(self._on_start_bot)
         self.mini_overlay.pause_clicked.connect(self._on_pause_bot)
         self.mini_overlay.stop_clicked.connect(self._on_stop_bot)
         self.mini_overlay.restore_clicked.connect(self._switch_to_normal_mode)
@@ -94,6 +95,7 @@ class MainWindow(QMainWindow):
 
     def _switch_to_mini_mode(self):
         """Переключение в мини-режим"""
+        self.is_mini_mode = True
         # Скрыть главное окно
         self.hide()
         
@@ -109,6 +111,7 @@ class MainWindow(QMainWindow):
         
     def _switch_to_normal_mode(self):
         """Переключение в обычный режим"""
+        self.is_mini_mode = False
         self.mini_overlay.hide()
         self.show()
         self.activateWindow()
@@ -123,13 +126,42 @@ class MainWindow(QMainWindow):
         def on_f6():
             self.pause_hotkey_signal.emit()
             
+        # Сохраняем листенер, но не запускаем его сразу
         self.hotkey_listener = keyboard.GlobalHotKeys({
             '<f5>': on_f5,
             '<f6>': on_f6
         })
-        self.toggle_hotkey_signal.connect(self._toggle_bot_state)
-        self.pause_hotkey_signal.connect(self._on_pause_bot)
-        self.hotkey_listener.start()
+        
+        # Подключаем сигналы только один раз
+        if not hasattr(self, '_signals_connected'):
+            self.toggle_hotkey_signal.connect(self._toggle_bot_state)
+            self.pause_hotkey_signal.connect(self._on_pause_bot)
+            self._signals_connected = True
+        
+    def showEvent(self, event):
+        """Включаем хоткеи при показе окна"""
+        super().showEvent(event)
+        if not hasattr(self, 'hotkey_listener'):
+            self._setup_hotkeys()
+            
+        try:
+            if not self.hotkey_listener.running:
+                self.hotkey_listener.start()
+        except RuntimeError:
+            # Если listener был остановлен, его нельзя перезапустить - нужно создать новый
+            self._setup_hotkeys()
+            self.hotkey_listener.start()
+
+    def hideEvent(self, event):
+        """Выключаем хоткеи при скрытии окна"""
+        super().hideEvent(event)
+        
+        # Если это просто сворачивание в мини-режим, не выключаем хоткеи!
+        if getattr(self, 'is_mini_mode', False):
+            return
+            
+        if hasattr(self, 'hotkey_listener') and self.hotkey_listener.running:
+            self.hotkey_listener.stop()
         
     def _toggle_bot_state(self):
         """Переключение состояния бота (Start/Stop)"""
@@ -153,7 +185,7 @@ class MainWindow(QMainWindow):
         header_layout = QHBoxLayout()
         header_layout.setSpacing(10)
         
-        title = QLabel("👽 Albion Market Scanner")
+        title = QLabel("GBot Market Scanner")
         title.setObjectName("title")
         header_layout.addWidget(title)
         
@@ -166,9 +198,9 @@ class MainWindow(QMainWindow):
         # Кнопка 'Меню' (если запущен через лаунчер)
         if self.launcher:
             menu_btn = QPushButton("Меню")
-            menu_btn.setFixedSize(60, 24)
+            menu_btn.setFixedSize(100, 30)
             menu_btn.setStyleSheet("""
-                QPushButton { background: #21262d; color: #8b949e; border: 1px solid #30363d; border-radius: 4px; }
+                QPushButton { background: #21262d; color: #8b949e; border: 1px solid #30363d; border-radius: 4px; padding: 5px 15px; font-size: 13px; }
                 QPushButton:hover { background: #30363d; color: #f0f6fc; }
             """)
             menu_btn.clicked.connect(self.close) # Закрытие вернет в меню через closeEvent
@@ -212,13 +244,12 @@ class MainWindow(QMainWindow):
             QTabBar::tab { 
                 background: #161b22; 
                 color: #8b949e; 
-                padding: 10px 20px; 
+                padding: 10px 15px; 
                 border: 1px solid #30363d; 
                 border-bottom: none; 
                 border-top-left-radius: 6px; 
                 border-top-right-radius: 6px; 
                 margin-right: 4px;
-                min-width: 120px;
             }
             QTabBar::tab:selected { 
                 background: #0d1117; 
@@ -240,6 +271,23 @@ class MainWindow(QMainWindow):
         self.control_panel.pause_clicked.connect(self._on_pause_bot)
         
         control_layout.addWidget(self.control_panel)
+        
+        # === Панель логов (только для вкладки Главная) ===
+        log_frame = QFrame()
+        log_frame.setStyleSheet("QFrame { background-color: #161b22; border: 1px solid #30363d; border-radius: 8px; }")
+        log_layout = QVBoxLayout(log_frame)
+        log_layout.setContentsMargins(15, 10, 15, 10)
+        log_layout.setSpacing(5)
+        
+        log_header = QLabel("📋 Журнал событий")
+        log_header.setStyleSheet("font-size: 13px; font-weight: 600; color: #8b949e;")
+        log_layout.addWidget(log_header)
+        
+        self.log_viewer = LogViewer()
+        log_layout.addWidget(self.log_viewer)
+        
+        control_layout.addWidget(log_frame)
+        
         self.tabs.addTab(self.control_tab, "🎮 Главная")
     
         # --- Вкладка 2: Профиты (NEW) ---
@@ -266,22 +314,6 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.settings_panel, "⚙️ Настройки")
         
         main_layout.addWidget(self.tabs, stretch=1)
-        
-        # === Панель логов (внизу, общая) ===
-        log_frame = QFrame()
-        log_frame.setStyleSheet("QFrame { background-color: #161b22; border: 1px solid #30363d; border-radius: 8px; }")
-        log_layout = QVBoxLayout(log_frame)
-        log_layout.setContentsMargins(15, 10, 15, 10)
-        log_layout.setSpacing(5)
-        
-        log_header = QLabel("📋 Журнал событий")
-        log_header.setStyleSheet("font-size: 13px; font-weight: 600; color: #8b949e;")
-        log_layout.addWidget(log_header)
-        
-        self.log_viewer = LogViewer()
-        log_layout.addWidget(self.log_viewer)
-        
-        main_layout.addWidget(log_frame)
 
     def _init_bot(self):
         """Инициализация бота"""
@@ -297,6 +329,7 @@ class MainWindow(QMainWindow):
     def _on_start_bot(self):
         """Запуск бота"""
         if not self.bot.isRunning():
+            self.mini_overlay.clear_logs() # Очистка логов оверлея
             # Получаем стартовый индекс (spinbox 1-based -> list 0-based)
             start_index = self.control_panel.start_index_spin.value() - 1
             self.bot.start_index = start_index

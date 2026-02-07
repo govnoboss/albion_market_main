@@ -311,8 +311,21 @@ class BuyerBot(BaseBot):
             # Сортировка по абсолютному профиту (desc)
             items.sort(key=lambda x: x[3], reverse=True)
             self.logger.info("💰 Сортировка: по серебру")
+        
+        # Применяем фильтры из настроек
+        filters = self.config.get_scan_filters()
+        allowed_tiers = filters.get("tiers", [4, 5, 6, 7, 8])
+        allowed_enchants = filters.get("enchants", [0, 1, 2, 3, 4])
+        
+        filtered_items = [
+            item for item in items 
+            if item[1] in allowed_tiers and item[2] in allowed_enchants
+        ]
+        
+        if len(filtered_items) < len(items):
+            self.logger.info(f"🔍 Фильтры: {len(items)} → {len(filtered_items)} предметов")
             
-        return items
+        return filtered_items
 
 
 
@@ -432,7 +445,7 @@ class BuyerBot(BaseBot):
             
             if current_price > 0 and current_price > target_price:
                 self.logger.info(f"📉 Цена рынка ({current_price}) выше целевой ({target_price}). Пропуск.")
-                self._close_menu()
+                # self._close_menu()  <-- REMOVED: Keep menu open for other variants
                 break
             
             # 4. Количество (Batching) — покупаем половину от ОРИГИНАЛЬНОГО лимита
@@ -475,11 +488,14 @@ class BuyerBot(BaseBot):
             # Ожидаемая сумма = target_price * qty * 1.025 (+ 2.5% комиссия)
             expected_total = int(target_price * buy_qty * 1.025)
             
+            # Добавляем буфер 2% на округление
+            allowed_max = int(expected_total * 1.02)
+            
             total_price_area = self.config.get_coordinate_area("buyer_total_price")
             if not total_price_area:
                 # ЗАЩИТА: Нет координаты — нельзя верифицировать, пропускаем!
                 self.logger.error("🛑 Координата 'buyer_total_price' не задана! Покупка отменена для безопасности.")
-                self._close_menu()
+                # self._close_menu() <-- REMOVED: Keep menu open for other variants
                 break
             
             time.sleep(0.3)  # Ждём обновления UI
@@ -489,15 +505,15 @@ class BuyerBot(BaseBot):
                 # ЗАЩИТА: OCR не смог прочитать сумму — пропускаем!
                 self.logger.error("🛑 Не удалось прочитать итоговую сумму! Покупка отменена для безопасности.")
                 consecutive_errors += 1
-                self._close_menu()
+                # self._close_menu() <-- REMOVED: Keep menu open for other variants
                 time.sleep(1)
                 continue
             
-            self.logger.info(f"🔍 Верификация: Ожидаем ≤{expected_total:,} | OCR: {actual_total:,}")
+            self.logger.info(f"🔍 Верификация: Ожидаем ≤{allowed_max:,} (с буфером 2%) | OCR: {actual_total:,}")
             
-            if actual_total <= expected_total:
+            if actual_total <= allowed_max:
                 # Всё хорошо — итоговая сумма в пределах нормы
-                self.logger.info(f"✅ Верификация пройдена: {actual_total:,} ≤ {expected_total:,}")
+                self.logger.info(f"✅ Верификация пройдена: {actual_total:,} ≤ {allowed_max:,}")
             else:
                 # actual_total > expected_total — реальная цена выше чем мы думали
                 # Вычисляем реальную цену из итоговой суммы
@@ -518,7 +534,7 @@ class BuyerBot(BaseBot):
                 
                 # Реальная цена выше целевой — пропускаем
                 self.logger.info(f"📉 Реальная цена ({real_price:,}) выше целевой ({target_price:,}). Пропуск.")
-                self._close_menu()
+                # self._close_menu() <-- REMOVED: Keep menu open for other variants
                 break
             
             # 8. Покупка
@@ -557,6 +573,14 @@ class BuyerBot(BaseBot):
     def _build_purchase_list(self):
         targets = self.config.get_wholesale_targets()
         self._items_to_buy = []
+        
+        # Получаем фильтры из настроек
+        filters = self.config.get_scan_filters()
+        allowed_tiers = filters.get("tiers", [4, 5, 6, 7, 8])
+        allowed_enchants = filters.get("enchants", [0, 1, 2, 3, 4])
+        
+        skipped_count = 0
+        
         for item_name, variants in targets.items():
             for key, data in variants.items():
                 try:
@@ -565,9 +589,18 @@ class BuyerBot(BaseBot):
                     if limit > 0 and enabled:
                         t, e = map(int, key.replace("T", "").split("."))
                         
+                        # Проверка фильтров
+                        if t not in allowed_tiers or e not in allowed_enchants:
+                            skipped_count += 1
+                            continue
+                        
                         self._items_to_buy.append((item_name, t, e, limit))
                 except:
                     continue
+        
+        if skipped_count > 0:
+            self.logger.info(f"🔍 Фильтры: пропущено {skipped_count} вариаций")
+            
         self._items_to_buy.sort(key=lambda x: (x[0], x[1], x[2]))
 
     def _search_item_and_open(self, name: str, tier: int = None, enchant: int = None) -> bool:
@@ -709,13 +742,41 @@ class BuyerBot(BaseBot):
 
     def _input_quantity(self, qty: int):
         """
-        Ввод количества кликами по кнопке Плюс.
-        Изначально стоит 1, поэтому кликаем (qty - 1) раз.
+        Ввод количества.
+        Приоритет: Ввод цифрами через поле 'buyer_amount_input'.
+        Фоллбэк: Клики по кнопке 'buyer_plus_btn'.
         """
+        # 1. Попытка ввода через клавиатуру (Keyboard Input)
+        amount_input_coord = self.config.get_coordinate("buyer_amount_input")
+        
+        if amount_input_coord and qty > 1:
+            self.logger.debug(f"⌨️ Ввод количества {qty} через клавиатуру...")
+            
+            self._human_move_to(*amount_input_coord)
+            time.sleep(0.05)
+            
+            # Зажатие кнопки мыши на 0.1с (как просил пользователь)
+            pyautogui.mouseDown()
+            time.sleep(0.1)
+            pyautogui.mouseUp()
+            time.sleep(0.05)
+            
+            # Очистка и ввод
+            import keyboard
+            # Быстрая очистка (Ctrl+A, Del надежнее Backspace)
+            pyautogui.hotkey('ctrl', 'a')
+            time.sleep(0.05)
+            pyautogui.press('backspace')
+            
+            self._human_type(str(qty))
+            time.sleep(0.2)
+            return
+
+        # 2. Фоллбэк: Клики по Плюсу (Mouse Clicks)
         plus_btn_coord = self.config.get_coordinate("buyer_plus_btn")
         
         if not plus_btn_coord:
-            self.logger.warning("⚠️ Координата 'buyer_plus_btn' не задана!")
+            self.logger.warning("⚠️ Координата 'buyer_plus_btn' не задана! И 'buyer_amount_input' тоже нет.")
             return
             
         clicks_needed = qty - 1  # Изначально стоит 1
@@ -724,7 +785,7 @@ class BuyerBot(BaseBot):
             self.logger.debug("Количество уже 1, кликать не нужно")
             return
             
-        self.logger.debug(f"🔢 Ввод количества: {qty} (кликов: {clicks_needed})")
+        self.logger.debug(f"🔢 Ввод количества: {qty} (кликов: {clicks_needed}) - FALLBACK MODE")
         
         # Кликаем на Плюс нужное количество раз
         self._human_move_to(*plus_btn_coord)
@@ -773,6 +834,17 @@ class BuyerBot(BaseBot):
         self._human_click()
         
         # --- AUTO CONFIRM DIALOG ("YES") ---
+        
+        # 1. Coordinate Check (Priority)
+        yes_coord = self.config.get_coordinate("buyer_order_yes_btn")
+        if yes_coord:
+            self.logger.info(f"✅ Использую координату для кнопки 'Да': {yes_coord}")
+            time.sleep(0.5) # Wait for dialog animation
+            self._human_move_to(*yes_coord)
+            self._human_click()
+            return True
+
+        # 2. Image Search (Fallback)
         # Search for "Yes" button image from resources
         try:
             import os

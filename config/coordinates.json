@@ -1,8 +1,8 @@
 {
     "coordinates": {
         "search_input": {
-            "x": 1020,
-            "y": 582,
+            "x": 626,
+            "y": 268,
             "type": "point"
         },
         "search_clear": {
@@ -16,8 +16,8 @@
             "type": "point"
         },
         "item_expand": {
-            "x": 882,
-            "y": 460,
+            "x": 1252,
+            "y": 323,
             "type": "point"
         },
         "tier_dropdown": {
@@ -254,6 +254,16 @@
                 111
             ],
             "type": "point"
+        },
+        "buyer_plus_btn": {
+            "x": 866,
+            "y": 598,
+            "type": "point"
+        },
+        "buyer_order_yes_btn": {
+            "x": 858,
+            "y": 545,
+            "type": "point"
         }
     },
     "settings": {
@@ -261,18 +271,15 @@
         "scan_interval": 100,
         "char_1_name": "GIGAESHKERE",
         "char_2_name": "Mambaloid",
-        "price_update_timeout": 9.5,
-        "last_scan_index": 21
+        "price_update_timeout": 10.0,
+        "last_scan_index": 6
     },
     "dropdowns": {
-        "row_height": 37,
-        "list_start_offset": 37
+        "row_height": 27,
+        "list_start_offset": 27
     },
     "scan_filters": {
         "tiers": [
-            4,
-            5,
-            6,
             7,
             8
         ],
@@ -280,8 +287,8 @@
             0
         ],
         "qualities": [
-            1,
-            2
+            2,
+            4
         ]
     },
     "items": [],

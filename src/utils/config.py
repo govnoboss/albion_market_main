@@ -37,8 +37,6 @@ class ConfigManager:
         return {
             "coordinates": {},
             "settings": {
-                "click_delay": 100,
-                "scan_interval": 500,
                 "tesseract_path": "",
                 "price_update_timeout": 5.0,
             },

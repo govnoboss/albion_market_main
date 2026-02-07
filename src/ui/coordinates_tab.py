@@ -89,6 +89,7 @@ class CoordinatesTab(QWidget):
                 ("item_menu_check", "Надпись 'Заказы на продажу' (Check)", "area"),
                 ("buyer_top_lot_qty", "Кол-во в топ лоте (OCR)", "area"),
                 ("buyer_total_price", "Итоговая стоимость (OCR)", "area"),
+                ("buyer_order_yes_btn", "Кнопка 'Да' (Confirm Dialog)", "point"),
             ],
             "Black Market (New)": [
                 ("bm_sell_tab", "Вкладка 'Продать'", "point"),

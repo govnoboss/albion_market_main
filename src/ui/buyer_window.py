@@ -1,8 +1,9 @@
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QPushButton, QLabel, QFrame, QTextEdit, QGroupBox,
-    QMessageBox, QTabWidget, QScrollArea
+    QMessageBox, QTabWidget, QScrollArea, QSpinBox
 )
+from PyQt6.QtGui import QIntValidator
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QIcon, QFont
 
@@ -23,22 +24,56 @@ class BuyerWindow(QMainWindow):
     def __init__(self, launcher=None):
         super().__init__()
         self.launcher = launcher
-        self.setWindowTitle("Albion Market - BUYER MODE")
-        self.resize(600, 750) 
+        self.setWindowTitle("GBot - Закупщик")
+        self.resize(720, 550) 
         self.setStyleSheet(MAIN_STYLE)
         
         # State
         self.last_mode = "wholesale" # Default start mode for F5
+        self._is_starting = False  # Блокировка двойного запуска
         
-        # Основной виджет (теперь с вкладками)
+        # Основной контейнер
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(15, 15, 15, 15)
+        main_layout.setSpacing(10)
+        
+        # === Глобальный заголовок (над всеми вкладками) ===
+        header_layout = QHBoxLayout()
+        header_layout.setSpacing(10)
+        
+        title = QLabel("🛒 GBot Закупщик")
+        title.setStyleSheet("font-size: 18px; color: #3fb950; font-weight: bold;")
+        header_layout.addWidget(title)
+        
+        hotkeys_info = QLabel("  [ F5: Start/Stop  |  F6: Pause ]")
+        hotkeys_info.setStyleSheet("color: #636e7b; font-size: 12px; font-weight: bold;")
+        header_layout.addWidget(hotkeys_info)
+        
+        header_layout.addStretch()
+        
+        # Кнопка 'Меню' (всегда видна)
+        if self.launcher:
+            menu_btn = QPushButton("Меню")
+            menu_btn.setFixedSize(80, 30)
+            menu_btn.setStyleSheet("""
+                QPushButton { background: #21262d; color: #8b949e; border: 1px solid #30363d; border-radius: 4px; }
+                QPushButton:hover { background: #30363d; color: #f0f6fc; }
+            """)
+            menu_btn.clicked.connect(self._on_back_clicked)
+            header_layout.addWidget(menu_btn)
+        
+        main_layout.addLayout(header_layout)
+        
+        # === Вкладки ===
         self.tabs = QTabWidget()
-        self.setCentralWidget(self.tabs)
         self.tabs.setStyleSheet("""
             QTabWidget::pane { border: none; }
             QTabBar::tab { 
                 background: #161b22; 
                 color: #8b949e; 
-                padding: 10px 20px; 
+                padding: 10px 15px; 
                 border: 1px solid #30363d;
                 border-bottom: none;
                 margin-right: 2px;
@@ -48,31 +83,35 @@ class BuyerWindow(QMainWindow):
                 color: #f0f6fc; 
             }
         """)
+        main_layout.addWidget(self.tabs)
 
         # --- Вкладка 1: Управление (Monitor) ---
         self.monitor_tab = QWidget()
         self.monitor_layout = QVBoxLayout(self.monitor_tab)
         self.monitor_layout.setSpacing(15)
-        self.monitor_layout.setContentsMargins(20, 20, 20, 20)
+        self.monitor_layout.setContentsMargins(10, 10, 10, 10)
         
-        self._setup_header(self.monitor_layout)
-        self._setup_status_panel(self.monitor_layout)
         self._setup_controls(self.monitor_layout)
         self._setup_log_area(self.monitor_layout)
         
-        self.tabs.addTab(self.monitor_tab, "🚀 Монитор")
+        self.tabs.addTab(self.monitor_tab, "🎮 Главная")
         
         # --- Вкладка 2: План закупки ---
         from .buyer.purchase_plan_tab import PurchasePlanTab
         self.plan_tab = PurchasePlanTab()
         self.tabs.addTab(self.plan_tab, "📋 План закупки")
         
-        # --- Вкладка 3: Координаты (Настройки) ---
+        # --- Вкладка 3: Координаты ---
         from .coordinates_tab import CoordinatesTab
         self.coords_tab = CoordinatesTab()
-        self.tabs.addTab(self.coords_tab, "⚙️ Координаты")
+        self.tabs.addTab(self.coords_tab, "📍 Координаты")
         
-        # --- Вкладка 4: Профиты (из сканера) ---
+        # --- Вкладка 4: Настройки (из сканера) ---
+        from .settings_panel import SettingsPanel
+        self.settings_tab = SettingsPanel()
+        self.tabs.addTab(self.settings_tab, "⚙️ Настройки")
+        
+        # --- Вкладка 5: Профиты (из сканера) ---
         from .profits_tab import ProfitsTab
         self.profit_tab = ProfitsTab()
         self.tabs.addTab(self.profit_tab, "📊 Профиты")
@@ -82,53 +121,7 @@ class BuyerWindow(QMainWindow):
         self.hotkey_pause_sig.connect(self._toggle_pause)
         self.hotkey_toggle_sig.connect(self._toggle_bot)
 
-    def _setup_header(self, layout):
-        """Заголовок окна"""
-        header_layout = QHBoxLayout()
-        
-        title_layout = QVBoxLayout()
-        title = QLabel("🛒 AUTOMATIC BUYER")
-        title.setObjectName("title")
-        title.setStyleSheet("font-size: 20px; color: #3fb950; font-weight: bold;")
-        
-        subtitle = QLabel("Режим автоматической закупки")
-        subtitle.setObjectName("subtitle")
-        
-        title_layout.addWidget(title)
-        title_layout.addWidget(subtitle)
-        
-        header_layout.addLayout(title_layout)
-        header_layout.addStretch()
-        
-        # Кнопка "Назад в меню"
-        back_btn = QPushButton("Меню")
-        back_btn.setFixedSize(80, 30)
-        back_btn.clicked.connect(self._on_back_clicked)
-        header_layout.addWidget(back_btn)
-        
-        layout.addLayout(header_layout)
-        
-        # Разделитель
-        line = QFrame()
-        line.setFrameShape(QFrame.Shape.HLine)
-        line.setStyleSheet(f"color: {COLORS['border']};")
-        layout.addWidget(line)
 
-    def _setup_status_panel(self, layout):
-        """Панель текущего статуса"""
-        self.status_card = QFrame()
-        self.status_card.setObjectName("card")
-        card_layout = QVBoxLayout(self.status_card)
-        
-        lbl = QLabel("Статус работы (F5)")
-        lbl.setStyleSheet("color: #8b949e; font-size: 12px; text-transform: uppercase;")
-        card_layout.addWidget(lbl)
-        
-        self.status_val_label = QLabel("ОЖИДАНИЕ")
-        self.status_val_label.setStyleSheet("font-size: 24px; font-weight: bold; color: #8b949e;")
-        card_layout.addWidget(self.status_val_label)
-        
-        layout.addWidget(self.status_card)
 
     def _setup_controls(self, layout):
         """Основные кнопки управления"""
@@ -137,7 +130,6 @@ class BuyerWindow(QMainWindow):
         ctrl_layout.setSpacing(10)
         
         # Бюджет
-        from PyQt6.QtWidgets import QSpinBox, QLabel
         budget_layout = QHBoxLayout()
         budget_lbl = QLabel("Бюджет:")
         budget_lbl.setStyleSheet("color: #8b949e; font-weight: bold;")
@@ -145,16 +137,20 @@ class BuyerWindow(QMainWindow):
         self.budget_spin = QSpinBox()
         self.budget_spin.setRange(0, 999_999_999)
         self.budget_spin.setSingleStep(100_000)
-        self.budget_spin.setSuffix(" Silver")
         self.budget_spin.setSpecialValueText("Безлимит")
         self.budget_spin.setValue(0)
+        self.budget_spin.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)  # Убираем +/-
         self.budget_spin.setStyleSheet("""
             QSpinBox { 
                 background: #0d1117; 
                 color: #c9d1d9; 
                 border: 1px solid #30363d; 
-                padding: 5px; 
+                padding: 8px; 
                 font-size: 13px;
+                border-radius: 4px;
+            }
+            QSpinBox:focus {
+                border: 1px solid #58a6ff;
             }
         """)
         
@@ -162,8 +158,8 @@ class BuyerWindow(QMainWindow):
         budget_layout.addWidget(self.budget_spin)
         ctrl_layout.addLayout(budget_layout)
 
-        # Кнопка СТАРТ (Standard/Wholesale)
-        self.start_btn = QPushButton("🚀 ЗАПУСТИТЬ ЗАКУПЩИК")
+        # Кнопка СТАРТ
+        self.start_btn = QPushButton("▶ Старт")
         self.start_btn.setObjectName("primary")
         self.start_btn.setMinimumHeight(45)
         self.start_btn.setStyleSheet("font-size: 14px; font-weight: bold; background-color: #238636;")
@@ -174,7 +170,7 @@ class BuyerWindow(QMainWindow):
         from PyQt6.QtWidgets import QCheckBox
         self.smart_mode_check = QCheckBox("🧠 Умный закупщик (Smart Buyer)")
         self.smart_mode_check.setToolTip("Покупать самые выгодные товары на основе сканирования,\nа не по фиксированному списку.")
-        self.smart_mode_check.setStyleSheet("color: #d29922; font-weight: bold;")
+        self.smart_mode_check.setStyleSheet("color: #c9d1d9; font-weight: bold; padding: 4px;")
         ctrl_layout.addWidget(self.smart_mode_check)
         
         # Чекбокс "Сортировать по %"
@@ -196,12 +192,7 @@ class BuyerWindow(QMainWindow):
         self.stop_btn.clicked.connect(self._on_stop_clicked)
         ctrl_layout.addWidget(self.stop_btn)
         
-        # Чекбокс Ручное подтверждение (Debug)
-        from PyQt6.QtWidgets import QCheckBox
-        self.debug_confirm_check = QCheckBox("Ручное подтверждение (F1/F2)")
-        self.debug_confirm_check.setChecked(False) # Отключено по умолчанию
-        self.debug_confirm_check.setStyleSheet("color: #8b949e;")
-        ctrl_layout.addWidget(self.debug_confirm_check)
+
         
         layout.addWidget(control_group)
 
@@ -222,12 +213,8 @@ class BuyerWindow(QMainWindow):
         self.overlay.pause_clicked.connect(self._toggle_pause)
         self.overlay.restore_clicked.connect(self._restore_window)
         
-        # Setup Hotkeys
-        try:
-            keyboard.add_hotkey("F5", self.hotkey_toggle_sig.emit) # Changed to TOGGLE
-            keyboard.add_hotkey("F6", self.hotkey_pause_sig.emit)
-        except Exception as e:
-            print(f"Ошибка регистрации хоткеев: {e}")
+        # Хоткеи регистрируются в showEvent, убираются в hideEvent
+        self._hotkeys_registered = False
 
     def _setup_log_area(self, layout):
         """Лог событий"""
@@ -235,7 +222,37 @@ class BuyerWindow(QMainWindow):
         self.log_viewer.setObjectName("logViewer")
         self.log_viewer.setReadOnly(True)
         self.log_viewer.setPlaceholderText("Лог событий закупки...")
+        self.log_viewer.setMaximumHeight(100)
         layout.addWidget(self.log_viewer)
+
+    def showEvent(self, event):
+        """Регистрация хоткеев при показе окна"""
+        super().showEvent(event)
+        if not self._hotkeys_registered:
+            import keyboard
+            try:
+                keyboard.add_hotkey("F5", self.hotkey_toggle_sig.emit)
+                keyboard.add_hotkey("F6", self.hotkey_pause_sig.emit)
+                self._hotkeys_registered = True
+            except Exception as e:
+                print(f"Ошибка регистрации хоткеев Buyer: {e}")
+    
+    def hideEvent(self, event):
+        """Удаление хоткеев при скрытии окна"""
+        super().hideEvent(event)
+        
+        # Если это просто сворачивание в мини-режим, не выключаем хоткеи!
+        if getattr(self, 'is_mini_mode', False):
+            return
+
+        if self._hotkeys_registered:
+            import keyboard
+            try:
+                keyboard.remove_hotkey("F5")
+                keyboard.remove_hotkey("F6")
+                self._hotkeys_registered = False
+            except Exception as e:
+                pass  # Игнорируем если хоткеи уже удалены
 
     def _toggle_bot(self):
         """Переключить состояние бота (Start/Stop)"""
@@ -245,13 +262,43 @@ class BuyerWindow(QMainWindow):
             self._on_start_clicked()
 
     def _on_start_clicked(self):
-        # 0. Проверка свежести данных (если включен Smart Mode)
+        # Блокировка двойного запуска
+        if self._is_starting or self.bot.isRunning():
+            return
+        self._is_starting = True
+        
+        # 0. Проверка наличия данных о ценах
+        from ..utils.price_storage import price_storage
+        from datetime import datetime
+        
+        cities = price_storage.get_cities()
+        bm_prices = price_storage.get_city_prices("Black Market")
+        
+        if not cities or len(cities) == 0:
+            QMessageBox.warning(
+                self,
+                "⚠️ Нет данных",
+                "Таблица профитов пуста!\n\n"
+                "Сначала запустите Сканер для сбора цен,\n"
+                "затем возвращайтесь в Закупщик."
+            )
+            self._is_starting = False
+            return
+        
+        if not bm_prices or len(bm_prices) == 0:
+            QMessageBox.warning(
+                self,
+                "⚠️ Нет цен ЧР",
+                "Нет данных о ценах Чёрного Рынка!\n\n"
+                "Без них невозможно рассчитать профит.\n"
+                "Сначала просканируйте ЧР."
+            )
+            self._is_starting = False
+            return
+        
         is_smart = self.smart_mode_check.isChecked()
         
         if is_smart:
-            # Check warnings
-            from ..utils.price_storage import price_storage
-            from datetime import datetime
             
             # Simple check: Iterate valid items in current config city (if known) or just all cities
             # Since we don't know the city yet (bot detects it), we check ALL data?
@@ -292,23 +339,26 @@ class BuyerWindow(QMainWindow):
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
                 )
                 if reply == QMessageBox.StandardButton.No:
+                    self._is_starting = False
                     return
 
         self.log_viewer.clear()
+        self.overlay.clear_logs()  # Очистка логов оверлея
         mode_str = "🧠 УМНЫЙ" if is_smart else "📦 СТАНДАРТНЫЙ"
         self.log_viewer.append(f"🚀 Инициализация... Режим: {mode_str}")
         
         self.start_btn.setVisible(False)
         self.stop_btn.setVisible(True)
-        self.status_val_label.setText("РАБОТАЕТ")
-        self.status_val_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #3fb950;")
         
         # Update Bot configuration
         self.bot.mode = "smart" if is_smart else "wholesale"
-        self.bot.manual_confirm_mode = self.debug_confirm_check.isChecked()
+        self.bot.manual_confirm_mode = False
         self.bot.max_budget = self.budget_spin.value()
         self.bot.sort_by_percent = self.sort_by_percent_check.isChecked()  # Сортировка по %
         self.bot.start()
+        
+        # После успешного запуска сбрасываем флаг
+        self._is_starting = False
         
         # Show Overlay (Top Center)
         from PyQt6.QtGui import QGuiApplication
@@ -319,6 +369,8 @@ class BuyerWindow(QMainWindow):
         
         self.overlay.show()
         self.overlay.update_status(True, False)
+        
+        self.is_mini_mode = True
         self.hide() # Скрываем основное окно
         
     def _on_stop_clicked(self):
@@ -326,7 +378,6 @@ class BuyerWindow(QMainWindow):
         
         self.log_viewer.append("🛑 Остановка...")
         self.bot.stop()
-        self.status_val_label.setText("ОСТАНОВКА...")
         
         # Update Overlay
         self.overlay.update_status(False, False)
@@ -336,11 +387,6 @@ class BuyerWindow(QMainWindow):
         
         self.bot.pause()
         is_paused = self.bot._is_paused
-        
-        status_text = "ПАУЗА" if is_paused else "РАБОТАЕТ"
-        color = "#d29922" if is_paused else "#3fb950"
-        self.status_val_label.setText(status_text)
-        self.status_val_label.setStyleSheet(f"font-size: 18px; font-weight: bold; color: {color};")
         
         self.overlay.update_status(True, is_paused)
         self.log_viewer.append(f"⏯️ Пауза: {is_paused}")
@@ -358,8 +404,7 @@ class BuyerWindow(QMainWindow):
         self.overlay.set_last_log(message)
         
     def _on_finished(self):
-        self.status_val_label.setText("ОЖИДАНИЕ")
-        self.status_val_label.setStyleSheet("font-size: 24px; font-weight: bold; color: #8b949e;")
+        self.is_mini_mode = False
         self.start_btn.setVisible(True)
         self.stop_btn.setVisible(False)
         self.log_viewer.append("🏁 Завершена.")
@@ -372,6 +417,7 @@ class BuyerWindow(QMainWindow):
         self.activateWindow()
 
     def _restore_window(self):
+        self.is_mini_mode = False
         self.show()
         self.activateWindow()
 

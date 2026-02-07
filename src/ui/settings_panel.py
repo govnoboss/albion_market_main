@@ -45,29 +45,7 @@ class SettingsPanel(QScrollArea):
         layout.setContentsMargins(15, 15, 15, 15)
         layout.setSpacing(20)
         
-        # === Общие настройки ===
-        general_group = QGroupBox("⚙️ Общие настройки")
-        general_layout = QFormLayout(general_group)
-        general_layout.setSpacing(15)
         
-        # Задержка клика
-        self.click_delay_spin = QSpinBox()
-        self.click_delay_spin.setRange(10, 5000)
-        self.click_delay_spin.setSuffix(" мс")
-        self.click_delay_spin.setSingleStep(10)
-        self.click_delay_spin.valueChanged.connect(self._on_click_delay_changed)
-        general_layout.addRow("Задержка клика:", self.click_delay_spin)
-        
-        # Интервал сканирования
-        self.scan_interval_spin = QSpinBox()
-        self.scan_interval_spin.setRange(100, 10000)
-        self.scan_interval_spin.setSuffix(" мс")
-        self.scan_interval_spin.setSingleStep(100)
-        self.scan_interval_spin.valueChanged.connect(self._on_scan_interval_changed)
-        general_layout.addRow("Интервал сканирования:", self.scan_interval_spin)
-        
-        layout.addWidget(general_group)
-
         # === Таймауты сканирования ===
         timeouts_group = QGroupBox("⏳ Таймауты сканирования")
         timeouts_layout = QFormLayout(timeouts_group)
@@ -174,10 +152,7 @@ class SettingsPanel(QScrollArea):
         """Загрузить настройки из конфига"""
         config = get_config()
         
-        # General
-        self.click_delay_spin.setValue(config.get_setting("click_delay", 100))
-        self.click_delay_spin.setValue(config.get_setting("click_delay", 100))
-        self.scan_interval_spin.setValue(config.get_setting("scan_interval", 500))
+
         
         # Timeouts
         self.timeout_spin.setValue(config.get_setting("price_update_timeout", 5.0))
@@ -207,11 +182,7 @@ class SettingsPanel(QScrollArea):
             
         self.blockSignals(False)
         
-    def _on_click_delay_changed(self, value):
-        get_config().set_setting("click_delay", value)
-        
-    def _on_scan_interval_changed(self, value):
-        get_config().set_setting("scan_interval", value)
+
 
     def _on_timeout_changed(self, value):
         get_config().set_setting("price_update_timeout", value)
