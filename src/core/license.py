@@ -6,8 +6,8 @@ import os
 import sys
 from pathlib import Path
 
-# Change this to your real server IP/URL in production
-SERVER_URL = "http://127.0.0.1:8000/api/v1"
+# Production server URL
+SERVER_URL = "https://gbot-license.fly.dev/api/v1"
 LICENSE_FILE = Path.home() / ".gbot_license"
 
 class LicenseManager:
@@ -18,19 +18,22 @@ class LicenseManager:
     def get_hwid(self) -> str:
         """
         Generates a unique Hardware ID based on Motherboard Serial + CPU ID.
-        Works mainly for Windows.
+        Works for Windows. Uses PowerShell (wmic is deprecated in Windows 11+).
         """
         try:
-            # 1. Motherboard Serial
-            cmd_mb = "wmic baseboard get serialnumber"
-            mb_serial = subprocess.check_output(cmd_mb, shell=True).decode().split('\n')[1].strip()
-            
+            # 1. Motherboard Serial (via PowerShell)
+            cmd_mb = 'powershell -Command "Get-WmiObject Win32_BaseBoard | Select-Object -ExpandProperty SerialNumber"'
+            mb_serial = subprocess.check_output(cmd_mb, shell=True, stderr=subprocess.DEVNULL).decode().strip()
+            if not mb_serial or mb_serial == "None":
+                mb_serial = "UNKNOWN_MB"
 
-            # 2. CPU ID
-            cmd_cpu = "wmic cpu get processorid"
-            cpu_id = subprocess.check_output(cmd_cpu, shell=True).decode().split('\n')[1].strip()
+            # 2. CPU ID (via PowerShell)
+            cmd_cpu = 'powershell -Command "Get-WmiObject Win32_Processor | Select-Object -ExpandProperty ProcessorId"'
+            cpu_id = subprocess.check_output(cmd_cpu, shell=True, stderr=subprocess.DEVNULL).decode().strip()
+            if not cpu_id or cpu_id == "None":
+                cpu_id = "UNKNOWN_CPU"
             
-            # 3. Windows Machine GUID
+            # 3. Windows Machine GUID (Registry) - Most reliable
             import winreg
             key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Cryptography", 0, winreg.KEY_READ | winreg.KEY_WOW64_64KEY)
             machine_guid, _ = winreg.QueryValueEx(key, "MachineGuid")
@@ -41,7 +44,7 @@ class LicenseManager:
             return hashlib.sha256(raw_id.encode()).hexdigest().upper()[:32]
             
         except Exception as e:
-            # Fallback for dev/testing if wmic fails
+            # Fallback for dev/testing if PowerShell fails
             return "UNKNOWN_HWID_DEV_MODE"
 
     def save_key(self, key: str):

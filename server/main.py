@@ -22,13 +22,20 @@ BASE_DIR = Path(__file__).resolve().parent
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address)
 
-# Admin password (should be in .env in production!)
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "secret_password")
+# Admin password (MUST be set via environment variable!)
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+if not ADMIN_PASSWORD:
+    raise RuntimeError("ADMIN_PASSWORD environment variable is required!")
 
 # Session storage (in-memory, use Redis in production)
 admin_sessions = {}
 
-app = FastAPI(title="GBot License Server")
+app = FastAPI(
+    title="GBot License Server",
+    docs_url=None,      # Disable /docs
+    redoc_url=None,     # Disable /redoc
+    openapi_url=None    # Disable /openapi.json
+)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 

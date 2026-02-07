@@ -10,9 +10,30 @@ from ..utils.logger import get_logger
 logger = get_logger()
 
 # Попытка найти путь к Tesseract
-TESSERACT_CMD = shutil.which("tesseract")
-if not TESSERACT_CMD:
-    # Проверяем стандартные пути Windows
+def _find_tesseract():
+    """Найти путь к Tesseract OCR"""
+    import sys
+    
+    # 1. Проверяем рядом с .exe (для скомпилированной версии)
+    if getattr(sys, 'frozen', False):
+        # Запущено как .exe (Nuitka/PyInstaller)
+        exe_dir = os.path.dirname(sys.executable)
+        bundled_path = os.path.join(exe_dir, "tesseract", "tesseract.exe")
+        if os.path.exists(bundled_path):
+            return bundled_path
+    else:
+        # Запущено как скрипт - проверяем папку проекта
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        bundled_path = os.path.join(project_root, "assets", "tesseract", "tesseract.exe")
+        if os.path.exists(bundled_path):
+            return bundled_path
+    
+    # 2. Проверяем PATH
+    path_tesseract = shutil.which("tesseract")
+    if path_tesseract:
+        return path_tesseract
+    
+    # 3. Стандартные пути Windows
     possible_paths = [
         r"C:\Program Files\Tesseract-OCR\tesseract.exe",
         r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
@@ -20,8 +41,11 @@ if not TESSERACT_CMD:
     ]
     for path in possible_paths:
         if os.path.exists(path):
-            TESSERACT_CMD = path
-            break
+            return path
+    
+    return None
+
+TESSERACT_CMD = _find_tesseract()
 
 if TESSERACT_CMD:
     pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD

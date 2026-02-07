@@ -22,6 +22,7 @@ class LauncherWindow(QMainWindow):
         # --- Splash Screen ---
         self.splash = SplashScreen()
         self.splash.show()
+        self.splash.set_progress(10)
         self.splash.set_status("Проверка лицензии...")
         QApplication.processEvents()
         
@@ -150,16 +151,27 @@ class LauncherWindow(QMainWindow):
     
     def _preload_windows(self):
         """Предзагрузка окон для быстрого переключения"""
-        # Статус в splash
-        self.splash.set_status("Загрузка Сканера...")
+        # Статус в splash (проверяем, что splash существует и не закрыт)
+        if hasattr(self, 'splash') and self.splash and self.splash.isVisible():
+            self.splash.set_progress(0)
+            self.splash.set_status("Загрузка Сканера...")
+            self.splash.set_progress(25)
         
         # Ленивые импорты (тяжёлые модули)
         from .main_window import MainWindow as ScannerWindow
         self.scanner_window = ScannerWindow(launcher=self)
         
-        self.splash.set_status("Загрузка Закупщика...")
+        if hasattr(self, 'splash') and self.splash and self.splash.isVisible():
+            self.splash.set_progress(50)
+            self.splash.set_status("Загрузка Закупщика...")
+            self.splash.set_progress(75)
+            
         from .buyer_window import BuyerWindow
         self.buyer_window = BuyerWindow(launcher=self)
+        
+        if hasattr(self, 'splash') and self.splash and self.splash.isVisible():
+            self.splash.set_progress(100)
+            self.splash.set_status("Готово!")
 
     def _launch_scanner(self):
         self.scanner_window.show()

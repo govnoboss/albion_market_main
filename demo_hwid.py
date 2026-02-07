@@ -5,24 +5,25 @@ def demo_hwid():
     print("--- HWID Generation Demo ---")
     
     try:
-        # 1. Motherboard Serial
-        cmd_mb = "wmic baseboard get serialnumber"
+        # 1. Motherboard Serial (via PowerShell - wmic is deprecated)
+        cmd_mb = 'powershell -Command "Get-WmiObject Win32_BaseBoard | Select-Object -ExpandProperty SerialNumber"'
         print(f"\nRunning: {cmd_mb}")
-        mb_output = subprocess.check_output(cmd_mb, shell=True).decode()
-        print(f"Output:\n{mb_output}")
-        
-        mb_serial = mb_output.split('\n')[1].strip()
+        mb_serial = subprocess.check_output(cmd_mb, shell=True, stderr=subprocess.DEVNULL).decode().strip()
         print(f"-> Extracted MB Serial: '{mb_serial}'")
         
+        if not mb_serial or mb_serial == "None":
+            mb_serial = "UNKNOWN_MB"
+            print("   (Using fallback: UNKNOWN_MB)")
 
-        # 2. CPU ID
-        cmd_cpu = "wmic cpu get processorid"
+        # 2. CPU ID (via PowerShell)
+        cmd_cpu = 'powershell -Command "Get-WmiObject Win32_Processor | Select-Object -ExpandProperty ProcessorId"'
         print(f"\nRunning: {cmd_cpu}")
-        cpu_output = subprocess.check_output(cmd_cpu, shell=True).decode()
-        print(f"Output:\n{cpu_output}")
-        
-        cpu_id = cpu_output.split('\n')[1].strip()
+        cpu_id = subprocess.check_output(cmd_cpu, shell=True, stderr=subprocess.DEVNULL).decode().strip()
         print(f"-> Extracted CPU ID:    '{cpu_id}'")
+        
+        if not cpu_id or cpu_id == "None":
+            cpu_id = "UNKNOWN_CPU"
+            print("   (Using fallback: UNKNOWN_CPU)")
         
         # 3. Windows Machine GUID (Registry) - The most reliable one
         print(f"\nReading Registry: HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Cryptography -> MachineGuid")

@@ -52,7 +52,8 @@ class SplashScreen(QWidget):
         
         # Прогресс-бар
         self.progress = QProgressBar()
-        self.progress.setRange(0, 0)  # Бесконечный режим
+        self.progress.setRange(0, 100)  # Режим 0-100%
+        self.progress.setValue(0)
         self.progress.setTextVisible(False)
         self.progress.setFixedHeight(4)
         self.progress.setStyleSheet("""
@@ -74,5 +75,11 @@ class SplashScreen(QWidget):
         """Обновить статус загрузки"""
         self.status_label.setText(text)
         # Принудительно перерисовываем
+        from PyQt6.QtWidgets import QApplication
+        QApplication.processEvents()
+    
+    def set_progress(self, value: int):
+        """Установить прогресс (0-100)"""
+        self.progress.setValue(value)
         from PyQt6.QtWidgets import QApplication
         QApplication.processEvents()
