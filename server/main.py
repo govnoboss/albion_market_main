@@ -19,8 +19,12 @@ from database import SessionLocal, License, init_db
 # Get the directory where this file is located
 BASE_DIR = Path(__file__).resolve().parent
 
-# Rate limiter
-limiter = Limiter(key_func=get_remote_address)
+# Rate limiter - prioritize Fly-Client-IP header
+def get_real_ip(request: Request):
+    client_host = request.client.host if request.client else "127.0.0.1"
+    return request.headers.get("fly-client-ip") or client_host
+
+limiter = Limiter(key_func=get_real_ip)
 
 # Admin password (MUST be set via environment variable!)
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
@@ -49,6 +53,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Security Headers Middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    return response
 
 # Mount static files and templates (using absolute paths)
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
@@ -144,7 +156,8 @@ def validate_license(request: Request, req: LicenseCheckRequest, db: Session = D
         return LicenseResponse(status="unbound", message="Key is new, please activate")
 
     if license_obj.hwid != req.hwid:
-        return LicenseResponse(status="hwid_mismatch", message="Key is bound to another PC")
+        # Security by obscurity: don't tell the attacker WHY it failed
+        return LicenseResponse(status="invalid", message="Key is invalid or disabled")
 
     return LicenseResponse(status="valid", expires_at=str(license_obj.expires_at))
 
@@ -163,7 +176,7 @@ def activate_license(request: Request, req: LicenseActivateRequest, db: Session 
         if license_obj.hwid == req.hwid:
             return LicenseResponse(status="valid", expires_at=str(license_obj.expires_at), message="Already bound to this PC")
         else:
-            return LicenseResponse(status="hwid_mismatch", message="Key already used on another PC")
+            return LicenseResponse(status="invalid", message="Key is invalid or disabled")
             
     # Bind
     license_obj.hwid = req.hwid
@@ -178,7 +191,7 @@ def generate_keys(request: Request, req: AdminGenerateRequest, db: Session = Dep
     Admin endpoint to create new keys.
     REPLACE 'secret_password' WITH A SECURE PASSWORD IN PRODUCTION!
     """
-    if req.admin_password != "secret_password":
+    if not secrets.compare_digest(req.admin_password, ADMIN_PASSWORD):
         raise HTTPException(status_code=403, detail="Invalid admin password")
         
     generated = []
@@ -204,6 +217,12 @@ def verify_admin_session(request: Request) -> bool:
     session = admin_sessions.get(session_id)
     if not session:
         return False
+    
+    # Check User-Agent binding (if browser fingerprint changed - logout)
+    current_ua = request.headers.get("user-agent", "")
+    if session.get("ua") != current_ua:
+        return False
+
     # Check expiry (30 minutes)
     if datetime.now() > session["expires"]:
         del admin_sessions[session_id]
@@ -223,7 +242,7 @@ def admin_login_page(request: Request):
 @app.post("/admin/login", response_class=HTMLResponse)
 @limiter.limit("3/minute")  # Strict rate limit for login attempts
 def admin_login(request: Request, password: str = Form(...)):
-    if password != ADMIN_PASSWORD:
+    if not secrets.compare_digest(password, ADMIN_PASSWORD):
         return templates.TemplateResponse("login.html", {
             "request": request,
             "session_active": False,
@@ -235,7 +254,8 @@ def admin_login(request: Request, password: str = Form(...)):
     session_id = secrets.token_urlsafe(32)
     admin_sessions[session_id] = {
         "created": datetime.now(),
-        "expires": datetime.now() + timedelta(minutes=30)
+        "expires": datetime.now() + timedelta(minutes=30),
+        "ua": request.headers.get("user-agent", "")
     }
     
     response = RedirectResponse("/admin/", status_code=302)

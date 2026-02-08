@@ -17,6 +17,12 @@ else:
 DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+
+# Enable Write-Ahead Logging (WAL) for better concurrency
+from sqlalchemy import text
+with engine.connect() as connection:
+    connection.execute(text("PRAGMA journal_mode=WAL;"))
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
