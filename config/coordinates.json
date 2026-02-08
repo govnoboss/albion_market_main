@@ -74,9 +74,9 @@
             "type": "area"
         },
         "market_name_area": {
-            "x": 651,
-            "y": 191,
-            "w": 208,
+            "x": 759,
+            "y": 260,
+            "w": 576,
             "h": 43,
             "type": "area"
         },
@@ -272,7 +272,7 @@
         "char_1_name": "GIGAESHKERE",
         "char_2_name": "Mambaloid",
         "price_update_timeout": 10.0,
-        "last_scan_index": 6
+        "last_scan_index": 0
     },
     "dropdowns": {
         "row_height": 27,

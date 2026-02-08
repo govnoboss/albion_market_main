@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-    QPushButton, QLabel, QFrame, QApplication
+    QPushButton, QLabel, QFrame, QApplication, QMessageBox
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont, QIcon
@@ -28,6 +28,8 @@ class LauncherWindow(QMainWindow):
         
         # --- License Check ---
         self.login_window = None
+        self.shutdown_timer = None
+        self.shutdown_seconds = 60
 
         if not self._check_license_silent():
             # Show Login Window instead of Launcher
@@ -38,13 +40,65 @@ class LauncherWindow(QMainWindow):
             return
 
         self._init_launcher_ui()
+        self._setup_daily_license_check()
         self.splash.close()
         self.show()
 
     def _check_license_silent(self):
         """Silently checks if we have a stored valid key"""
         res = license_manager.validate_key() # Load from file
+        if res.get('success'):
+            license_manager.mark_checked()
         return res.get('success', False)
+    
+    def _setup_daily_license_check(self):
+        """Setup timer for daily license validation"""
+        # Check every 10 minutes if we need to validate today
+        self.license_check_timer = QTimer(self)
+        self.license_check_timer.timeout.connect(self._daily_license_check)
+        self.license_check_timer.start(10 * 60 * 1000)  # 10 minutes
+    
+    def _daily_license_check(self):
+        """Perform daily license check"""
+        if not license_manager.should_check_today():
+            return  # Already checked today
+        
+        res = license_manager.validate_key()
+        if res.get('success'):
+            license_manager.mark_checked()
+        else:
+            self._start_graceful_shutdown(res.get('message', 'License expired'))
+    
+    def _start_graceful_shutdown(self, reason: str):
+        """Start 1-minute graceful shutdown with warning"""
+        self.shutdown_seconds = 60
+        
+        # Create warning dialog
+        self.shutdown_dialog = QMessageBox(self)
+        self.shutdown_dialog.setIcon(QMessageBox.Icon.Warning)
+        self.shutdown_dialog.setWindowTitle("Лицензия недействительна")
+        self.shutdown_dialog.setText(f"Причина: {reason}\n\nПриложение закроется через 60 секунд.\nСохраните свою работу.")
+        self.shutdown_dialog.setStandardButtons(QMessageBox.StandardButton.Ok)
+        self.shutdown_dialog.button(QMessageBox.StandardButton.Ok).setText("Понятно")
+        self.shutdown_dialog.show()
+        
+        # Start countdown timer
+        self.shutdown_timer = QTimer(self)
+        self.shutdown_timer.timeout.connect(self._shutdown_tick)
+        self.shutdown_timer.start(1000)  # Every second
+    
+    def _shutdown_tick(self):
+        """Update shutdown countdown"""
+        self.shutdown_seconds -= 1
+        
+        if self.shutdown_seconds <= 0:
+            self.shutdown_timer.stop()
+            QApplication.quit()
+        elif self.shutdown_dialog and self.shutdown_dialog.isVisible():
+            self.shutdown_dialog.setText(
+                f"Приложение закроется через {self.shutdown_seconds} секунд.\n"
+                f"Сохраните свою работу."
+            )
 
     def _show_launcher(self):
         """Called when login is successful"""

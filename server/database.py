@@ -1,10 +1,20 @@
 from sqlalchemy import create_engine, Column, String, Boolean, DateTime
 from sqlalchemy.orm import sessionmaker, declarative_base
+from pathlib import Path
 import datetime
 import uuid
+import os
 
-# SQLite database file
-DATABASE_URL = "sqlite:///./licenses.db"
+# SQLite database file - use persistent volume on fly.io, local path for dev
+# On fly.io, /data is a mounted persistent volume
+if os.path.exists("/data"):
+    DATABASE_PATH = "/data/licenses.db"
+else:
+    # Local development - use path relative to this file
+    BASE_DIR = Path(__file__).resolve().parent
+    DATABASE_PATH = str(BASE_DIR / "licenses.db")
+
+DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
