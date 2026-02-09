@@ -6,7 +6,12 @@ import os
 import sys
 import base64
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+# Cryptography
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import serialization
 
 # Production server URL
 SERVER_URL = "https://gbot-license.fly.dev/api/v1"
@@ -17,12 +22,31 @@ LICENSE_FILE = APP_DATA_DIR / 'license.dat'
 HWID_FALLBACK_FILE = APP_DATA_DIR / '.hwid'
 LAST_CHECK_FILE = APP_DATA_DIR / '.last_check'
 
+# --- EMBEDDED PUBLIC KEY ---
+# Replace this with the content of keys/public.pem
+PUBLIC_KEY_PEM = b"""-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtHDocWXCv6ulUD7TgEEH
+w2OVFQLsqcZsfEZjgKCkQQa3vSXcpRBYC9S2JzaxNHFnrcKy8q39HOly255jdkOS
+n3w3lL2/T1DB5EKY5sp/63b78uOmoHsZD8HQFeApkGnvpcRsZzb1BNUNfsSBAqrq
+3HWl+dnYTfk/STCkgWf+kN3FsYy4cYLR3yCdlB29EcYGg+tRKXrwi5fL+Kbksp67
+UEgq5MV/9Sep0Zuj6hn7VkCnQJkym9whgbujb+UrKyJulkO0qxHMVUn1PfWRUyyF
+MnY590eFH/j60TwT8zYi2Z7C51DzoEJSL2hoCczmfb99FQLqEyPIgJCDr8avpA36
+/wIDAQAB
+-----END PUBLIC KEY-----"""
+
 class LicenseManager:
     def __init__(self):
         self.cached_key = None
         self.cached_status = False
         # Ensure app data directory exists
         APP_DATA_DIR.mkdir(parents=True, exist_ok=True)
+        
+        # Load Public Key
+        try:
+            self.public_key = serialization.load_pem_public_key(PUBLIC_KEY_PEM)
+        except Exception as e:
+            print(f"CRITICAL: Failed to load public key: {e}")
+            self.public_key = None
 
     def get_hwid(self) -> str:
         """
@@ -114,6 +138,71 @@ class LicenseManager:
                 pass
         return ""
     
+    def get_network_time(self) -> datetime:
+        """
+        Attempts to get accurate time from Google via HTTP headers.
+        Falls back to system time but returns flag.
+        """
+        try:
+            # Quick HEAD request to a reliable server
+            response = requests.head("https://www.google.com", timeout=3)
+            date_str = response.headers['Date']
+            # Parse 'Sat, 07 Feb 2026 12:00:00 GMT'
+            network_time = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %Z')
+            return network_time.replace(tzinfo=timezone.utc)
+        except Exception as e:
+            # Fallback to local time (UTC)
+            print(f"Time Check Failed: {e}")
+            return datetime.now(timezone.utc)
+
+    def verify_signature(self, response_json: dict) -> bool:
+        """
+        Verifies that the response was signed by our Private Key.
+        Prevents Server Emulation attacks.
+        """
+        if not self.public_key:
+            return False
+            
+        try:
+            signature_b64 = response_json.get("signature")
+            timestamp = response_json.get("timestamp")
+            data = response_json.get("data")
+            
+            if not signature_b64 or not timestamp or not data:
+                return False
+
+            # 1. Reconstruct Payload
+            payload = data.copy()
+            payload["timestamp"] = timestamp
+            
+            canonical_json = json.dumps(payload, sort_keys=True, separators=(',', ':'))
+            
+            # 2. Verify Signature
+            signature = base64.b64decode(signature_b64)
+            
+            self.public_key.verify(
+                signature,
+                canonical_json.encode(),
+                padding.PKCS1v15(),
+                hashes.SHA256()
+            )
+            
+            # 3. Verify Timestamp (Anti-Replay & Time Tamper)
+            server_time = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+            network_time = self.get_network_time()
+            
+            # Allow 10 minutes drift
+            delta = abs((network_time - server_time).total_seconds())
+            if delta > 600:
+                print(f"Security: Time skew too large! Server: {server_time}, Network: {network_time}")
+                return False
+                
+            return True
+            
+        except Exception as e:
+            print(f"Security: Signature verification failed! {e}")
+            return False
+
     def should_check_today(self) -> bool:
         """Returns True if we haven't validated today yet"""
         if not LAST_CHECK_FILE.exists():
@@ -148,8 +237,13 @@ class LicenseManager:
         try:
             # 1. First, try to VALIDATE
             resp = requests.post(f"{SERVER_URL}/validate", json={"key": key, "hwid": hwid}, timeout=5)
-            data = resp.json()
+            full_response = resp.json()
             
+            # NEW: Validate Signature
+            if not self.verify_signature(full_response):
+                return {"success": False, "message": "Security Error: Server Signature Invalid!", "code": "security_error"}
+
+            data = full_response.get("data", {})
             status = data.get("status")
             
             if status == "valid":
@@ -172,7 +266,8 @@ class LicenseManager:
         except requests.exceptions.ConnectionError:
             return {"success": False, "message": "Server unavailable. Check internet.", "code": "connection_error"}
         except Exception as e:
-            return {"success": False, "message": str(e), "code": "error"}
+             # In case of verification error, return generic error
+            return {"success": False, "message": f"Error: {str(e)}", "code": "error"}
 
     def activate_key(self, key: str) -> dict:
         """
@@ -181,7 +276,13 @@ class LicenseManager:
         hwid = self.get_hwid()
         try:
             resp = requests.post(f"{SERVER_URL}/activate", json={"key": key, "hwid": hwid}, timeout=5)
-            data = resp.json()
+            full_response = resp.json()
+            
+            # NEW: Validate Signature
+            if not self.verify_signature(full_response):
+                return {"success": False, "message": "Security Error: Server Signature Invalid!", "code": "security_error"}
+
+            data = full_response.get("data", {})
             
             if data.get("status") == "valid":
                  self.save_key(key)
@@ -194,3 +295,4 @@ class LicenseManager:
 
 # Singleton instance
 license_manager = LicenseManager()
+

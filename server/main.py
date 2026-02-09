@@ -5,10 +5,17 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Dict, Any
 import secrets
 import os
+import json # Added for JSON serialization
+import base64 # Added for signature encoding
 from pathlib import Path
+
+# Cryptography Imports
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import serialization
 
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -30,6 +37,71 @@ limiter = Limiter(key_func=get_real_ip)
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 if not ADMIN_PASSWORD:
     raise RuntimeError("ADMIN_PASSWORD environment variable is required!")
+
+# --- RSA PRIVATE KEY LOADING ---
+PRIVATE_KEY = None
+
+def load_private_key():
+    global PRIVATE_KEY
+    # 1. Try Environment Variable
+    env_key = os.getenv("LICENSE_PRIVATE_KEY")
+    if env_key:
+        try:
+            # Fix newlines if passed as single line string in env
+            if "-----BEGIN PRIVATE KEY-----" not in env_key:
+                 env_key = env_key.replace(" ", "\n")
+                 env_key = f"-----BEGIN PRIVATE KEY-----\n{env_key}\n-----END PRIVATE KEY-----"
+            
+            PRIVATE_KEY = serialization.load_pem_private_key(
+                env_key.encode(),
+                password=None
+            )
+            print("RSA Private Key loaded from Environment.")
+            return
+        except Exception as e:
+            print(f"Failed to load key from ENV: {e}")
+
+    # 2. Try File (Development)
+    key_path = BASE_DIR.parent / "keys" / "private.pem"
+    if key_path.exists():
+        try:
+            with open(key_path, "rb") as f:
+                PRIVATE_KEY = serialization.load_pem_private_key(
+                    f.read(),
+                    password=None
+                )
+            print(f"RSA Private Key loaded from file: {key_path}")
+            return
+        except Exception as e:
+            print(f"Failed to load key from file: {e}")
+            
+    print("WARNING: NO PRIVATE KEY LOADED! SIGNING WILL FAIL.")
+
+# Load key on startup
+load_private_key()
+
+def sign_data(data: Dict[str, Any]) -> str:
+    """
+    Signs a dictionary using RSA Private Key.
+    Returns base64 encoded signature.
+    """
+    if not PRIVATE_KEY:
+        return "NO_KEY"
+        
+    try:
+        # Canonical JSON string: sorted keys, no spaces
+        canonical_json = json.dumps(data, sort_keys=True, separators=(',', ':'))
+        
+        signature = PRIVATE_KEY.sign(
+            canonical_json.encode(),
+            padding.PKCS1v15(),
+            hashes.SHA256()
+        )
+        return base64.b64encode(signature).decode()
+    except Exception as e:
+        print(f"Signing error: {e}")
+        return "SIGN_ERROR"
+
 
 # Session storage (in-memory, use Redis in production)
 admin_sessions = {}
@@ -116,10 +188,11 @@ class LicenseActivateRequest(BaseModel):
     key: str
     hwid: str
 
-class LicenseResponse(BaseModel):
-    status: str  # valid, expired, invalid, unbound, hwid_mismatch
-    expires_at: Optional[str] = None
-    message: Optional[str] = None
+# NEW Response Model with Signature
+class SignedResponse(BaseModel):
+    data: Dict[str, Any]
+    signature: str
+    timestamp: float
 
 class AdminGenerateRequest(BaseModel):
     admin_password: str
@@ -133,56 +206,92 @@ def on_startup():
 
 # --- Endpoints ---
 
-@app.post("/api/v1/validate", response_model=LicenseResponse)
+@app.post("/api/v1/validate", response_model=SignedResponse)
 @limiter.limit("10/minute")
 def validate_license(request: Request, req: LicenseCheckRequest, db: Session = Depends(get_db)):
     """
     Checks if the license is valid for the given HWID.
+    Returns SIGNED response.
     """
     license_obj = db.query(License).filter(License.key == req.key).first()
+    
+    response_data = {}
 
     if not license_obj:
-        return LicenseResponse(status="invalid", message="Key not found")
-
-    if not license_obj.is_active:
-        return LicenseResponse(status="invalid", message="Key is disabled")
+        response_data = {"status": "invalid", "message": "Key not found"}
+    
+    elif not license_obj.is_active:
+        response_data = {"status": "invalid", "message": "Key is disabled"}
 
     # Check Expiry
-    if datetime.now() > license_obj.expires_at:
-        return LicenseResponse(status="expired", expires_at=str(license_obj.expires_at))
+    elif datetime.now() > license_obj.expires_at:
+        response_data = {"status": "expired", "expires_at": str(license_obj.expires_at)}
 
     # Check Binding
-    if license_obj.hwid is None:
-        return LicenseResponse(status="unbound", message="Key is new, please activate")
+    elif license_obj.hwid is None:
+        response_data = {"status": "unbound", "message": "Key is new, please activate"}
 
-    if license_obj.hwid != req.hwid:
+    elif license_obj.hwid != req.hwid:
         # Security by obscurity: don't tell the attacker WHY it failed
-        return LicenseResponse(status="invalid", message="Key is invalid or disabled")
+        response_data = {"status": "invalid", "message": "Key is invalid or disabled"}
+    
+    else:
+        response_data = {"status": "valid", "expires_at": str(license_obj.expires_at)}
 
-    return LicenseResponse(status="valid", expires_at=str(license_obj.expires_at))
+    # SIGNING
+    timestamp = datetime.utcnow().timestamp()
+    
+    # We sign the combination of data + timestamp
+    payload_to_sign = response_data.copy()
+    payload_to_sign["timestamp"] = timestamp
+    
+    sig = sign_data(payload_to_sign)
 
-@app.post("/api/v1/activate", response_model=LicenseResponse)
+    return SignedResponse(
+        data=response_data,
+        signature=sig,
+        timestamp=timestamp
+    )
+
+@app.post("/api/v1/activate", response_model=SignedResponse)
 @limiter.limit("10/minute")
 def activate_license(request: Request, req: LicenseActivateRequest, db: Session = Depends(get_db)):
     """
     Binds a new license key to a HWID.
+    Returns SIGNED response.
     """
     license_obj = db.query(License).filter(License.key == req.key).first()
+    
+    response_data = {}
 
     if not license_obj:
-        raise HTTPException(status_code=404, detail="Key not found")
+         response_data = {"status": "invalid", "message": "Key not found"} # Keep consistant invalid status for missing keys
 
-    if license_obj.hwid is not None:
+    elif license_obj.hwid is not None:
         if license_obj.hwid == req.hwid:
-            return LicenseResponse(status="valid", expires_at=str(license_obj.expires_at), message="Already bound to this PC")
+            response_data = {"status": "valid", "expires_at": str(license_obj.expires_at), "message": "Already bound to this PC"}
         else:
-            return LicenseResponse(status="invalid", message="Key is invalid or disabled")
+            response_data = {"status": "invalid", "message": "Key is invalid or disabled"}
             
-    # Bind
-    license_obj.hwid = req.hwid
-    db.commit()
+    else:
+        # Bind
+        license_obj.hwid = req.hwid
+        db.commit()
+        response_data = {"status": "valid", "expires_at": str(license_obj.expires_at), "message": "Activation successful"}
+
+    # SIGNING
+    timestamp = datetime.utcnow().timestamp()
     
-    return LicenseResponse(status="valid", expires_at=str(license_obj.expires_at), message="Activation successful")
+    payload_to_sign = response_data.copy()
+    payload_to_sign["timestamp"] = timestamp
+    
+    sig = sign_data(payload_to_sign)
+    
+    return SignedResponse(
+        data=response_data,
+        signature=sig,
+        timestamp=timestamp
+    )
 
 @app.post("/api/v1/admin/generate")
 @limiter.limit("5/minute")
@@ -396,3 +505,4 @@ if __name__ == "__main__":
     import uvicorn
     # Run localhost on port 8000
     uvicorn.run(app, host="127.0.0.1", port=8000)
+

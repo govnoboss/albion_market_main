@@ -9,10 +9,12 @@
 ### Core Purpose
 A desktop application that automates market data collection (Scanner) and item purchasing (Buyer) in the Albion Online MMORPG. It uses Optical Character Recognition (OCR) and template matching to read the game state and emulates human input (mouse/keyboard) to interact with the game UI.
 
-### High-Level Workflow
-1.  **Configuration**: User sets coordinates for UI elements and defines items/filters via the GUI.
-2.  **Scanning**: Bot iterates through items, changing Tiers/Enchants/Qualities, reads prices via OCR, and saves them to a local database/cache.
-3.  **Buying**: Bot monitors prices (or uses scan data) to purchase items that meet profit criteria (Smart Mode) or specific quantity limits (Wholesale Mode).
+### Key Features
+*   **Scanner:** Automatically iterates through items, tiers, and enchants to record market prices. Supports **Black Market** specific logic (character switching).
+*   **Buyer (Wholesale):** Purchases specific items up to a configured limit.
+*   **Buyer (Smart):** Automatically identifies and purchases profitable items based on the spread between City Market and Black Market prices.
+*   **Mini Overlay:** A compact, always-on-top interface for monitoring bot status without blocking the game view.
+*   **License System:** HWID-based licensing system to restrict usage.
 
 ---
 
@@ -24,124 +26,131 @@ The project follows a layered architecture separating Logic (`core`), Interface 
 src/
 ├── core/               # Business Logic & Bot Engines
 │   ├── base_bot.py     # Base thread, input emulation, common checks
-│   ├── bot.py          # Scanner Mode logic
+│   ├── bot.py          # Scanner Mode logic (incl. Black Market)
 │   ├── buyer.py        # Buyer Mode logic (Wholesale/Smart)
 │   ├── interaction.py  # UI Element calculation (Dropdowns)
+│   ├── license.py      # HWID generation and license validation
 │   └── validator.py    # Screen state validation (OCR/Visual)
 ├── ui/                 # PyQt6 Interface
 │   ├── main_window.py  # Entry point, Tab management, Hotkeys
-│   ├── overlay.py      # HUD components
-│   └── ...tabs         # Specific tab implementations
+│   ├── mini_overlay.py # Compact status overlay
+│   ├── overlay.py      # (Legacy) HUD components
+│   └── [tabs]          # Specific tab implementations:
+│       ├── control_panel.py   # Start/Stop controls
+│       ├── profits_tab.py     # Smart Buyer analysis view
+│       ├── prices_tab.py      # Database viewer
+│       ├── items_panel.py     # Item management
+│       ├── coordinates_tab.py # UI calibration
+│       └── settings_panel.py  # General config
 ├── utils/              # Shared Utilities
 │   ├── config.py       # JSON Config Manager (Singleton)
 │   ├── logger.py       # Thread-safe logging system
+│   ├── price_storage.py# Price database (JSON)
 │   ├── image_utils.py  # Image comparison & search
 │   └── ocr.py          # Tesseract/Image-processing wrappers
+├── server/             # (Optional) Web Server for License/Distribution
 └── main.py             # Application Entry Point
 ```
-
-### Dependency Rules
-*   **UI** depends on **Core** (to start/stop bots) and **Utils** (config/logging).
-*   **Core** depends on **Utils** (config, logger, ocr) but **NOT** on UI (signals are used).
-*   **Utils** should be independent.
 
 ---
 
 ## 3. Core Components ("The Brain")
 
 ### BaseBot (`src/core/base_bot.py`)
-*   **Role:** Abstract parent class (QTread).
+*   **Role:** Abstract parent class (QThread).
 *   **Responsibilities:**
     *   Thread management (`start`, `stop`, `pause`).
-    *   Human-like Input (`_human_move_to`, `_human_click`, `_human_type`).
-    *   Market Validation (`_check_market_is_open`, `_detect_current_city`).
-    *   Logging actions.
+    *   **Human-like Input:** `_human_move_to` (with randomization), `_human_click`, `_human_type`.
+    *   **Market Validation:** Checks if the Market or Item Menu is open (`_check_market_is_open`, `_detect_current_city`).
+    *   **Pause Logic:** Handles graceful pausing via `_check_pause`.
 
-### MarketBot (`src/core/bot.py`)
-*   **Role:** The Scanner. Iterates through items to collect price data.
+### MarketBot (Scanner) (`src/core/bot.py`)
+*   **Role:** Iterates through items to collect price data.
 *   **Key Logic:**
-    *   **Iteration:** Loops through a list of items (`config.known_items`).
-    *   **Variations:** For each item, iterates active Tiers (4-8) and Enchants (0-4).
-    *   **Character Switch:** Specific logic for "Black Market" to switch characters when inventory is full (Item 48 trigger).
-    *   **Collision/Opportunistic:** Captures prices for other tiers if visible on screen to speed up scanning.
-*   **Safety:** Uses `_capture_item_menu_state` & `_check_safe_state` to ensure the bot is looking at the correct item menu. Re-opens it if lost.
+    *   **Loop:** Iterates items -> Tiers (4-8) -> Enchants (0-4).
+    *   **Safety:** Uses `_capture_item_menu_state` & `_check_safe_state` to ensuring valid context. Implements **Auto-Recovery** if the menu closes unexpectedly.
+    *   **Black Market:** Handles inventory limits (Item 48 trigger) by executing a character switch sequence.
+    *   **Opportunistic Capture:** If a price for another tier/enchant is visible while working on the current one, it captures it to save time.
 
-### BuyerBot (`src/core/buyer.py`)
-*   **Role:** The Purchaser. Executes buy orders based on logic.
+### BuyerBot (Buyer) (`src/core/buyer.py`)
+*   **Role:** Executes buy orders based on logic.
 *   **Modes:**
-    1.  **Wholesale**: Buying specific items up to a configured limit.
-    2.  **Smart**: Buying items based on calculated profitability (Market vs Black Market diff).
-*   **Key Logic (`_process_variant_wholesale`):**
-    *   Reads current price (OCR).
-    *   Calculates target price: `Target = (BM_Price * 0.935) / (1.025 * Margin)`.
-    *   Verifies total cost before clicking confirm to prevent OCR errors.
-    *   Batched buying (Quantity input).
+    1.  **Wholesale**: Buys items from a user-defined list up to a specific limit.
+    2.  **Smart**: Analyzes `PriceStorage`, finds items where `(BlackMarketPrice * 0.935) - MarketPrice` > `MinProfit`, and buys them.
+*   **Key Logic:**
+    *   **Target Price Calculation:** `Target = (BM_Price * 0.935) / (1.025 * Margin)`.
+    *   **Verification:** Reads the "Total Buy Order" price via OCR ensuring the total cost matches expected `Price * Qty`.
+    *   **Input:** Uses keyboard input with mouse-hold logic for setting quantities.
 
 ### Interaction (`src/core/interaction.py`)
-*   **Role:** Calculates coordinates for dynamic UI elements.
-*   **Components:**
-    *   `DropdownSelector`: Calculates `(x, y)` for dropdown items based on `row_height` and `offset`.
-    *   **Tier Exceptions**: Handles UI quirks where "Tier 1" items offset the dropdown list (e.g. T2 starts at index 1 instead of 0).
+*   **Role:** UI Coordinate Logic.
+*   **DropdownSelector:** Calculates `(x, y)` for dynamic dropdowns (Tier, Enchant, Quality) handling specific offsets and row heights.
+*   **Tier Exceptions:** database of items that don't have specific tiers (e.g., T1 for some artifacts), adjusting dropdown clicks accordingly.
+
+### LicenseManager (`src/core/license.py`)
+*   **Role:** Security & Access Control.
+*   **Logic:** Generates a stable HWID (Motherboard + CPU + MachineGUID), encrypts/decrypts keys locally, and validates against a remote server.
 
 ---
 
 ## 4. UI Architecture
 
 ### MainWindow (`src/ui/main_window.py`)
-*   **Initialization:** Sets up specific tabs (`Control`, `Profits`, `Prices`, `Items`, `Coordinates`, `Settings`).
-*   **Hotkeys:** Global `F5` (Start/Stop) and `F6` (Pause) via `pynput`.
-*   **Mini Overaly:** Automatically switches to a compact `MiniOverlay` when the bot starts.
+*   **Features:**
+    *   **Tabs:** Control, Profits, Prices, Items, Coordinates, Settings.
+    *   **Hotkeys:** Global `F5` (Start/Stop) and `F6` (Pause) using `pynput` listener.
+    *   **Mini Overlay Integration:** Automatically hides the main window and shows `MiniOverlay` on start.
 
-### Event Flow
-1.  **Start:** User clicks "Start" or presses F5 -> `MainWindow._on_start_bot` -> `Bot.start()`.
-2.  **Progress:** `Bot.progress_updated` (Signal) -> `MainWindow` -> `ControlPanel/Overlay`.
-3.  **Logs:** `Logger` emits signal -> `LogViewer` (TextEdit) appends HTML formatted text.
+### MiniOverlay (`src/ui/mini_overlay.py`)
+*   **Role:** Compact widget showing Status, Progress Bar, and Last Log Message.
+*   **Behavior:** "Always on Top", draggable. Allows controlling the bot (Pause/Stop) without alt-tabbing.
+
+### Tabs
+*   **ProfitsTab:** Displays calculated profit margins based on scanned data.
+*   **CoordinatesTab:** Interactive calibration tool. Allows users to "Set" coordinates by pressing Ctrl, auto-saving to config.
+*   **PricesTab:** View and query the history of scanned prices.
 
 ---
 
 ## 5. Data Flow & Configuration
 
-### Configuration (`config/coordinates.json`)
-Managed by `src/utils/config.py` (Singleton `get_config()`).
-*   **Coordinates:** `{ "key": {"x": 100, "y": 200, "type": "point"} }`
-*   **Items/Targets:** `{ "wholesale_targets": { "Sword": { "T4.0": { "limit": 10 ... } } } }`
-*   **Persisted:** Auto-saves on change. Supports "Profiles" to swap coordinate sets.
+### ConfigManager (`src/utils/config.py`)
+*   **File:** `config/coordinates.json`.
+*   **Profiles:** Supports multiple coordinate profiles (e.g., for different screen resolutions or window positions).
+*   **Capabilities:** Load/Save coordinates, Settings (`tesseract_path`), Dropdown tweaks, and Item Lists.
+
+### PriceStorage (`src/utils/price_storage.py`)
+*   **File:** `data/prices.json` (JSON Database).
+*   **Structure:** `{ City: { ItemName: { "T4.0": { "price": 100, "updated": ISO_TIMESTAMP } } } }`.
+*   **Features:** History cleaning (removing old sessions), City management.
 
 ### OCR Pipeline
-1.  **Capture:** `ImageGrab` captures a region defined in config (`price_area`).
+1.  **Capture:** `ImageGrab` captures a defined area.
 2.  **Pre-process:** Grayscale/Thresholding (`image_utils`).
-3.  **Read:** `pytesseract` converts image to text/numbers.
-4.  **Validation:** `Validator.check_market_open` verifies context (Header text).
-5.  **Logic:** Bot decides to Buy/Skip based on the integer value.
-
-### Logging
-Managed by `src/utils/logger.py`.
-*   **Dual Output:** Console (Standard `logging`) + GUI (Qt Signal).
-*   **Levels:** INFO (User actions), DEBUG (Tech details), WARNING (Retries), ERROR (Failures).
+3.  **Read:** `pytesseract` converts to text.
+4.  **Validate:** `Validator` checks expected text (e.g., "Market Marketplace").
 
 ---
 
-## 6. Key Data Structures
+## 6. License Server
 
-### Item Verification
-*   **Logic:** `_verify_item_name_with_retry` (Bot).
-*   **Mechanism:** SequenceMatcher ratio > 0.90 between Config Name and OCR Name.
+The project includes a standalone **License Server** (FastAPI) to manage access control via HWID locking.
 
-### Validation Schemas (Implicit)
-*   **Coordinates:** Must have `x`, `y`. Optional: `w`, `h` (for areas).
-*   **Price Storage:** `{ City: { ItemName: { "T4.0": { price: 100, updated: timestamp } } } }`
+*   **Documentation:** [LICENSE_SERVER.md](LICENSE_SERVER.md)
+*   **Source Code:** `server/` directory.
+*   **Features:** HWID Validation, Admin Panel, REST API.
 
 ---
 
-## 7. Invariants & Constraints
-1.  **Input Exclusivity:** Bot assumes it controls the mouse. User interference pauses or breaks the loop (Anti-AFK logic not fully detailed, relies on `check_pause`).
-2.  **OCR Dependency:** Cannot work if game language differs from OCR expectations (Rus/Eng supported).
-3.  **Resolution:** Coordinates are absolute. Changing window size/position breaks the config (Requires Recalibration).
-4.  **Menu State:** Both Bots heavily rely on the "Left-side list, Right-side details" layout of the Albion Market UI.
+## 7. How AI Agents Should Use This Document
 
-## 8. How AI Agents Should Use This Document
-*   **Refactoring:** `base_bot.py` is the safest place for shared input/logic improvements.
+*   **Refactoring:**
+    *   `base_bot.py` is the foundation. Changes here affect BOTH Scanner and Buyer.
+    *   UI changes should be modular (create new Tab classes).
 *   **New Features:**
-    *   To add a new Mode: Inherit `BaseBot` in `core/`, add Tab in `ui/`.
-    *   To improve OCR: Modify `utils/ocr.py`, do not change usage in `bot.py` without verifying return types (int vs str).
-*   **Warning:** `src/core/bot.py` contains complex state machines (Recovery/Switching). Modify with extreme caution and always preserve `_check_safe_state()` calls.
+    *   **Logic:** Add to `src/core/` (inherit BaseBot).
+    *   **UI:** Add to `src/ui/` and register in `MainWindow`.
+*   **Critical Constraints:**
+    *   **Coordinates:** The bot is blind without accurate coordinates. Any UI change in the Game requires recalibration.
+    *   **OCR Reliability:** Always verify OCR output (`isdigit()`, `>0`) before critical actions (Buying).
+    *   **Safety:** The `_check_safe_state()` in `bot.py` is the primary crash-prevention mechanism. Do not remove it.
