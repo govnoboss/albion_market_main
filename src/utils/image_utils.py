@@ -1,38 +1,5 @@
 from PIL import Image, ImageChops, ImageStat
-
-def compare_images(img1: Image.Image, img2: Image.Image) -> float:
-    """
-    Сравнивает два изображения и возвращает среднюю разницу (Mean Pixel Difference).
-    0.0 = Идентичны
-    255.0 = Полностью противоположны
-    
-    Logic:
-    1. Resize target to reference size
-    2. RGB conversion
-    3. Calculate Absolute Difference
-    4. Return Mean value of the difference
-    """
-    # 1. Resize if needed (Force fit)
-    if img1.size != img2.size:
-        img2 = img2.resize(img1.size)
-
-    # 2. Convert
-    img1 = img1.convert('RGB')
-    img2 = img2.convert('RGB')
-
-    # 3. Difference
-    diff = ImageChops.difference(img1, img2)
-    
-    # 4. Calculate Mean Level
-    stat = ImageStat.Stat(diff)
-    # stat.mean returns [r, g, b]. We take average of them.
-    mean_diff = sum(stat.mean) / len(stat.mean)
-    
-    stat = ImageStat.Stat(diff)
-    # stat.mean returns [r, g, b]. We take average of them.
-    mean_diff = sum(stat.mean) / len(stat.mean)
-    
-    return mean_diff
+import math
 
 def find_image_on_screen(template_path: str, confidence: float = 0.8, region=None):
     """
@@ -57,3 +24,26 @@ def find_image_on_screen(template_path: str, confidence: float = 0.8, region=Non
         except Exception as e2:
              print(f"Template match error: {e2}")
              return None
+
+def compare_images(img1: Image, img2: Image) -> float:
+    """
+    Сравнение двух изображений (RMS Difference).
+    Возвращает число: 0 = абсолютно одинаковые.
+    Чем больше число, тем больше разница.
+    """
+    if img1.size != img2.size:
+         img2 = img2.resize(img1.size)
+    
+    diff = ImageChops.difference(img1, img2)
+    h = diff.histogram()
+    sq = (value*((idx%256)**2) for idx, value in enumerate(h))
+    sum_of_squares = sum(sq)
+    rms = math.sqrt(sum_of_squares/float(img1.size[0] * img1.size[1]))
+    return rms
+
+def find_image_on_screens(template: Image, screen: Image) -> float:
+    """
+    Алиас для compare_images (так как в коде bot.py 
+    используется find_image_on_screens для сравнения snapshot-ов)
+    """
+    return compare_images(template, screen)

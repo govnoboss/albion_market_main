@@ -1,5 +1,6 @@
 import pytesseract
 from PIL import ImageGrab, ImageOps, Image
+import time
 import os
 import shutil
 import cv2
@@ -118,6 +119,9 @@ def read_screen_text(x: int, y: int, w: int, h: int, lang: str = 'rus', whitelis
         
         clean_text = text.strip()
         logger.debug(f"OCR Scan [{x},{y},{w},{h}]: '{clean_text}'")
+        
+
+
         return clean_text
         
     except Exception as e:
@@ -143,14 +147,10 @@ def fuzzy_match_quality(detected_text: str, expected_names: list[str]) -> bool:
     return False
 
 
-def parse_price(text: str) -> Optional[int]:
+def parse_price(text: str, allow_low_values: bool = False) -> Optional[int]:
     """
     Парсит цену из текста.
-    Возвращает int или None, если не удалось распознать число.
-    Поддерживает:
-    - Разделители тысяч (пробелы, запятые, точки): "1 000", "1,000", "1.000" -> 1000
-    - Ошибки OCR: "O" -> "0"
-    - Суффиксы: "1.5k" -> 1500, "2m" -> 2000000
+    allow_low_values: Если True, разрешает значения <= 5 (для Quantity).
     """
     if not text:
         return None
@@ -201,8 +201,8 @@ def parse_price(text: str) -> Optional[int]:
             # Но выше мы удалили точки если multiplier == 1.
             result = int(int(filtered) * int(multiplier))
         
-        # Цена <= 5 скорее всего ошибка OCR (мусор)
-        if result <= 5:
+        # Цена <= 5 скорее всего ошибка OCR (мусор), ЕСЛИ не разрешены низкие значения
+        if not allow_low_values and result <= 5:
             return 0
             
         # Исключение для 310 (ложное срабатывание OCR при отсутствии цены)
@@ -280,20 +280,53 @@ def read_price_at(area: dict) -> Optional[int]:
     )
     return parse_price(raw_text)
 
-def read_amount_at(area: dict) -> int:
+def read_qty_text(area: dict) -> int:
     """
-    Считывает количество (целое число) из заданной области.
+    Специализированный метод для чтения КОЛИЧЕСТВА (buyer_top_lot_qty).
+    Использует жесткие фильтры: Scale x5, Invert, Simple Threshold 55% (~140).
     """
-    if not area: return 1 # Default fallback
+    if not is_ocr_available() or not area:
+        return 0
     
-    # Только цифры
-    whitelist = "0123456789"
-    
-    raw_text = read_screen_text(
-        area['x'], area['y'], area['w'], area['h'], 
-        lang='eng', 
-        whitelist=whitelist
-    )
-    
-    val = parse_price(raw_text)
-    return val if val is not None else 0
+    try:
+        # 1. Capture
+        bbox = (area['x'], area['y'], area['x'] + area['w'], area['y'] + area['h'])
+        screenshot = ImageGrab.grab(bbox=bbox)
+        
+        # 2. Scale x5
+        scale = 5
+        new_size = (screenshot.width * scale, screenshot.height * scale)
+        processed = screenshot.resize(new_size, Image.Resampling.LANCZOS)
+        
+        # Convert to numpy
+        img_np = np.array(processed)
+        
+        # 3. Grayscale
+        if len(img_np.shape) == 3:
+            img_np = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+            
+        # 4. Invert
+        img_np = cv2.bitwise_not(img_np)
+        
+        # 5. Simple Threshold 55% (0.55 * 255 = 140.25 -> 140)
+        _, img_np = cv2.threshold(img_np, 120, 255, cv2.THRESH_BINARY)
+        
+        # Convert back to PIL for Tesseract (or pass numpy directly if supported, but PIL is safer here)
+        final_img = Image.fromarray(img_np)
+        
+        # 6. OCR
+        whitelist = "0123456789"
+        config = f'--psm 6 -c tessedit_char_whitelist={whitelist}'
+        
+        text = pytesseract.image_to_string(final_img, lang='eng', config=config)
+        clean_text = text.strip()
+        
+        logger.debug(f"OCR Qty Scan [{area['x']},{area['y']}]: '{clean_text}'")
+        
+        # Parse
+        val = parse_price(clean_text, allow_low_values=True)
+        return val if val is not None else 0
+        
+    except Exception as e:
+        logger.error(f"Ошибка OCR (Qty): {e}")
+        return 0

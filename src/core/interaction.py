@@ -48,53 +48,30 @@ class DropdownSelector:
         
         return (anchor_x, target_y)
 
-    def get_tier_click_point(self, tier: int, item_name: str = None, current_enchant: int = 0) -> Optional[Tuple[int, int]]:
+    def get_tier_click_point(self, tier: int) -> Optional[Tuple[int, int]]:
         """
         Получить координату для выбора Тира
         
         Args:
             tier: Уровень тира (4-8)
-            item_name: Название предмета (для обработки исключений смещения)
-            current_enchant: Текущее зачарование (если > 0, исключения игнорируются)
         """
         # Базовая проверка
-        # (для T1 вещей мы можем запросить tier=1, надо расширить диапазон или убрать проверку)
-        # Если мы все еще сканируем 4-8, но для T1 предмета это может быть смещено.
-        # Пока оставим 4-8 как в логике бота, но логика смещения должна работать.
-        if not (1 <= tier <= 8):
-             self.logger.warning(f"Запрошен некорректный тир: {tier}")
+        # Минимальный тир = 4. Ниже не кликаем.
+        if not (4 <= tier <= 8):
+             self.logger.warning(f"Запрошен некорректный тир: {tier} (Min T4)")
              return None
             
-        offset = 4 # Default for T4 items
+        # Вариант Б: Список полный (Все, Т1, Т2, Т3, Т4...)
+        # Index 0 = Все
+        # Index 1 = T1
+        # Index 4 = T4
+        # ...
+        # Значит, index = tier.
         
-        # Применяем исключения ТОЛЬКО если энчант = 0 (или None -> считаем 0).
-        # Если зачарование > 0, игра показывает стандартный список (T4, T5...),
-        # и смещение для "Новичка" не нужно.
-        should_check_exceptions = (current_enchant is None or current_enchant == 0)
-        
-        if item_name and should_check_exceptions:
-            item_lower = item_name.lower().strip()
-            exceptions = self.config.get_tier_exceptions()
-            
-            # Проверяем списки
-            # Tier_1: T1-T8 -> offset 1
-            # Tier_2: T2-T8 -> offset 2
-            # Tier_3: T3-T8 -> offset 3
-            
-            # Helper to check list
-            def in_list(key):
-                # Using strip() to be safe against trailing spaces in config
-                return any(x.lower().strip() == item_lower for x in exceptions.get(key, []))
-
-            if in_list("Tier_1"): offset = 1
-            elif in_list("Tier_2"): offset = 2
-            elif in_list("Tier_3"): offset = 3
-        
-        # Индекс в меню
-        index = tier - offset
+        index = tier
         
         if index < 0:
-            self.logger.warning(f"Индекс тира < 0 для {item_name} T{tier} (offset {offset})")
+            self.logger.warning(f"Индекс тира < 0 для T{tier} (offset {offset})")
             return None
             
         return self.get_dropdown_click_point("tier_dropdown", index)
@@ -110,8 +87,9 @@ class DropdownSelector:
             self.logger.warning(f"Запрошено некорректное зачарование: {enchant}. Допустимо 0-4.")
             return None
             
-        # Список зачарований: 0, 1, 2, 3, 4. Индекс совпадает со значением.
-        return self.get_dropdown_click_point("enchant_dropdown", enchant)
+        # Список зачарований: 0, 1, 2, 3, 4. 
+        # Добавляем +1 из-за пункта "Все"
+        return self.get_dropdown_click_point("enchant_dropdown", enchant + 1)
 
     def get_quality_click_point(self, quality: int) -> Optional[Tuple[int, int]]:
         """

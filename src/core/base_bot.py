@@ -5,7 +5,9 @@ import pyautogui
 from PyQt6.QtCore import QThread, pyqtSignal
 
 from ..utils.config import get_config
+
 from ..utils.logger import get_logger
+from ..utils.human_mouse import move_mouse_human
 
 class BaseBot(QThread):
     """
@@ -64,25 +66,20 @@ class BaseBot(QThread):
     # === Input Emulation ===
 
     def _human_move_to(self, x: int, y: int):
-        """Реалистичное движение мыши"""
+        """Реалистичное движение мыши (Bezier)"""
         if self._stop_requested: return
         self._check_pause()
         
         start_time = time.time()
         
-        # Разброс (Человечность)
-        # По горизонтали: более широкий разброс (5-8 пикселей)
-        offset_x = random.randint(-8, 8)
-        # По вертикали: минимальный разброс (+- 1-2 пикселя)
-        offset_y = random.randint(-2, 2)
+        # Используем новую логику с кривыми Безье
+        # offset уже включен в реализацию human_mouse (хотя там он start/end, но мы можем добавить final offset и тут)
         
-        target_x = x + offset_x
-        target_y = y + offset_y
+        # Добавляем небольшой случайный оффсет к ЦЕЛЕВОЙ точке, чтобы не кликать в один пиксель
+        target_x = x + random.randint(-1, 1)
+        target_y = y + random.randint(-1, 1)
         
-        # Длительность
-        duration = random.uniform(0.03, 0.08)
-        
-        pyautogui.moveTo(target_x, target_y, duration=duration, tween=pyautogui.easeInOutQuad)
+        move_mouse_human(target_x, target_y)
         
         self._record_time("Мышь: Движение", (time.time() - start_time) * 1000)
 
@@ -193,7 +190,7 @@ class BaseBot(QThread):
             self._current_city = "Unknown"
             self.logger.error(f"🛑 Неизвестный город: '{city_text}'!")
             
-    def _verify_item_name_with_retry(self, expected_name: str, max_retries: int = 2) -> bool:
+    def _verify_item_name_with_retry(self, expected_name: str, max_retries: int = 2, use_buy_button: bool = True) -> bool:
         """Verification logic (Shared)"""
         # NOTE: Implementation copied from MarketBot, essential for Buyer too
         from difflib import SequenceMatcher
@@ -223,6 +220,25 @@ class BaseBot(QThread):
             ocr_name_clean = re.sub(r'\s*\([^)]*\)\s*', '', ocr_name).strip()
             ocr_clean = ocr_name_clean.lower()
             
+            if not ocr_clean:
+                # Если OCR пуст, это может быть лаг отрисовки. Попробуем повторить пару раз.
+                # Но только внутри текущей попытки (attempt), или сделаем микро-цикл здесь?
+                # Сделаем микро-цикл ожидания появления текста (до 3 раз по 0.3 сек)
+                text_found = False
+                for _ in range(3):
+                    time.sleep(0.3)
+                    ocr_name_retry = read_screen_text(
+                        item_name_area['x'], item_name_area['y'],
+                        item_name_area['w'], item_name_area['h'],
+                        lang='rus+eng'
+                    )
+                    if ocr_name_retry.strip():
+                        ocr_name = ocr_name_retry
+                        ocr_name_clean = re.sub(r'\s*\([^)]*\)\s*', '', ocr_name).strip()
+                        ocr_clean = ocr_name_clean.lower()
+                        text_found = True
+                        break
+            
             similarity = SequenceMatcher(None, expected_clean, ocr_clean).ratio()
             
             if similarity >= 0.90:
@@ -231,25 +247,30 @@ class BaseBot(QThread):
             self.logger.warning(f"⚠️ Имя не совпадает (Try {attempt+1}): {ocr_name_clean} vs {expected_name}")
             
             if attempt == max_retries:
-                if menu_close:
+                # Если попытки исчерпаны и разрешен Full Reset (use_buy_button=True), пробуем закрыть меню
+                if use_buy_button and menu_close:
                     self._human_move_to(*menu_close)
                     self._human_click()
                     time.sleep(0.3)
                 return False
             
-            # Retry logic (Sort -> Buy)
-            self.logger.info("🔄 Пробуем найти через сортировку...")
-            if menu_close:
+            # Retry logic
+            self.logger.info("� Пробуем найти через сортировку...")
+            
+            # 1. Close Menu (If Full Mode and likely open)
+            if use_buy_button and menu_close:
                 self._human_move_to(*menu_close)
                 self._human_click()
                 time.sleep(0.5)
             
+            # 2. Click Sort (Always try sort if button exists)
             if sort_btn:
                 self._human_move_to(*sort_btn)
                 self._human_click()
-                time.sleep(1.0) # Wait for sort result (simplified wait)
+                time.sleep(1.0) # Wait for sort result 
                 
-            if buy_btn:
+            # 3. Click Buy (Only if Full Mode)
+            if use_buy_button and buy_btn:
                 self._human_move_to(*buy_btn)
                 self._human_click()
                 time.sleep(1.0)

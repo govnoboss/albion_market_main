@@ -1,8 +1,8 @@
 {
     "coordinates": {
         "search_input": {
-            "x": 626,
-            "y": 268,
+            "x": 635,
+            "y": 272,
             "type": "point"
         },
         "search_clear": {
@@ -11,8 +11,8 @@
             "type": "point"
         },
         "buy_button": {
-            "x": 1274,
-            "y": 436,
+            "x": 1275,
+            "y": 432,
             "type": "point"
         },
         "item_expand": {
@@ -21,13 +21,13 @@
             "type": "point"
         },
         "tier_dropdown": {
-            "x": 514,
-            "y": 397,
+            "x": 955,
+            "y": 273,
             "type": "point"
         },
         "enchant_dropdown": {
-            "x": 672,
-            "y": 396,
+            "x": 1100,
+            "y": 272,
             "type": "point"
         },
         "quality_dropdown": {
@@ -55,10 +55,10 @@
             "type": "area"
         },
         "best_price_area": {
-            "x": 1018,
-            "y": 360,
-            "w": 81,
-            "h": 21,
+            "x": 1065,
+            "y": 405,
+            "w": 130,
+            "h": 59,
             "type": "area"
         },
         "create_buy_order": {
@@ -67,17 +67,17 @@
             "type": "point"
         },
         "item_name_area": {
-            "x": 544,
-            "y": 294,
-            "w": 316,
-            "h": 34,
+            "x": 665,
+            "y": 416,
+            "w": 222,
+            "h": 57,
             "type": "area"
         },
         "market_name_area": {
-            "x": 759,
-            "y": 260,
-            "w": 576,
-            "h": 43,
+            "x": 653,
+            "y": 190,
+            "w": 212,
+            "h": 45,
             "type": "area"
         },
         "item_sort": {
@@ -224,15 +224,15 @@
         "buyer_top_lot_qty": {
             "x": 1102,
             "y": 362,
-            "w": 39,
-            "h": 20,
+            "w": 36,
+            "h": 19,
             "type": "area"
         },
         "buyer_total_price": {
-            "x": 567,
-            "y": 711,
-            "w": 87,
-            "h": 32,
+            "x": 565,
+            "y": 715,
+            "w": 101,
+            "h": 27,
             "type": "area"
         },
         "buyer_tab_buy": {
@@ -272,14 +272,17 @@
         "char_1_name": "GIGAESHKERE",
         "char_2_name": "Mambaloid",
         "price_update_timeout": 10.0,
-        "last_scan_index": 0
+        "last_scan_index": 7
     },
     "dropdowns": {
         "row_height": 27,
-        "list_start_offset": 27
+        "list_start_offset": 25
     },
     "scan_filters": {
         "tiers": [
+            4,
+            5,
+            6,
             7,
             8
         ],
@@ -287,8 +290,7 @@
             0
         ],
         "qualities": [
-            2,
-            4
+            1
         ]
     },
     "items": [],

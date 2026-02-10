@@ -96,10 +96,15 @@ class MarketBot(BaseBot):
         self.finished.emit()
 
     def _process_item(self, name: str):
-        """Логика обработки одного предмета (Scanner)"""
+        """
+        Логика обработки одного предмета.
+        Разделяется на два флоу:
+        1. Normal Market (Быстрый скан без открытия окна покупка)
+        2. Black Market (Полный скан с вкладками и качеством)
+        """
         if self._stop_requested: return
         
-        # 0. Safety Check
+        # 0. Safety Check (Shared)
         market_found = False
         for attempt in range(10):
             if self._stop_requested: return
@@ -123,25 +128,34 @@ class MarketBot(BaseBot):
         self._recovery_attempts = 0
         self._safe_menu_snapshot = None
         
-        if self._stop_requested: return
+        if self._is_black_market:
+            self._process_item_black_market(name)
+        else:
+            self._process_item_normal_market(name)
+            
+        self.logger.info(f"--- Завершено: {name} ---")
 
+    def _process_item_normal_market(self, name: str):
+        """
+        Новая логика для ОБЫЧНОГО рынка.
+        Sequence:
+        1. Clear/Search -> Enter
+        2. Verify Name (Immediately)
+        3. Reset Filters (No Quality)
+        4. Scan Loop (No Quality)
+        5. Finish (No Close)
+        """
         # 1. Clear Search
         search_clear_coord = self.config.get_coordinate("search_clear")
         if search_clear_coord:
             self._human_move_to(*search_clear_coord)
             self._human_click()
+
+        # 1.1 Reset Filters (BEFORE Search)
+        # Сбрасываем фильтры на минимум (T4.0), чтобы при вводе имени предмет точно нашелся
+        self._reset_filters()
             
-        # 1.1 BM Sell Tab
-        if self._is_black_market:
-            sell_tab = self.config.get_coordinate("bm_sell_tab")
-            if sell_tab:
-                self._human_move_to(*sell_tab)
-                self._human_click()
-                time.sleep(random.uniform(0.2, 0.4))
-                
         # 2. Search Input
-
-
         search_coord = self.config.get_coordinate("search_input")
         if not search_coord:
             self.logger.error("Нет координат поиска!")
@@ -152,9 +166,58 @@ class MarketBot(BaseBot):
         
         self._human_type(name)
         pyautogui.press('enter')
+        self.logger.debug("Нажат Enter. Ждем обновления списка...")
+        time.sleep(1.0) # Даем время прогрузиться списку
+        
+        # 3. Varify Name (Immediately)
+        # 3. Varify Name (Immediately)
+        # allow_recovery_clicks -> use_buy_button=False (Разрешаем Sort, запрещаем Buy)
+        if not self._verify_item_name_with_retry(name, max_retries=2, use_buy_button=False):
+            self.logger.warning(f"⚠️ Предмет '{name}' не найден или имя не совпало!")
+            return
+
+        # 4. Filters already reset at step 1.1
+        # self._reset_filters()
+        
+        # 5. Scan Loop (Item already selected implicitly by search result?)
+        # Пользователь: "Все клики по энчантам и тирам происходят сразу после сканирования имени"
+        self._scan_variations(initial_last_price=0)
+        
+        # 6. No Close Loop (User Request)
+        # Просто переходим к следующему
+
+    def _process_item_black_market(self, name: str):
+        """
+        Старая логика для ЧЕРНОГО рынка.
+        (Без изменений, скопировано из старого _process_item)
+        """
+        if self._stop_requested: return
+
+        # 1. Clear Search
+        search_clear_coord = self.config.get_coordinate("search_clear")
+        if search_clear_coord:
+            self._human_move_to(*search_clear_coord)
+            self._human_click()
+            
+        # 1.1 BM Sell Tab
+        sell_tab = self.config.get_coordinate("bm_sell_tab")
+        if sell_tab:
+            self._human_move_to(*sell_tab)
+            self._human_click()
+            time.sleep(random.uniform(0.2, 0.4))
+                
+        # 2. Search Input
+        search_coord = self.config.get_coordinate("search_input")
+        if not search_coord: return
+        
+        self._human_move_to(*search_coord)
+        self._human_click()
+        
+        self._human_type(name)
+        pyautogui.press('enter')
         self.logger.debug("Нажат Enter...")
         
-        # 4. Wait Result
+        # 4. Wait Result & Buy Button
         buy_coord = self.config.get_coordinate("buy_button")
         
         if buy_coord:
@@ -182,13 +245,8 @@ class MarketBot(BaseBot):
         if not self._verify_item_name_with_retry(name):
             return
 
-        # 5.1 BM Check logic
-        if not self._is_black_market:
-            order_tab_coord = self.config.get_coordinate("create_buy_order")
-            if order_tab_coord:
-                self._human_move_to(*order_tab_coord)
-                self._human_click()
-                time.sleep(0.2)
+        # 5.1 BM Check logic (Should be redundants this IS BM function, bu at kept for legacy structure)
+        # if not self._is_black_market: ... (Removed as we are in BM func)
                 
         self._capture_item_menu_state()
         
@@ -202,8 +260,6 @@ class MarketBot(BaseBot):
             self._human_move_to(*close_coord)
             self._human_click()
             time.sleep(0.3)
-            
-        self.logger.info(f"--- Завершено: {name} ---")
 
     def _capture_item_menu_state(self):
         """
@@ -430,10 +486,13 @@ class MarketBot(BaseBot):
         self._last_detected_quality = None
         
         # Важно: Сначала Enchant, потом Tier, потом Quality
-        # (Некоторые игры сбрасывают Tier при смене Enchant, но здесь мы все равно кликаем все)
         self._select_enchant(target_enchant)
         self._select_tier(target_tier)
-        self._select_quality(target_quality, force=True)
+        
+        # Quality: Кликаем только на ЧР или если режим не "Быстрый Скан" (для надежности)
+        # Если мы на Normal Market (is_black_market=False), то пользователь просил УБРАТЬ клик качества
+        if self._is_black_market:
+             self._select_quality(target_quality, force=True)
 
     def _scan_variations(self, initial_last_price: int = 0):
         """Перебор вариантов согласно фильтрам сканирования."""
@@ -513,7 +572,9 @@ class MarketBot(BaseBot):
                  self._select_enchant(enchant)
                  current_screen_enchant = enchant # Обновляем состояние
                  
-                 self._select_quality(1)
+                 # Quality Click: ТОЛЬКО ДЛЯ ЧР (или если старый режим)
+                 if self._is_black_market:
+                     self._select_quality(1)
                  
                  # READ PRICE
                  base_timeout = self.config.get_setting("price_update_timeout", 5.0)
@@ -550,12 +611,8 @@ class MarketBot(BaseBot):
     def _select_tier(self, tier: int):
         if self._current_tier == tier: return
         
-        # Передаем имя и энчант для корректного расчета смещения (исключения)
-        coord = self.dropdowns.get_tier_click_point(
-            tier, 
-            item_name=self._current_item_name,
-            current_enchant=self._current_enchant
-        )
+        # Передаем только tier, так как метод в interaction.py не принимает другие аргументы
+        coord = self.dropdowns.get_tier_click_point(tier)
         if coord:
             self.dropdowns.open_tier_menu(self)
             self._human_move_to(*coord)
@@ -901,6 +958,8 @@ class MarketBot(BaseBot):
             return 0
 
         start_time = time.time()
+        empty_read_count = 0
+        max_empty_reads = 5
         
         while time.time() - start_time < timeout:
             if self._stop_requested: return 0
@@ -911,9 +970,17 @@ class MarketBot(BaseBot):
             
             # 1. Если цена None (не распозналась или пусто) -> Ждем
             if price is None:
+                empty_read_count += 1
+                if empty_read_count >= max_empty_reads:
+                    self.logger.debug(f"⚠️ Цена не обнаружена после {max_empty_reads} попыток. Считаем, что лота нет.")
+                    return 0
+                    
                 # self.logger.debug("Цена: None (Loading...)")
                 time.sleep(0.1)
                 continue
+            
+            # Сброс счетчика, если что-то распознали (даже если старая цена)
+            empty_read_count = 0
                 
             # 2. Если цена новая -> УСПЕХ
             if price != old_price:

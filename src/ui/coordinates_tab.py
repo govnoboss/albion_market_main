@@ -62,17 +62,20 @@ class CoordinatesTab(QWidget):
                 ("item_sort", "Сортировка предмета", "point"),
                 # OCR
                 ("market_name_area", "Название Рынка (OCR)", "area"),
-            ],
-            "Окно меню предмета": [
-                # Основные кнопки
-                ("item_expand", "Раскрыть цену предмета", "point"),
-                ("create_buy_order", "Заказ на покупку", "point"),
                 
                 # Выпадающие списки
                 ("tier_dropdown", "Выпадающий список Тиров", "point"),
                 ("enchant_dropdown", "Выпадающий список Чары", "point"),
                 ("quality_dropdown", "Выпадающий список Качества", "point"),
                 
+                ("item_name_area", "Название предмета (OCR)", "area"),
+                
+                ("best_price_area", "Цена за 1шт предмета (OCR)", "area"), 
+            ],
+            "Окно меню предмета": [
+                # Основные кнопки
+                ("item_expand", "Раскрыть цену предмета", "point"),
+                ("create_buy_order", "Заказ на покупку", "point"),
                 # Элементы ордера
                 ("buyer_minus_btn", "Кнопка Минус", "point"),
                 ("buyer_plus_btn", "Кнопка Плюс", "point"),
@@ -83,9 +86,7 @@ class CoordinatesTab(QWidget):
                 ("menu_close", "Крестик закрытия меню предмета", "point"),
 
                 # OCR зоны
-                ("item_name_area", "Название предмета (OCR)", "area"),
                 ("quality_text_region", "Название текущего качества (OCR)", "area"),
-                ("best_price_area", "Цена за 1шт предмета (OCR)", "area"),
                 ("item_menu_check", "Надпись 'Заказы на продажу' (Check)", "area"),
                 ("buyer_top_lot_qty", "Кол-во в топ лоте (OCR)", "area"),
                 ("buyer_total_price", "Итоговая стоимость (OCR)", "area"),
