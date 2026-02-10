@@ -31,9 +31,11 @@ class License(Base):
     __tablename__ = "licenses"
     
     key = Column(String, primary_key=True, index=True)
-    hwid = Column(String, nullable=True, default=None)  # None = Unbound (New Key)
+    hwid = Column(String, nullable=True, default=None)
     expires_at = Column(DateTime, nullable=False)
     is_active = Column(Boolean, default=True)
+    last_seen = Column(DateTime, nullable=True)
+    last_ip = Column(String, nullable=True)
 
     @staticmethod
     def generate_key():
@@ -42,3 +44,22 @@ class License(Base):
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+    
+    try:
+        with engine.connect() as conn:
+            # Check if column exists
+            result = conn.execute(text("PRAGMA table_info(licenses)"))
+            columns = [row[1] for row in result.fetchall()]
+            
+            if "last_seen" not in columns:
+                print("Migrating DB: Adding 'last_seen' column...")
+                conn.execute(text("ALTER TABLE licenses ADD COLUMN last_seen TIMESTAMP"))
+            
+            if "last_ip" not in columns:
+                 print("Migrating DB: Adding 'last_ip' column...")
+                 conn.execute(text("ALTER TABLE licenses ADD COLUMN last_ip VARCHAR"))
+
+            conn.commit()
+            print("Migration successful.")
+    except Exception as e:
+        print(f"Migration check failed: {e}")

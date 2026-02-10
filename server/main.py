@@ -103,8 +103,8 @@ def sign_data(data: Dict[str, Any]) -> str:
         return "SIGN_ERROR"
 
 
-# Session storage (in-memory, use Redis in production)
-admin_sessions = {}
+# Admin sessions are now stateless (JWT in cookies)
+
 
 app = FastAPI(
     title="GBot License Server",
@@ -188,6 +188,10 @@ class LicenseActivateRequest(BaseModel):
     key: str
     hwid: str
 
+class HeartbeatRequest(BaseModel):
+    key: str
+    hwid: str
+
 # NEW Response Model with Signature
 class SignedResponse(BaseModel):
     data: Dict[str, Any]
@@ -224,7 +228,7 @@ def validate_license(request: Request, req: LicenseCheckRequest, db: Session = D
         response_data = {"status": "invalid", "message": "Key is disabled"}
 
     # Check Expiry
-    elif datetime.now() > license_obj.expires_at:
+    elif datetime.utcnow() > license_obj.expires_at:
         response_data = {"status": "expired", "expires_at": str(license_obj.expires_at)}
 
     # Check Binding
@@ -236,6 +240,10 @@ def validate_license(request: Request, req: LicenseCheckRequest, db: Session = D
         response_data = {"status": "invalid", "message": "Key is invalid or disabled"}
     
     else:
+        # Valid! Update last_seen and IP
+        license_obj.last_seen = datetime.utcnow()
+        license_obj.last_ip = get_real_ip(request)
+        db.commit()
         response_data = {"status": "valid", "expires_at": str(license_obj.expires_at)}
 
     # SIGNING
@@ -252,6 +260,31 @@ def validate_license(request: Request, req: LicenseCheckRequest, db: Session = D
         signature=sig,
         timestamp=timestamp
     )
+
+@app.post("/api/v1/heartbeat")
+@limiter.limit("20/minute")
+def heartbeat_endpoint(request: Request, data: HeartbeatRequest, db: Session = Depends(get_db)):
+    """Updates the last_seen timestamp for a license"""
+    license_obj = db.query(License).filter(License.key == data.key).first()
+    
+    if not license_obj:
+        return JSONResponse(status_code=404, content={"status": "error", "message": "Key not found"})
+        
+    if not license_obj.is_active:
+        return JSONResponse(status_code=403, content={"status": "error", "message": "Key banned"})
+        
+    if license_obj.hwid != data.hwid:
+         return JSONResponse(status_code=403, content={"status": "error", "message": "HWID Mismatch"})
+         
+    if datetime.utcnow() > license_obj.expires_at:
+         return JSONResponse(status_code=403, content={"status": "error", "message": "Expired"})
+
+    # Update last_seen and IP
+    license_obj.last_seen = datetime.utcnow()
+    license_obj.last_ip = get_real_ip(request)
+    db.commit()
+    
+    return {"status": "ok"}
 
 @app.post("/api/v1/activate", response_model=SignedResponse)
 @limiter.limit("10/minute")
@@ -276,6 +309,8 @@ def activate_license(request: Request, req: LicenseActivateRequest, db: Session 
     else:
         # Bind
         license_obj.hwid = req.hwid
+        license_obj.last_seen = datetime.utcnow() # Update last_seen
+        license_obj.last_ip = get_real_ip(request)
         db.commit()
         response_data = {"status": "valid", "expires_at": str(license_obj.expires_at), "message": "Activation successful"}
 
@@ -318,25 +353,50 @@ def generate_keys(request: Request, req: AdminGenerateRequest, db: Session = Dep
 
 # === ADMIN PANEL ROUTES ===
 
+# --- JWT Authentication (Replaces in-memory sessions) ---
+import jwt
+
+# Using ADMIN_PASSWORD as the secret key for JWT (simple and effective for this use case)
+# In a larger app, we'd want a separate SECRET_KEY
+JWT_SECRET = ADMIN_PASSWORD
+JWT_ALGORITHM = "HS256"
+SESSION_DURATION_MINUTES = 60
+
+def create_session_token() -> str:
+    """Creates a JWT token for the admin session"""
+    expiration = datetime.utcnow() + timedelta(minutes=SESSION_DURATION_MINUTES)
+    payload = {
+        "sub": "admin",
+        "exp": expiration,
+        "iat": datetime.utcnow()
+    }
+    encoded_jwt = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    return encoded_jwt
+
 def verify_admin_session(request: Request) -> bool:
-    """Check if user has valid admin session"""
-    session_id = request.cookies.get("admin_session")
-    if not session_id:
-        return False
-    session = admin_sessions.get(session_id)
-    if not session:
+    """
+    Validates the admin session using JWT from the cookie.
+    Stateless: Works even if the server restarts.
+    """
+    token = request.cookies.get("admin_session")
+    if not token:
         return False
     
-    # Check User-Agent binding (if browser fingerprint changed - logout)
-    current_ua = request.headers.get("user-agent", "")
-    if session.get("ua") != current_ua:
+    try:
+        # Verify signature and expiration
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        
+        # Check if token is for admin (extra safety)
+        if payload.get("sub") != "admin":
+            return False
+            
+        return True
+    except jwt.ExpiredSignatureError:
+        # Token expired
         return False
-
-    # Check expiry (30 minutes)
-    if datetime.now() > session["expires"]:
-        del admin_sessions[session_id]
+    except jwt.InvalidTokenError:
+        # Invalid token (tampered or wrong key)
         return False
-    return True
 
 @app.get("/admin/login", response_class=HTMLResponse)
 @limiter.limit("10/minute")
@@ -349,7 +409,7 @@ def admin_login_page(request: Request):
     })
 
 @app.post("/admin/login", response_class=HTMLResponse)
-@limiter.limit("3/minute")  # Strict rate limit for login attempts
+@limiter.limit("5/minute")
 def admin_login(request: Request, password: str = Form(...)):
     if not secrets.compare_digest(password, ADMIN_PASSWORD):
         return templates.TemplateResponse("login.html", {
@@ -359,29 +419,25 @@ def admin_login(request: Request, password: str = Form(...)):
             "message_type": "error"
         })
     
-    # Create session
-    session_id = secrets.token_urlsafe(32)
-    admin_sessions[session_id] = {
-        "created": datetime.now(),
-        "expires": datetime.now() + timedelta(minutes=30),
-        "ua": request.headers.get("user-agent", "")
-    }
-    
+    # Generate JWT Token AND Redirect
     response = RedirectResponse("/admin/", status_code=302)
+    
+    token = create_session_token()
+    
+    # Set Secure Cookie
     response.set_cookie(
         key="admin_session",
-        value=session_id,
-        httponly=True,
-        samesite="strict",
-        max_age=1800  # 30 minutes
+        value=token,
+        httponly=True,       # Prevent JS access (XSS protection)
+        samesite="lax",      # Protect against CSRF
+        secure=True,         # Only send over HTTPS (Critical for Fly.io)
+        max_age=SESSION_DURATION_MINUTES * 60
     )
+    
     return response
 
 @app.get("/admin/logout")
 def admin_logout(request: Request):
-    session_id = request.cookies.get("admin_session")
-    if session_id and session_id in admin_sessions:
-        del admin_sessions[session_id]
     response = RedirectResponse("/admin/login", status_code=302)
     response.delete_cookie("admin_session")
     return response
@@ -391,7 +447,7 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
     if not verify_admin_session(request):
         return RedirectResponse("/admin/login", status_code=302)
     
-    now = datetime.now()
+    now = datetime.utcnow()
     all_licenses = db.query(License).all()
     
     total = len(all_licenses)
@@ -399,13 +455,19 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
     expired = sum(1 for l in all_licenses if l.expires_at <= now)
     unbound = sum(1 for l in all_licenses if l.hwid is None and l.expires_at > now)
     
+    # Online Users (seen in last 5 minutes)
+    five_min_ago = now - timedelta(minutes=5)
+    # Handle None in last_seen
+    online_users = sum(1 for l in all_licenses if l.last_seen and l.last_seen >= five_min_ago)
+
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "session_active": True,
         "total_keys": total,
         "active_keys": active,
         "expired_keys": expired,
-        "unbound_keys": unbound
+        "unbound_keys": unbound,
+        "online_users": online_users
     })
 
 @app.get("/admin/licenses", response_class=HTMLResponse)
@@ -413,7 +475,7 @@ def admin_licenses(request: Request, search: str = "", status: str = "", db: Ses
     if not verify_admin_session(request):
         return RedirectResponse("/admin/login", status_code=302)
     
-    now = datetime.now()
+    now = datetime.utcnow()
     query = db.query(License)
     
     # Search filter
@@ -425,8 +487,12 @@ def admin_licenses(request: Request, search: str = "", status: str = "", db: Ses
     licenses = query.all()
     
     # Add computed property for template
+    five_min_ago = now - timedelta(minutes=5)
+    
     for lic in licenses:
         lic.is_expired = lic.expires_at <= now
+        # Check if online (seen in last 5 mins)
+        lic.is_online = lic.last_seen and lic.last_seen >= five_min_ago
     
     # Status filter
     if status == "active":
@@ -459,7 +525,7 @@ def admin_generate_keys(request: Request, count: int = Form(...), days: int = Fo
         return RedirectResponse("/admin/login", status_code=302)
     
     generated = []
-    expires = datetime.now() + timedelta(days=days)
+    expires = datetime.utcnow() + timedelta(days=days)
     
     for _ in range(min(count, 100)):  # Max 100 at a time
         key_str = License.generate_key()

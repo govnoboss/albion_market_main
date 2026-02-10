@@ -21,17 +21,18 @@ APP_DATA_DIR = Path(os.getenv('LOCALAPPDATA', Path.home())) / '.gbot'
 LICENSE_FILE = APP_DATA_DIR / 'license.dat'
 HWID_FALLBACK_FILE = APP_DATA_DIR / '.hwid'
 LAST_CHECK_FILE = APP_DATA_DIR / '.last_check'
+LAST_KNOWN_FILE = APP_DATA_DIR / '.sys_time'
 
 # --- EMBEDDED PUBLIC KEY ---
 # Replace this with the content of keys/public.pem
 PUBLIC_KEY_PEM = b"""-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtHDocWXCv6ulUD7TgEEH
-w2OVFQLsqcZsfEZjgKCkQQa3vSXcpRBYC9S2JzaxNHFnrcKy8q39HOly255jdkOS
-n3w3lL2/T1DB5EKY5sp/63b78uOmoHsZD8HQFeApkGnvpcRsZzb1BNUNfsSBAqrq
-3HWl+dnYTfk/STCkgWf+kN3FsYy4cYLR3yCdlB29EcYGg+tRKXrwi5fL+Kbksp67
-UEgq5MV/9Sep0Zuj6hn7VkCnQJkym9whgbujb+UrKyJulkO0qxHMVUn1PfWRUyyF
-MnY590eFH/j60TwT8zYi2Z7C51DzoEJSL2hoCczmfb99FQLqEyPIgJCDr8avpA36
-/wIDAQAB
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA7VTILsXuFFk2lyAd2zqi
+ZvUv3QHdrGeapTgA16GgDwYDjzpnWyT1L3LKh9A1aRk3HTwqX2wOWxBhlY1wDDHK
+N3r+/Pfw66kvnblzoWhbB9ibEbW0yKWsUBtSFKjeRlviHMvJZi1efO6aHgIg1TgB
+JR4T7h/End9aixYyjYv6atNxsxcG8wwKLmWtnEuw3Q2M+im6Gie2uTmQlmDIcRC0
+GiH/1/RoCV9qp4vlS5kxqrhPwFj2Du+NxUx689RBIX43NvOHg95xva9s+sVU+Kno
+MCzh7If2c9xhjQk5nfbOhJQYcvqgPU4iiaU3VeY6P4YP/WKkGp/QkA09mJ19kUdy
+zQIDAQAB
 -----END PUBLIC KEY-----"""
 
 class LicenseManager:
@@ -203,14 +204,45 @@ class LicenseManager:
             print(f"Security: Signature verification failed! {e}")
             return False
 
+    def _save_last_known_time(self):
+        """Saves the current max time to prevent rollback attacks"""
+        try:
+            now = datetime.now()
+            # Encrypt simple timestamp
+            encrypted = self._simple_encrypt(now.isoformat())
+            LAST_KNOWN_FILE.write_text(encrypted)
+        except:
+            pass
+
+    def _load_last_known_time(self) -> datetime:
+        """Loads last known time"""
+        if not LAST_KNOWN_FILE.exists():
+            return None
+        try:
+            encrypted = LAST_KNOWN_FILE.read_text().strip()
+            decrypted = self._simple_decrypt(encrypted)
+            return datetime.fromisoformat(decrypted)
+        except:
+            return None
+
     def should_check_today(self) -> bool:
-        """Returns True if we haven't validated today yet"""
+        """Returns True if we haven't validated today or if rollback detected"""
+        now = datetime.now()
+        
+        # 1. Anti-Rollback Check
+        last_known = self._load_last_known_time()
+        if last_known:
+            if now < last_known - timedelta(minutes=5):
+                print(f"Time Rollback Detected! (Now: {now}, Last: {last_known})")
+                return True 
+        
+        # 2. Standard 24h Check
         if not LAST_CHECK_FILE.exists():
             return True
         try:
             last_check_str = LAST_CHECK_FILE.read_text().strip()
             last_check = datetime.fromisoformat(last_check_str)
-            return datetime.now() - last_check > timedelta(days=1)
+            return now - last_check > timedelta(days=1)
         except:
             return True
     
@@ -218,6 +250,7 @@ class LicenseManager:
         """Mark that we validated the license today"""
         try:
             LAST_CHECK_FILE.write_text(datetime.now().isoformat())
+            self._save_last_known_time()
         except:
             pass
 
@@ -248,6 +281,7 @@ class LicenseManager:
             
             if status == "valid":
                 self.save_key(key)
+                self.start_heartbeat(key) # Start background heartbeat
                 return {"success": True, "message": "Valid", "expires": data.get("expires_at")}
                 
             elif status == "unbound":
@@ -286,12 +320,51 @@ class LicenseManager:
             
             if data.get("status") == "valid":
                  self.save_key(key)
+                 self.start_heartbeat(key) # Start background heartbeat
                  return {"success": True, "message": "Activated Successfully", "expires": data.get("expires_at")}
             else:
                  return {"success": False, "message": data.get("message"), "code": "activation_failed"}
                  
         except Exception as e:
             return {"success": False, "message": str(e), "code": "error"}
+
+    # --- HEARTBEAT SYSTEM ---
+    def start_heartbeat(self, key: str):
+        """Starts a background thread to send heartbeats"""
+        if hasattr(self, '_heartbeat_thread') and self._heartbeat_thread.is_alive():
+            return # Already running
+            
+        import threading
+        self._heartbeat_key = key
+        self._heartbeat_stop_event = threading.Event()
+        self._heartbeat_thread = threading.Thread(target=self._heartbeat_loop, daemon=True)
+        self._heartbeat_thread.start()
+        
+    def stop_heartbeat(self):
+        """Stops the heartbeat thread"""
+        if hasattr(self, '_heartbeat_stop_event'):
+            self._heartbeat_stop_event.set()
+
+    def _heartbeat_loop(self):
+        """Sends heartbeat every 3 minutes"""
+        import time
+        while not self._heartbeat_stop_event.is_set():
+            self._send_heartbeat()
+            # Wait 3 minutes (180s) or until stopped
+            if self._heartbeat_stop_event.wait(180):
+                break
+                
+    def _send_heartbeat(self):
+        """Sends a single heartbeat request"""
+        try:
+            hwid = self.get_hwid()
+            requests.post(
+                f"{SERVER_URL}/heartbeat", 
+                json={"key": self._heartbeat_key, "hwid": hwid}, 
+                timeout=5
+            )
+        except:
+            pass # Fail silently, we'll try again later
 
 # Singleton instance
 license_manager = LicenseManager()

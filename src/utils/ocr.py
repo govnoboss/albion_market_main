@@ -16,14 +16,25 @@ def _find_tesseract():
     
     # 1. Проверяем рядом с .exe (для скомпилированной версии)
     if getattr(sys, 'frozen', False):
-        # Запущено как .exe (Nuitka/PyInstaller)
+        # Запущено как .exe
+        
+        # Вариант A: Nuitka Onefile (распаковка во временную папку)
+        # В этом случае __file__ указывает на файл внутри временной папки
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        bundled_path_temp = os.path.join(base_dir, "tesseract", "tesseract.exe")
+        
+        if os.path.exists(bundled_path_temp):
+             return bundled_path_temp
+
+        # Вариант B: Nuitka Standalone (папка dist) / Рядом с exe
         exe_dir = os.path.dirname(sys.executable)
-        bundled_path = os.path.join(exe_dir, "tesseract", "tesseract.exe")
-        if os.path.exists(bundled_path):
-            return bundled_path
+        bundled_path_exe = os.path.join(exe_dir, "tesseract", "tesseract.exe")
+        
+        if os.path.exists(bundled_path_exe):
+            return bundled_path_exe
     else:
         # Запущено как скрипт - проверяем папку проекта
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         bundled_path = os.path.join(project_root, "assets", "tesseract", "tesseract.exe")
         if os.path.exists(bundled_path):
             return bundled_path

@@ -49,6 +49,8 @@ class LauncherWindow(QMainWindow):
         res = license_manager.validate_key() # Load from file
         if res.get('success'):
             license_manager.mark_checked()
+            # STORE Expiry Date
+            self.license_expires = res.get('expires')
         return res.get('success', False)
     
     def _setup_daily_license_check(self):
@@ -102,13 +104,14 @@ class LauncherWindow(QMainWindow):
 
     def _show_launcher(self):
         """Called when login is successful"""
+        # Force re-check to get fresh expiry data
+        self._check_license_silent()
         self._init_launcher_ui()
         self.show()
 
     def _init_launcher_ui(self):
-        self.setWindowTitle("GBot - Launcher")
         self.setWindowTitle("GBot Launcher")
-        self.resize(600, 400)
+        self.resize(600, 450) # Increased height slightly
         self.setStyleSheet(MAIN_STYLE)
         
         # Центрирование окна (если возможно)
@@ -157,14 +160,64 @@ class LauncherWindow(QMainWindow):
         layout.addLayout(btn_layout)
         layout.addStretch()
         
-        # Footer
-        footer = QLabel("v2.0 • 2026")
-        footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        footer.setStyleSheet("color: #30363d;")
-        layout.addWidget(footer)
+        # --- License Info Footer ---
+        footer_layout = QVBoxLayout()
+        footer_layout.setSpacing(5)
+        
+        self.license_lbl = QLabel()
+        self.license_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._update_license_display() # Set text based on stored info
+        footer_layout.addWidget(self.license_lbl)
+
+        version_lbl = QLabel("v2.0 • 2026")
+        version_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        version_lbl.setStyleSheet("color: #30363d; font-size: 11px;")
+        footer_layout.addWidget(version_lbl)
+        
+        layout.addLayout(footer_layout)
         
         # Предзагрузка окон для быстрого переключения
         self._preload_windows()
+
+    def _update_license_display(self):
+        """Updates the license label text and color"""
+        if not hasattr(self, 'license_expires'):
+            self.license_lbl.setText("Ситус лицензии: Неизвестно")
+            self.license_lbl.setStyleSheet("color: #8b949e; font-size: 12px;")
+            return
+
+        try:
+            from datetime import datetime
+            # Parse expiry (Format: 2026-03-01 12:00:00 or similar from server)
+            # Server sends: str(license_obj.expires_at) which is typically ISO-like 'YYYY-MM-DD HH:MM:SS.ms'
+            expires_str = self.license_expires.split('.')[0] # Remove potential microseconds
+            expires_at = datetime.fromisoformat(expires_str)
+            now = datetime.now()
+            
+            delta = expires_at - now
+            days_left = delta.days
+            
+            # Format display
+            date_display = expires_at.strftime("%d.%m.%Y")
+            
+            if days_left < 0:
+                text = f"ЛИЦЕНЗИЯ ИСТЕКЛА ({date_display})"
+                color = "#da3633" # Red
+            elif days_left < 3:
+                text = f"Лицензия активна до: {date_display} (Осталось: {days_left} дн.) ⚠️"
+                color = "#d29922" # Yellow/Orange
+            else:
+                text = f"Лицензия активна до: {date_display} (Осталось: {days_left} дн.)"
+                color = "#3fb950" # Green
+                
+            self.license_lbl.setText(text)
+            self.license_lbl.setStyleSheet(f"color: {color}; font-size: 13px; font-weight: bold;")
+            
+        except Exception as e:
+            print(f"Error parsing date: {e}")
+            self.license_lbl.setText(f"Лицензия активна: {self.license_expires}")
+            self.license_lbl.setStyleSheet("color: #3fb950; font-size: 12px;")
+
 
     def _create_mode_button(self, title, desc, color):
         btn = QPushButton()

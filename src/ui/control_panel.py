@@ -86,22 +86,19 @@ class ControlPanel(QWidget):
         self.refresh_resume_button()
         
         
+        # Кнопка СТАРТ
         self.start_btn = QPushButton("▶ Старт")
         self.start_btn.setObjectName("primary")
         self.start_btn.setMinimumHeight(45)
+        self.start_btn.setStyleSheet("font-size: 14px; font-weight: bold; background-color: #238636;")
         self.start_btn.clicked.connect(self.start_clicked.emit)
         controls_layout.addWidget(self.start_btn)
         
-        self.pause_btn = QPushButton("⏸ Пауза")
-        self.pause_btn.setMinimumHeight(45)
-        self.pause_btn.setEnabled(False)
-        self.pause_btn.clicked.connect(self.pause_clicked.emit)
-        controls_layout.addWidget(self.pause_btn)
-        
-        self.stop_btn = QPushButton("⏹ Стоп")
+        # Кнопка СТОП (Скрыта по умолчанию)
+        self.stop_btn = QPushButton("⏹ ОСТАНОВИТЬ (F5)")
         self.stop_btn.setObjectName("danger")
         self.stop_btn.setMinimumHeight(45)
-        self.stop_btn.setEnabled(False)
+        self.stop_btn.setVisible(False)
         self.stop_btn.clicked.connect(self.stop_clicked.emit)
         controls_layout.addWidget(self.stop_btn)
         
@@ -137,24 +134,21 @@ class ControlPanel(QWidget):
 
     def _update_ui_state(self):
         """Обновить UI на основе внутреннего состояния"""
-        self.start_btn.setEnabled(not self._is_running)
-        self.pause_btn.setEnabled(self._is_running)
-        self.stop_btn.setEnabled(self._is_running)
+        # Toggle visibility instead of enabling/disabling
+        self.start_btn.setVisible(not self._is_running)
+        self.stop_btn.setVisible(self._is_running)
         
         if not self._is_running:
             self.status_label.setText("Остановлен")
             self.status_label.setStyleSheet("color: #8b949e; font-weight: 600;")
-            self.pause_btn.setText("⏸ Пауза")
             self.progress_bar.setValue(0)
             self.progress_bar.setFormat("Ожидание...")
         elif self._is_paused:
             self.status_label.setText("На паузе")
             self.status_label.setStyleSheet("color: #d29922; font-weight: 600;")
-            self.pause_btn.setText("▶ Продолжить")
         else:
             self.status_label.setText("Работает")
             self.status_label.setStyleSheet("color: #3fb950; font-weight: 600;")
-            self.pause_btn.setText("⏸ Пауза")
     
     def update_progress(self, current: int, total: int, item_name: str = ""):
         if total > 0:

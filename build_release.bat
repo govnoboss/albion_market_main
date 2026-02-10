@@ -20,6 +20,7 @@ echo [INFO] Using %NUMBER_OF_PROCESSORS% CPU cores.
 python -m nuitka ^
     --onefile ^
     --windows-disable-console ^
+    --windows-uac-admin ^
     --lto=yes ^
     --plugin-enable=anti-bloat ^
     --plugin-enable=pyside6 ^
@@ -29,6 +30,15 @@ python -m nuitka ^
     --output-dir=dist_release ^
     --noinclude-pytest-mode=nofollow ^
     --noinclude-unittest-mode=nofollow ^
+    --nofollow-import-to=sqlalchemy.dialects.mysql ^
+    --nofollow-import-to=sqlalchemy.dialects.postgresql ^
+    --nofollow-import-to=sqlalchemy.dialects.oracle ^
+    --nofollow-import-to=sqlalchemy.dialects.mssql ^
+    --nofollow-import-to=fastapi ^
+    --nofollow-import-to=uvicorn ^
+    --nofollow-import-to=slowapi ^
+    --nofollow-import-to=jinja2 ^
+    --nofollow-import-to=multipart ^
     --jobs=%NUMBER_OF_PROCESSORS% ^
     --main=src/main.py
 

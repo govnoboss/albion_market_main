@@ -36,9 +36,37 @@ def generate_keys():
         f.write(pem_public)
 
     print("\nSUCCESS! Keys generated in 'keys/' directory.")
+    
+    # --- AUTOMATICALLY UPDATE CLIENT CODE ---
+    try:
+        license_file = "src/core/license.py"
+        if os.path.exists(license_file):
+            print(f"Updating {license_file}...")
+            with open(license_file, "r", encoding="utf-8") as f:
+                content = f.read()
+
+            import re
+            # Regex to find the PUBLIC_KEY_PEM block
+            pattern = re.compile(r'PUBLIC_KEY_PEM\s*=\s*b"""-----BEGIN PUBLIC KEY-----.*?-----END PUBLIC KEY-----"""', re.DOTALL)
+            
+            new_block = f'PUBLIC_KEY_PEM = b"""{pem_public.decode().strip()}"""'
+            
+            if pattern.search(content):
+                new_content = pattern.sub(new_block, content)
+                with open(license_file, "w", encoding="utf-8") as f:
+                    f.write(new_content)
+                print(f"✅ {license_file} updated successfully!")
+            else:
+                print(f"⚠️ Could not find PUBLIC_KEY_PEM in {license_file}. Please update manually.")
+        else:
+             print(f"⚠️ {license_file} not found. Skipping auto-update.")
+             
+    except Exception as e:
+        print(f"❌ Failed to update client code: {e}")
+
     print("-" * 50)
     print("1. SERVER: Content of 'keys/private.pem' -> env variable LICENSE_PRIVATE_KEY")
-    print("2. CLIENT: Content of 'keys/public.pem' -> src/core/license.py (PUBLIC_KEY_PEM)")
+    print("2. CLIENT: Public key already updated in src/core/license.py")
     print("-" * 50)
 
 if __name__ == "__main__":

@@ -2,6 +2,34 @@
 
 {% block title %}Ключи - GBot Admin{% endblock %}
 
+{% block head %}
+<style>
+    .badge-online {
+        background-color: #3fb950;
+        color: white;
+        animation: pulse 2s infinite;
+    }
+
+    .row-online {
+        background-color: rgba(63, 185, 80, 0.05);
+    }
+
+    @keyframes pulse {
+        0% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.7;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <h1>📋 Все ключи</h1>
 
@@ -22,7 +50,7 @@
     <thead>
         <tr>
             <th>Ключ</th>
-            <th>HWID</th>
+            <th> HWID / IP</th>
             <th>Истекает</th>
             <th>Статус</th>
             <th>Действия</th>
@@ -30,7 +58,8 @@
     </thead>
     <tbody>
         {% for license in licenses %}
-        <tr class="{% if not license.is_active %}row-disabled{% endif %}">
+        <tr
+            class="{% if not license.is_active %}row-disabled{% endif %} {% if license.is_online %}row-online{% endif %}">
             <td class="key-cell">
                 <code class="full-key">{{ license.key }}</code>
                 <button class="btn btn-sm btn-copy"
@@ -38,13 +67,22 @@
             </td>
             <td class="hwid-cell">
                 {% if license.hwid %}
-                <code class="full-hwid">{{ license.hwid }}</code>
+                <div class="hwid-container">
+                    <code class="full-hwid">{{ license.hwid }}</code>
+                    {% if license.last_ip %}
+                    <br><span class="ip-address text-muted" style="font-size: 0.85em;">IP: {{ license.last_ip }}</span>
+                    {% endif %}
+                </div>
                 {% else %}
                 <span class="text-muted">—</span>
                 {% endif %}
             </td>
             <td>{{ license.expires_at.strftime('%d.%m.%Y %H:%M') }}</td>
             <td>
+                {% if license.is_online %}
+                <span class="badge badge-online">🟢 Онлайн</span>
+                {% endif %}
+
                 {% if not license.is_active %}
                 <span class="badge badge-disabled">Отключён</span>
                 {% elif license.is_expired %}
