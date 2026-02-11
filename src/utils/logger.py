@@ -1,10 +1,8 @@
-"""
-Система логирования для Albion Market Scanner
-"""
-
 import logging
+import os
 from datetime import datetime
 from typing import Callable, Optional
+from logging.handlers import RotatingFileHandler
 from PyQt6.QtCore import QObject, pyqtSignal
 
 
@@ -36,7 +34,7 @@ class Logger:
         self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.DEBUG)
         
-        # Консольный хендлер
+        # 1. Консольный хендлер
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.DEBUG)
         console_handler.setFormatter(
@@ -44,6 +42,31 @@ class Logger:
                             datefmt='%H:%M:%S')
         )
         self.logger.addHandler(console_handler)
+
+        # 2. Файловый хендлер (Rotating)
+        # Создаем папку logs если её нет
+        log_dir = "logs"
+        if not os.path.exists(log_dir):
+            try:
+                os.makedirs(log_dir)
+            except Exception:
+                pass # Если не удалось создать (например, нет прав)
+
+        try:
+            log_file = os.path.join(log_dir, "debug.log")
+            file_handler = RotatingFileHandler(
+                log_file, 
+                maxBytes=5*1024*1024,  # 5 MB
+                backupCount=3,
+                encoding="utf-8"
+            )
+            file_handler.setLevel(logging.DEBUG)
+            file_handler.setFormatter(
+                logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s')
+            )
+            self.logger.addHandler(file_handler)
+        except Exception as e:
+            print(f"FAILED TO INIT FILE LOGGER: {e}")
         
         # Эмиттер для UI
         self.emitter = LogEmitter()

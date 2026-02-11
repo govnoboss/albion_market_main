@@ -11,6 +11,12 @@ if not exist "%TESSERACT_PATH%" (
     exit /b 1
 )
 
+:: Clean previous build
+if exist dist_release (
+    echo [CLEAN] Removing old dist_release...
+    rd /s /q dist_release
+)
+
 echo [BUILD] Starting RELEASE build (Slow, Onefile, Optimized)...
 echo [INFO] This can take 5-10 minutes. Please wait...
 echo [INFO] Using %NUMBER_OF_PROCESSORS% CPU cores.
@@ -23,22 +29,51 @@ python -m nuitka ^
     --windows-uac-admin ^
     --lto=yes ^
     --plugin-enable=anti-bloat ^
-    --plugin-enable=pyside6 ^
+    --plugin-enable=pyqt6 ^
     --include-data-dir=assets=assets ^
     --include-data-dir="%TESSERACT_PATH%=tesseract" ^
     --output-filename=GBot.exe ^
     --output-dir=dist_release ^
+    --product-version=1.0.0 ^
+    --file-version=1.0.0 ^
     --noinclude-pytest-mode=nofollow ^
     --noinclude-unittest-mode=nofollow ^
-    --nofollow-import-to=sqlalchemy.dialects.mysql ^
-    --nofollow-import-to=sqlalchemy.dialects.postgresql ^
-    --nofollow-import-to=sqlalchemy.dialects.oracle ^
-    --nofollow-import-to=sqlalchemy.dialects.mssql ^
+    --nofollow-import-to=sqlalchemy ^
     --nofollow-import-to=fastapi ^
     --nofollow-import-to=uvicorn ^
+    --nofollow-import-to=starlette ^
     --nofollow-import-to=slowapi ^
     --nofollow-import-to=jinja2 ^
     --nofollow-import-to=multipart ^
+    --nofollow-import-to=pandas ^
+    --nofollow-import-to=matplotlib ^
+    --nofollow-import-to=scipy ^
+    --nofollow-import-to=sklearn ^
+    --nofollow-import-to=kivy ^
+    --nofollow-import-to=openpyxl ^
+    --nofollow-import-to=PIL._tkinter_finder ^
+    --nofollow-import-to=tkinter ^
+    --nofollow-import-to=email_validator ^
+    --nofollow-import-to=dnspython ^
+    --nofollow-import-to=httpcore ^
+    --nofollow-import-to=httptools ^
+    --nofollow-import-to=h11 ^
+    --nofollow-import-to=annotated_types ^
+    --nofollow-import-to=anyio ^
+    --nofollow-import-to=sniffio ^
+    --nofollow-import-to=trio ^
+    --nofollow-import-to=outcome ^
+    --nofollow-import-to=wsproto ^
+    --nofollow-import-to=selenium ^
+    --nofollow-import-to=zstandard ^
+    --nofollow-import-to=lxml ^
+    --nofollow-import-to=pygments ^
+    --nofollow-import-to=ipython ^
+    --nofollow-import-to=notebook ^
+    --nofollow-import-to=jedi ^
+    --nofollow-import-to=parso ^
+    --nofollow-import-to=wcwidth ^
+    --nofollow-import-to=prompt_toolkit ^
     --jobs=%NUMBER_OF_PROCESSORS% ^
     --main=src/main.py
 
