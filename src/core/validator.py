@@ -22,15 +22,15 @@ class ScreenValidator:
             return True, "OCR N/A (Skip Check)"
 
         try:
-            # Читаем текст (Eng)
-            text = read_screen_text(area['x'], area['y'], area['w'], area['h'], lang='eng')
+            # Читаем текст (Rus+Eng for Black Market compatibility)
+            text = read_screen_text(area['x'], area['y'], area['w'], area['h'], lang='rus+eng')
             text_clean = text.strip().lower()
             
             # Список городов (и ключевых слов заголовка, если вдруг Black Market)
             valid_indicators = [
                 "bridgewatch", "martlock", "lymhurst", "thetford", 
                 "fort sterling", "caerleon", "brecilien", "black market", 
-                "market"
+                "market", "черный рынок", "рынок"
             ]
             
             # Проверяем нечеткое вхождение

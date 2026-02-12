@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont, QIcon
+import sys
 
 
 from .styles import MAIN_STYLE, COLORS
@@ -258,23 +259,38 @@ class LauncherWindow(QMainWindow):
     
     def _preload_windows(self):
         """Предзагрузка окон для быстрого переключения"""
-        # Статус в splash (проверяем, что splash существует и не закрыт)
+        if hasattr(self, 'splash') and self.splash and self.splash.isVisible():
+            self.splash.set_progress(0)
+            self.splash.set_status("Загрузка Сканера...")
+            self.splash.set_progress(25)
+        
         if hasattr(self, 'splash') and self.splash and self.splash.isVisible():
             self.splash.set_progress(0)
             self.splash.set_status("Загрузка Сканера...")
             self.splash.set_progress(25)
         
         # Ленивые импорты (тяжёлые модули)
-        from .main_window import MainWindow as ScannerWindow
-        self.scanner_window = ScannerWindow(launcher=self)
+        sys.stderr.write("DEBUG: Importing ScannerWindow...\n"); sys.stderr.flush()
+        try:
+            from .main_window import MainWindow as ScannerWindow
+            sys.stderr.write("DEBUG: ScannerWindow imported. Initializing...\n"); sys.stderr.flush()
+            self.scanner_window = ScannerWindow(launcher=self)
+            sys.stderr.write("DEBUG: ScannerWindow initialized.\n"); sys.stderr.flush()
+        except Exception as e:
+            sys.stderr.write(f"ERROR initializing ScannerWindow: {e}\n"); sys.stderr.flush()
+            import traceback
+            traceback.print_exc()
+            raise e
         
         if hasattr(self, 'splash') and self.splash and self.splash.isVisible():
             self.splash.set_progress(50)
             self.splash.set_status("Загрузка Закупщика...")
             self.splash.set_progress(75)
             
+        sys.stderr.write("DEBUG: Importing BuyerWindow...\n"); sys.stderr.flush()
         from .buyer_window import BuyerWindow
         self.buyer_window = BuyerWindow(launcher=self)
+        sys.stderr.write("DEBUG: BuyerWindow initialized.\n"); sys.stderr.flush()
         
         if hasattr(self, 'splash') and self.splash and self.splash.isVisible():
             self.splash.set_progress(100)

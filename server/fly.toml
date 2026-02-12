@@ -12,6 +12,9 @@ primary_region = 'fra'
   source = "gbot_data"
   destination = "/data"
 
+[env]
+  DATABASE_URL = "sqlite:////data/licenses.db"
+
 [http_service]
   internal_port = 8000
   force_https = true

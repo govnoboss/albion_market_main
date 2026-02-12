@@ -6,7 +6,7 @@
 ### 1.1 Анализ и Подготовка
 - [ ] Составить список **INCLUDE** (критичные библиотеки: `cv2`, `numpy`, `PIL`, `pyautogui`, `requests`, `cryptography`, `pydantic`).
 - [ ] Составить список **EXCLUDE** (bloatware: `matplotlib`, `pandas`, `scipy`, `unittest`, `tkinter`, `pydoc`).
-- [ ] Проверить совместимость Tesseract (он внешний .exe) с `onefile` сборкой.
+- [ ] Убедиться что tesseract будет входить в сборку, пользователь не должен сам его качать.
 
 ### 1.2 Профиль DEV (Debug Build)
 *Приоритет: Скорость компиляции (< 1 мин), удобство отладки.*

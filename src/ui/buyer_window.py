@@ -8,6 +8,7 @@ from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QIcon, QFont
 
 from .styles import MAIN_STYLE, COLORS
+from .log_overlay import LogOverlay  # Импорт лог-оверлея
 
 class BuyerWindow(QMainWindow):
     """
@@ -213,6 +214,14 @@ class BuyerWindow(QMainWindow):
         self.overlay.pause_clicked.connect(self._toggle_pause)
         self.overlay.restore_clicked.connect(self._restore_window)
         
+        # Log Overlay
+        self.log_overlay = LogOverlay()
+        
+        # Connect Logger to LogOverlay
+        from ..utils.logger import get_logger
+        logger = get_logger()
+        logger.connect_ui(lambda msg, lvl: self.log_overlay.add_log(msg, lvl))
+        
         # Хоткеи регистрируются в showEvent, убираются в hideEvent
         self._hotkeys_registered = False
 
@@ -343,7 +352,7 @@ class BuyerWindow(QMainWindow):
                     return
 
         self.log_viewer.clear()
-        self.overlay.clear_logs()  # Очистка логов оверлея
+        # self.overlay.clear_logs()  # Removed
         mode_str = "🧠 УМНЫЙ" if is_smart else "📦 СТАНДАРТНЫЙ"
         self.log_viewer.append(f"🚀 Инициализация... Режим: {mode_str}")
         
@@ -370,6 +379,10 @@ class BuyerWindow(QMainWindow):
         self.overlay.show()
         self.overlay.update_status(True, False)
         
+        # Show Log Overlay
+        self.log_overlay.show()
+        self.log_overlay.clear_logs()
+        
         self.is_mini_mode = True
         self.hide() # Скрываем основное окно
         
@@ -381,6 +394,7 @@ class BuyerWindow(QMainWindow):
         
         # Update Overlay
         self.overlay.update_status(False, False)
+        self.log_overlay.hide()
         
     def _toggle_pause(self):
         if not self.bot.isRunning(): return
@@ -401,7 +415,7 @@ class BuyerWindow(QMainWindow):
             
         # Update Overlay
         self.overlay.update_progress(current, total, message)
-        self.overlay.set_last_log(message)
+        # self.overlay.set_last_log(message) # Removed
         
     def _on_finished(self):
         self.is_mini_mode = False
@@ -411,6 +425,7 @@ class BuyerWindow(QMainWindow):
         
         self.overlay.update_status(False, False)
         self.overlay.hide()
+        self.log_overlay.hide()
         
         # Восстанавливаем окно
         self.show()
@@ -442,4 +457,5 @@ class BuyerWindow(QMainWindow):
             self.bot.wait()
             
         self.overlay.close()
+        self.log_overlay.close()
         event.accept()

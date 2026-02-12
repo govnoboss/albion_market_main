@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "C:\Users\Student\DOCUME~1\GitHub\ALBION~1\dist_dev\MAIN~1.DIS\main.py", line 34, in <module>
+  File "C:\Users\Student\DOCUME~1\GitHub\ALBION~1\dist_dev\MAIN~1.DIS\main.py", line 28, in run_app
+  File "C:\Users\Student\DOCUME~1\GitHub\ALBION~1\dist_dev\MAIN~1.DIS\src\ui\launcher.py", line 42, in __init__
+  File "C:\Users\Student\DOCUME~1\GitHub\ALBION~1\dist_dev\MAIN~1.DIS\src\ui\launcher.py", line 180, in _init_launcher_ui
+  File "C:\Users\Student\DOCUME~1\GitHub\ALBION~1\dist_dev\MAIN~1.DIS\src\ui\launcher.py", line 269, in _preload_windows
+  File "C:\Users\Student\DOCUME~1\GitHub\ALBION~1\dist_dev\MAIN~1.DIS\src\ui\main_window.py", line 81, in __init__
+  File "C:\Users\Student\DOCUME~1\GitHub\ALBION~1\dist_dev\MAIN~1.DIS\src\ui\main_window.py", line 350, in _init_bot
+  File "C:\Users\Student\DOCUME~1\GitHub\ALBION~1\dist_dev\MAIN~1.DIS\src\utils\ocr.py", line 1, in <module src.utils.ocr>
+  File "C:\Users\Student\DOCUME~1\GitHub\ALBION~1\dist_dev\MAIN~1.DIS\pytesseract\__init__.py", line 2, in <module pytesseract>
+  File "C:\Users\Student\DOCUME~1\GitHub\ALBION~1\dist_dev\MAIN~1.DIS\pytesseract\pytesseract.py", line 42, in <module pytesseract.pytesseract>
+ImportError: Module 'pandas' was actively excluded from Nuitka compilation. Disable with '--no-deployment-flag=excluded-module-usage': Module is exact match of 'pandas' instructed by user to not follow to using '--nofollow-import-to'.

@@ -1,5 +1,5 @@
 """
-Albion Market Scanner & Buyer
+ Scanner & Buyer
 Точка входа приложения
 """
 
@@ -12,22 +12,57 @@ os.environ["QT_FONT_DPI"] = "96"
 # Добавляем корневую папку проекта в путь
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from PyQt6.QtWidgets import QApplication
-from PyQt6.QtGui import QFont
-from src.ui.launcher import LauncherWindow
+try:
+    from PyQt6.QtWidgets import QApplication
+    from PyQt6.QtGui import QFont
+    from src.ui.launcher import LauncherWindow
+except Exception as e:
+    import traceback
+    sys.stderr.write(f"CRASH during imports: {e}\n")
+    sys.stderr.write(traceback.format_exc())
+    sys.stderr.flush()
+    input("Press Enter to exit (Import Error)...")
+    sys.exit(1)
 
 def run_app():
     """Запуск приложения"""
-    app = QApplication(sys.argv)
+    sys.stderr.write("DEBUG: run_app started. Creating QApplication...\n")
+    sys.stderr.flush()
+    try:
+        app = QApplication(sys.argv)
+        sys.stderr.write("DEBUG: QApplication created.\n")
+        sys.stderr.flush()
+    except Exception as e:
+        sys.stderr.write(f"CRASH: QApplication init failed: {e}\n")
+        sys.stderr.flush()
+        raise e
     
     font = QFont("Segoe UI", 10)
     app.setFont(font)
     
-    # Запускаем Лаунчер
-    # Он сам решит, показать себя или окно входа
-    _ = LauncherWindow()
+    sys.stderr.write("DEBUG: Initializing LauncherWindow...\n")
+    sys.stderr.flush()
+    try:
+        # Запускаем Лаунчер
+        # Он сам решит, показать себя или окно входа
+        _ = LauncherWindow()
+        sys.stderr.write("DEBUG: LauncherWindow initialized.\n")
+        sys.stderr.flush()
+    except Exception as e:
+        sys.stderr.write(f"CRASH: LauncherWindow init failed: {e}\n")
+        sys.stderr.flush()
+        raise e
     
+    sys.stderr.write("DEBUG: Entering app.exec()...\n")
+    sys.stderr.flush()
     sys.exit(app.exec())
 
 if __name__ == "__main__":
-    run_app()
+    try:
+        run_app()
+    except Exception as e:
+        import traceback
+        sys.stderr.write(traceback.format_exc())
+        sys.stderr.write(f"CRASH: {e}\n")
+        sys.stderr.flush()
+        input("Press Enter to exit...")

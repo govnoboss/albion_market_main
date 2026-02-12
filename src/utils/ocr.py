@@ -15,37 +15,33 @@ def _find_tesseract():
     """Найти путь к Tesseract OCR"""
     import sys
     
-    # 1. Проверяем рядом с .exe (для скомпилированной версии)
+    # Базовая директория приложения (где лежит exe или скрипт)
     if getattr(sys, 'frozen', False):
-        # Запущено как .exe
-        
-        # Вариант A: Nuitka Onefile (распаковка во временную папку)
-        # В этом случае __file__ указывает на файл внутри временной папки
-        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        bundled_path_temp = os.path.join(base_dir, "tesseract", "tesseract.exe")
-        
-        if os.path.exists(bundled_path_temp):
-             return bundled_path_temp
-
-        # Вариант B: Nuitka Standalone (папка dist) / Рядом с exe
-        exe_dir = os.path.dirname(sys.executable)
-        bundled_path_exe = os.path.join(exe_dir, "tesseract", "tesseract.exe")
-        
-        if os.path.exists(bundled_path_exe):
-            return bundled_path_exe
+        # Если запущено как exe (Nuitka)
+        app_dir = os.path.dirname(sys.executable)
     else:
-        # Запущено как скрипт - проверяем папку проекта
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        bundled_path = os.path.join(project_root, "assets", "tesseract", "tesseract.exe")
-        if os.path.exists(bundled_path):
-            return bundled_path
-    
-    # 2. Проверяем PATH
+        # Если запущено как скрипт (src/utils/ocr.py -> ... -> src/ -> project_root)
+        app_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+    # 1. Проверяем папку 'tesseract' рядом с запускаемым файлом (Portable / Standalone)
+    # Структура: GBot.exe
+    #            tesseract/
+    #               tesseract.exe
+    local_tesseract = os.path.join(app_dir, "tesseract", "tesseract.exe")
+    if os.path.exists(local_tesseract):
+        return local_tesseract
+        
+    # 2. Проверяем assets/tesseract (для режима разработки/скрипта)
+    assets_tesseract = os.path.join(app_dir, "assets", "tesseract", "tesseract.exe")
+    if os.path.exists(assets_tesseract):
+        return assets_tesseract
+
+    # 3. Fallback: Проверяем PATH (если вдруг пользователь удалил папку, но у него есть в системе)
     path_tesseract = shutil.which("tesseract")
     if path_tesseract:
         return path_tesseract
     
-    # 3. Стандартные пути Windows
+    # 4. Fallback: Стандартные пути Windows (на крайний случай)
     possible_paths = [
         r"C:\Program Files\Tesseract-OCR\tesseract.exe",
         r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
@@ -57,7 +53,22 @@ def _find_tesseract():
     
     return None
 
-TESSERACT_CMD = _find_tesseract()
+with open("debug_startup.log", "a", encoding="utf-8") as f: 
+    f.write(f"\n--- SESSION START {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n")
+    f.write("DEBUG: Finding Tesseract...\n")
+    f.write(f"DEBUG: sys.frozen = {getattr(sys, 'frozen', 'Not Set')}\n")
+    f.write(f"DEBUG: sys.executable = {sys.executable}\n")
+    f.write(f"DEBUG: os.getcwd() = {os.getcwd()}\n")
+
+try:
+    TESSERACT_CMD = _find_tesseract()
+    with open("debug_startup.log", "a", encoding="utf-8") as f: 
+        f.write(f"DEBUG: Tesseract found at: {TESSERACT_CMD}\n")
+        if TESSERACT_CMD:
+             f.write(f"DEBUG: Exists? {os.path.exists(TESSERACT_CMD)}\n")
+except Exception as e:
+    with open("debug_startup.log", "a", encoding="utf-8") as f: f.write(f"ERROR detecting Tesseract: {e}\n")
+    TESSERACT_CMD = None
 
 if TESSERACT_CMD:
     pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD

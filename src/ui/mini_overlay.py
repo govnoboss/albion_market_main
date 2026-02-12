@@ -34,13 +34,13 @@ class MiniOverlay(QWidget):
             Qt.WindowType.Tool
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setFixedSize(320, 130) # Compact height
+        self.setFixedSize(320, 95) # Compact height (removed logs)
         
     def _setup_ui(self):
         """Создание интерфейса"""
         # Основной контейнер с фоном и рамкой
         self.container = QFrame(self)
-        self.container.setGeometry(0, 0, 320, 130)
+        self.container.setGeometry(0, 0, 320, 95)
         self.container.setStyleSheet("""
             QFrame {
                 background-color: rgba(22, 27, 34, 240); /* Чуть менее прозрачный */
@@ -85,25 +85,6 @@ class MiniOverlay(QWidget):
         self.progress_label.setStyleSheet("color: #f0f6fc; font-size: 11px; border: none; background: transparent;")
         layout.addWidget(self.progress_label)
         
-        # --- Лог (Список) ---
-        from PyQt6.QtWidgets import QListWidget, QAbstractItemView
-        self.log_list = QListWidget()
-        self.log_list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff) # Hide scrollbar
-        self.log_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.log_list.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
-        self.log_list.setStyleSheet("""
-            QListWidget {
-                background-color: transparent;
-                border: none;
-                color: #8b949e;
-                font-size: 10px;
-            }
-            QListWidget::item {
-                padding: 0px;
-            }
-        """)
-        self.log_list.setFixedHeight(35) # Space for ~3 tiny lines
-        layout.addWidget(self.log_list)
         
         # --- Кнопки управления ---
         btn_layout = QHBoxLayout()
@@ -236,25 +217,4 @@ class MiniOverlay(QWidget):
         else:
             self.progress_label.setText(item_name) # Например "Завершено"
 
-    def set_last_log(self, message: str):
-        """Обновление последней строки лога"""
-        # Убираем HTML теги если есть, для простоты просто показываем текст
-        clean_msg = message
-        if ">" in message and "<" in message:
-             # Basic stripping of span tags
-             import re
-             clean_msg = re.sub('<[^<]+?>', '', message)
-             
-        # Добавляем в список
-        self.log_list.addItem(clean_msg)
-        
-        # Автопрокрутка вниз
-        self.log_list.scrollToBottom()
-        
-        # Ограничиваем историю (например, 20 строк)
-        if self.log_list.count() > 20:
-             self.log_list.takeItem(0)
 
-    def clear_logs(self):
-        """Очистка лога"""
-        self.log_list.clear()

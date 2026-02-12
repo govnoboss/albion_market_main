@@ -2,12 +2,13 @@
 setlocal
 
 :: Define Tesseract Path
-set "TESSERACT_PATH=C:\Program Files\Tesseract-OCR"
+:: Define Tesseract Path (Portable)
+set "TESSERACT_PATH=assets\tesseract"
 
-:: Check if Tesseract exists
-if not exist "%TESSERACT_PATH%" (
-    echo [ERROR] Tesseract not found at: %TESSERACT_PATH%
-    echo Please install Tesseract-OCR or update the path in this script.
+:: Check if Tesseract exists locally
+if not exist "%TESSERACT_PATH%\tesseract.exe" (
+    echo [ERROR] Portable Tesseract not found at: %TESSERACT_PATH%\tesseract.exe
+    echo Please copy your Tesseract files to assets\tesseract
     pause
     exit /b 1
 )
@@ -21,21 +22,35 @@ if exist dist_dev (
 echo [BUILD] Starting DEV build (Fast, Standalone)...
 echo [INFO] Tesseract Path: %TESSERACT_PATH%
 
-:: Nuitka Build Command (DEV PROFILE)
+:: Nuitka Build Command (DEV PROFILE - DEBUGGING RELEASE)
 :: --jobs: Use all CPU cores for C compilation
 :: --lto=no: Disable LTO for speed
+:: ONEFILE + CONSOLE: To see why release crashes
 python -m nuitka ^
-    --standalone ^
+    --onefile ^
     --enable-console ^
     --windows-uac-admin ^
+    --lto=no ^
     --plugin-enable=anti-bloat ^
-    --no-progress ^
     --plugin-enable=pyqt6 ^
-    --include-data-dir=assets=assets ^
-    --include-data-dir="%TESSERACT_PATH%=tesseract" ^
+    --include-data-dir=resources=resources ^
     --output-dir=dist_dev ^
     --product-version=1.0.0 ^
     --file-version=1.0.0 ^
+    --python-flag=no_docstrings ^
+    --remove-output ^
+    --noinclude-dlls=opencv_videoio_ffmpeg* ^
+    --nofollow-import-to=PyQt6.QtPdf ^
+    --nofollow-import-to=PyQt6.QtSvg ^
+    --nofollow-import-to=PyQt6.QtQuick ^
+    --nofollow-import-to=PyQt6.QtQml ^
+    --nofollow-import-to=PyQt6.QtMultimedia ^
+    --nofollow-import-to=PyQt6.QtDesigner ^
+    --nofollow-import-to=PyQt6.QtHelp ^
+    --nofollow-import-to=PyQt6.QtSensors ^
+    --nofollow-import-to=PyQt6.QtWebEngine ^
+    --nofollow-import-to=PyQt6.QtWebEngineCore ^
+    --nofollow-import-to=PyQt6.QtWebEngineWidgets ^
     --nofollow-import-to=sqlalchemy ^
     --nofollow-import-to=fastapi ^
     --nofollow-import-to=uvicorn ^
@@ -43,7 +58,6 @@ python -m nuitka ^
     --nofollow-import-to=slowapi ^
     --nofollow-import-to=jinja2 ^
     --nofollow-import-to=multipart ^
-    --nofollow-import-to=pandas ^
     --nofollow-import-to=matplotlib ^
     --nofollow-import-to=scipy ^
     --nofollow-import-to=sklearn ^
@@ -74,11 +88,14 @@ python -m nuitka ^
     --nofollow-import-to=prompt_toolkit ^
     --jobs=%NUMBER_OF_PROCESSORS% ^
     --report=compilation-report.xml ^
-    --lto=no ^
     --main=src/main.py
 
 if %ERRORLEVEL% equ 0 (
-    echo [SUCCESS] Build complete! Run dist_dev\main.dist\main.exe
+    echo [COPY] Copying Portable Tesseract to dist path...
+    if not exist "dist_dev\tesseract" mkdir "dist_dev\tesseract"
+    xcopy /E /I /Y "assets\tesseract" "dist_dev\tesseract"
+    
+    echo [SUCCESS] Build complete! Run dist_dev\main.exe
 ) else (
     echo [FAILURE] Build failed.
 )

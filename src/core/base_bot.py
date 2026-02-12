@@ -79,7 +79,7 @@ class BaseBot(QThread):
         target_x = x + random.randint(-1, 1)
         target_y = y + random.randint(-1, 1)
         
-        move_mouse_human(target_x, target_y)
+        move_mouse_human(target_x, target_y, check_pause_func=self._check_pause)
         
         self._record_time("Мышь: Движение", (time.time() - start_time) * 1000)
 
@@ -196,6 +196,7 @@ class BaseBot(QThread):
         from difflib import SequenceMatcher
         import re
         from ..utils.ocr import read_screen_text
+        from ..utils.text_utils import normalize_text
         
         item_name_area = self.config.get_coordinate_area("item_name_area")
         sort_btn = self.config.get_coordinate("item_sort")
@@ -215,22 +216,20 @@ class BaseBot(QThread):
             ocr_name = read_screen_text(
                 item_name_area['x'], item_name_area['y'],
                 item_name_area['w'], item_name_area['h'],
-                lang='rus+eng'
+                lang='rus'
             )
             ocr_name_clean = re.sub(r'\s*\([^)]*\)\s*', '', ocr_name).strip()
             ocr_clean = ocr_name_clean.lower()
             
             if not ocr_clean:
-                # Если OCR пуст, это может быть лаг отрисовки. Попробуем повторить пару раз.
-                # Но только внутри текущей попытки (attempt), или сделаем микро-цикл здесь?
-                # Сделаем микро-цикл ожидания появления текста (до 3 раз по 0.3 сек)
+
                 text_found = False
                 for _ in range(3):
                     time.sleep(0.3)
                     ocr_name_retry = read_screen_text(
                         item_name_area['x'], item_name_area['y'],
                         item_name_area['w'], item_name_area['h'],
-                        lang='rus+eng'
+                        lang='rus'
                     )
                     if ocr_name_retry.strip():
                         ocr_name = ocr_name_retry
@@ -243,8 +242,17 @@ class BaseBot(QThread):
             
             if similarity >= 0.90:
                 return True
+                
+            # --- Try Normalization (Fix for "NOCOX" vs "ПОСОХ") ---
+            norm_expected = normalize_text(expected_clean)
+            norm_ocr = normalize_text(ocr_clean)
+            norm_similarity = SequenceMatcher(None, norm_expected, norm_ocr).ratio()
             
-            self.logger.warning(f"⚠️ Имя не совпадает (Try {attempt+1}): {ocr_name_clean} vs {expected_name}")
+            if norm_similarity >= 0.90:
+                self.logger.info(f"✅ Имя совпало после нормализации: '{ocr_clean}' -> '{norm_ocr}' (Ratio: {norm_similarity:.2f})")
+                return True
+            
+            self.logger.warning(f"⚠️ Имя не совпадает (Try {attempt+1}): {ocr_name_clean} vs {expected_name} (Norm: {norm_similarity:.2f})")
             
             if attempt == max_retries:
                 # Если попытки исчерпаны и разрешен Full Reset (use_buy_button=True), пробуем закрыть меню

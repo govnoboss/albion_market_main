@@ -88,6 +88,40 @@ class SettingsPanel(QScrollArea):
         
         layout.addWidget(dropdown_group)
         
+        # === Настройки мыши ===
+        mouse_group = QGroupBox("🐭 Настройки мыши")
+        mouse_layout = QFormLayout(mouse_group)
+        mouse_layout.setSpacing(10)
+
+        
+
+        # Speed
+        self.mouse_speed_spin = QSpinBox()
+        self.mouse_speed_spin.setRange(500, 5000)
+        self.mouse_speed_spin.setSingleStep(100)
+        self.mouse_speed_spin.setSuffix(" px/sec")
+        self.mouse_speed_spin.setToolTip("Скорость перемещения курсора (больше = быстрее)")
+        self.mouse_speed_spin.valueChanged.connect(self._on_mouse_speed_changed)
+        mouse_layout.addRow("Скорость:", self.mouse_speed_spin)
+
+        # Min Duration
+        self.mouse_mindur_spin = QDoubleSpinBox()
+        self.mouse_mindur_spin.setRange(0.01, 1.0)
+        self.mouse_mindur_spin.setSingleStep(0.01)
+        self.mouse_mindur_spin.setSuffix(" сек")
+        self.mouse_mindur_spin.setToolTip("Минимальное время движения (даже на короткие дистанции)")
+        self.mouse_mindur_spin.valueChanged.connect(self._on_mouse_mindur_changed)
+        mouse_layout.addRow("Мин. время:", self.mouse_mindur_spin)
+
+        # Curvature
+        self.mouse_curve_spin = QDoubleSpinBox()
+        self.mouse_curve_spin.setRange(0.0, 1.0)
+        self.mouse_curve_spin.setSingleStep(0.05)
+        self.mouse_curve_spin.setToolTip("Сила искривления траектории (0 = прямая, 1 = сильная дуга)")
+        self.mouse_curve_spin.valueChanged.connect(self._on_mouse_curve_changed)
+        mouse_layout.addRow("Кривизна:", self.mouse_curve_spin)
+
+        layout.addWidget(mouse_group)
         # === Фильтры сканирования ===
         filters_group = QGroupBox("🔍 Фильтры сканирования")
         filters_layout = QVBoxLayout(filters_group)
@@ -145,6 +179,7 @@ class SettingsPanel(QScrollArea):
         
         filters_layout.addLayout(grid_layout)
         layout.addWidget(filters_group)
+
         
         layout.addStretch()
     
@@ -179,6 +214,12 @@ class SettingsPanel(QScrollArea):
             
         for q_id, chk in self.quality_checks.items():
             chk.setChecked(q_id in filters.get("qualities", []))
+
+        # Mouse
+        mouse_cfg = config.get_mouse_settings()
+        self.mouse_speed_spin.setValue(int(mouse_cfg.get("speed_pps", 1800.0)))
+        self.mouse_mindur_spin.setValue(mouse_cfg.get("min_duration", 0.08))
+        self.mouse_curve_spin.setValue(mouse_cfg.get("curvature", 0.1))
             
         self.blockSignals(False)
         
@@ -232,3 +273,16 @@ class SettingsPanel(QScrollArea):
         config.set_scan_filter("tiers", selected_tiers)
         config.set_scan_filter("enchants", selected_enchants)
         config.set_scan_filter("qualities", selected_qualities)
+
+        # Mouse Settings loading logic (inserted here for context, ensure it goes into _load_settings)
+        # BUT wait, I need to edit _load_settings and add the handlers.
+        # I will do it as a separate edit or append to the file if it's new methods.
+
+    def _on_mouse_speed_changed(self, value):
+        get_config().set_mouse_setting("speed_pps", float(value))
+
+    def _on_mouse_mindur_changed(self, value):
+        get_config().set_mouse_setting("min_duration", value)
+
+    def _on_mouse_curve_changed(self, value):
+        get_config().set_mouse_setting("curvature", value)

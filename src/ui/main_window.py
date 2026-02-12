@@ -19,6 +19,7 @@ from .mini_overlay import MiniOverlay  # Импорт мини-оверлея
 from ..utils.logger import get_logger
 from ..utils.config import get_config
 from ..core.bot import MarketBot  # Импорт бота
+from .log_overlay import LogOverlay  # Импорт лог-оверлея
 
 
 class LogViewer(QTextEdit):
@@ -61,6 +62,7 @@ class MainWindow(QMainWindow):
     pause_hotkey_signal = pyqtSignal()
     
     def __init__(self, launcher=None):
+        with open("debug_startup.log", "a", encoding="utf-8") as f: f.write("DEBUG: MainWindow.__init__ started\n")
         super().__init__()
         self.launcher = launcher
         
@@ -69,7 +71,11 @@ class MainWindow(QMainWindow):
         self.mini_overlay.start_clicked.connect(self._on_start_bot)
         self.mini_overlay.pause_clicked.connect(self._on_pause_bot)
         self.mini_overlay.stop_clicked.connect(self._on_stop_bot)
+        self.mini_overlay.stop_clicked.connect(self._on_stop_bot)
         self.mini_overlay.restore_clicked.connect(self._switch_to_normal_mode)
+        
+        # Инициализация Log Overlay
+        self.log_overlay = LogOverlay()
         
         self._setup_window()
         self._setup_ui()
@@ -81,7 +87,25 @@ class MainWindow(QMainWindow):
         # Подключение логгера к оверлею
         # Используем lambda, чтобы передавать только сообщение или форматировать его
         logger = get_logger()
-        logger.connect_ui(lambda msg, lvl: self.mini_overlay.set_last_log(msg))
+        # logger.connect_ui(lambda msg, lvl: self.mini_overlay.set_last_log(msg)) # Removed
+        
+        # Filter for LogOverlay: Show prices, errors, warnings, and status
+        def log_filter(msg, lvl):
+            # Always show errors and warnings
+            if lvl.lower() in ["error", "warning", "critical", "success"]:
+                self.log_overlay.add_log(msg, lvl)
+                return
+
+            # Show status messages
+            if any(x in msg for x in ["Запуск", "Остановка", "Start", "Stop", "Paused", "Пауза", "Завершено"]):
+                self.log_overlay.add_log(msg, lvl)
+                return
+
+            # Show price indicators (main goal)
+            if any(x in msg for x in ["💰", "Цена:", "Price:", "Профит:", "Profit:"]):
+                 self.log_overlay.add_log(msg, lvl)
+                 
+        logger.connect_ui(log_filter)
         
         # Приветственное сообщение (после подключения UI)
         logger.info("Albion Market Scanner & Buyer запущен")
@@ -321,6 +345,7 @@ class MainWindow(QMainWindow):
         self.bot.progress_updated.connect(self.control_panel.update_progress)
         self.bot.progress_updated.connect(self.mini_overlay.update_progress) # Sync to overlay
         self.bot.finished.connect(self._on_bot_finished)
+        self.bot.overlay_status.connect(self._on_overlay_status_changed) # Connect overlay visibility signal
 
         # Проверка OCR модуля (выведет статус в консоль при импорте)
         from ..utils.ocr import is_ocr_available
@@ -329,7 +354,7 @@ class MainWindow(QMainWindow):
     def _on_start_bot(self):
         """Запуск бота"""
         if not self.bot.isRunning():
-            self.mini_overlay.clear_logs() # Очистка логов оверлея
+            # self.mini_overlay.clear_logs() # Removed
             # Получаем стартовый индекс (spinbox 1-based -> list 0-based)
             start_index = self.control_panel.start_index_spin.value() - 1
             self.bot.start_index = start_index
@@ -337,6 +362,10 @@ class MainWindow(QMainWindow):
             self.bot.start()
             self.control_panel.set_running_state(True)
             self.mini_overlay.update_status(True, False)
+            # Показываем лог-оверлей при старте
+            self.log_overlay.show()
+            self.log_overlay.clear_logs()
+            
             # Автоматический переход в мини-режим
             self._switch_to_mini_mode()
 
@@ -355,6 +384,7 @@ class MainWindow(QMainWindow):
             self.control_panel.set_running_state(False)
             self.control_panel.refresh_resume_button()  # Обновляем кнопку "Продолжить"
             self.mini_overlay.update_status(False, False)
+            self.log_overlay.hide()
             # Автоматический возврат в обычный режим
             self._switch_to_normal_mode()
             
@@ -365,8 +395,18 @@ class MainWindow(QMainWindow):
         self.control_panel.refresh_resume_button()  # Обновляем кнопку "Продолжить"
         self.mini_overlay.update_status(False, False)
         self.mini_overlay.update_progress(0, 0, "Завершено")
+        self.log_overlay.hide()
         # Автоматический возврат в обычный режим
         self._switch_to_normal_mode()
+        
+    def _on_overlay_status_changed(self, visible: bool):
+        """Обработка сигнала видимости оверлея"""
+        if visible:
+            # Show only if bot is running (don't show if stopped)
+            if self.bot.isRunning():
+                self.log_overlay.show()
+        else:
+            self.log_overlay.hide()
         
     def _toggle_always_on_top(self, checked: bool):
         """Переключить режим 'поверх всех окон'"""
@@ -393,6 +433,7 @@ class MainWindow(QMainWindow):
         
         # Close overlay too
         self.mini_overlay.close()
+        self.log_overlay.close()
         
         # Если есть лаунчер -> возвращаемся в меню
         if self.launcher:

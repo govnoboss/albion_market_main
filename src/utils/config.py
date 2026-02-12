@@ -49,6 +49,11 @@ class ConfigManager:
                 "enchants": [0, 1, 2, 3, 4],
                 "qualities": [1, 2, 3, 4, 5]
             },
+            "mouse_settings": {
+                "speed_pps": 1800.0,
+                "min_duration": 0.08,
+                "curvature": 0.1
+            },
             "items": []  # Список предметов для покупки
         }
     
@@ -174,6 +179,25 @@ class ConfigManager:
             self._config["scan_filters"] = {}
         
         self._config["scan_filters"][category] = values
+        self.save()
+
+    # === Mouse Settings ===
+
+    def get_mouse_settings(self) -> dict:
+        """Получить настройки мыши"""
+        defaults = {
+            "speed_pps": 1800.0,
+            "min_duration": 0.08,
+            "curvature": 0.1
+        }
+        return self._config.get("mouse_settings", defaults)
+
+    def set_mouse_setting(self, key: str, value: Any) -> None:
+        """Установить настройку мыши"""
+        if "mouse_settings" not in self._config:
+            self._config["mouse_settings"] = {}
+        
+        self._config["mouse_settings"][key] = value
         self.save()
 
 

@@ -100,6 +100,10 @@ class CoordinatesTab(QWidget):
                 ("bm_open_market_btn", "🏪 Открыть Рынок", "point"),
                 ("bm_char1_area", "👤 Аватарка Персонаж 1 (Area/Ref)", "area"),
                 ("bm_char2_area", "👤 Аватарка Персонаж 2 (Area/Ref)", "area"),
+                # New Coordinates
+                ("bm_tier_dropdown", "BM: Список Тиров", "point"),
+                ("bm_enchant_dropdown", "BM: Список Чары", "point"),
+                ("bm_price_area", "BM: Цена топ лота (OCR)", "area"),
             ],
         }
         

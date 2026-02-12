@@ -1,11 +1,12 @@
-
+from typing import Callable, Optional
 import time
 import random
 import math
 import pyautogui
 import numpy as np
+from .config import get_config
 
-def _get_control_points(start_x, start_y, end_x, end_y, knots_count=2):
+def _get_control_points(start_x, start_y, end_x, end_y, knots_count=2, curvature=0.1):
     """
     Генерирует контрольные точки для кривой Безье.
     Чем больше дистанция, тем больше может быть отклонение.
@@ -15,8 +16,8 @@ def _get_control_points(start_x, start_y, end_x, end_y, knots_count=2):
     dist = math.hypot(end_x - start_x, end_y - start_y)
     
     # Максимальное отклонение (чем дальше ехать, тем больше дуга)
-    # Но не слишком много, чтобы не "гуляло" по всему экрану
-    max_offset = min(dist * 0.1, 50.0) 
+    # curvature (0.0 - 1.0)
+    max_offset = min(dist * curvature, 100.0) 
     
     for i in range(1, knots_count + 1):
         # Линейная интерполяция для базы
@@ -62,10 +63,22 @@ def _bezier_curve(points, n=100):
         
     return curve
 
-def move_mouse_human(target_x, target_y, duration=None):
+def move_mouse_human(target_x: int, target_y: int, duration: float = None, check_pause_func: Optional[Callable] = None):
     """
     Перемещение мыши по человекоподобной кривой.
+    :param check_pause_func: Функция, вызываемая на каждом шаге для проверки паузы
     """
+    # Load settings
+    try:
+        cfg = get_config().get_mouse_settings()
+        speed_pps = cfg.get("speed_pps", 1800.0)
+        min_dur = cfg.get("min_duration", 0.08)
+        curvature = cfg.get("curvature", 0.1)
+    except:
+        speed_pps = 1800.0
+        min_dur = 0.08
+        curvature = 0.1
+
     start_x, start_y = pyautogui.position()
     
     # Если дистанция очень маленькая, просто двигаем линейно (микро-доводка)
@@ -77,20 +90,18 @@ def move_mouse_human(target_x, target_y, duration=None):
 
     # Расчет длительности, если не задана
     if duration is None:
-        # Чем дальше, тем дольше, но с затуханием (логарифмически или корнем)
-        # Базовая скорость: 1800px за ~0.5-0.8 сек (Быстрее)
-        min_duration = 0.08
-        calc_duration = (dist / 1800.0) + random.uniform(0.0, 0.1)
-        duration = max(min_duration, calc_duration)
+        # Чем дальше, тем дольше.
+        # Базовая скорость: speed_pps px/sec
+        calc_duration = (dist / speed_pps) + random.uniform(0.0, 0.05)
+        duration = max(min_dur, calc_duration)
         
     # Количество шагов (чем дольше, тем больше точек)
-    # PyAutoGUI по умолчанию делает паузы, поэтому too many steps может тормозить.
     # Оптимально: 60-100 шагов в секунду
     steps = int(duration * 60)
     steps = max(10, min(steps, 200)) # Clamping
     
     # Генерируем 2 контрольные точки (Cubic Bezier)
-    knots = _get_control_points(start_x, start_y, target_x, target_y, knots_count=2)
+    knots = _get_control_points(start_x, start_y, target_x, target_y, knots_count=2, curvature=curvature)
     path = _bezier_curve(knots, n=steps)
     
     # Движение по точкам
@@ -100,13 +111,16 @@ def move_mouse_human(target_x, target_y, duration=None):
     # Простейшая реализация: равномерное движение по времени
     step_delay = duration / steps
     
-    # PyAutoGUI safe-fail
-    # pyautogui.PAUSE = 0 # Временно отключаем
+    # PyAutoGUI safe-fail is handled by caller usually, but good to know
     
     for point in path:
+        # Проверка паузы ВНУТРИ цикла движения
+        if check_pause_func:
+            check_pause_func()
+            
         pyautogui.moveTo(point[0], point[1], _pause=False)
-        # Можно добавить микро-вариации задержки для имитации тремора скорости, но sleep(0) ненадежен
         time.sleep(step_delay)
         
     # Гарантированный довод в конечную точку
     pyautogui.moveTo(target_x, target_y, _pause=False)
+

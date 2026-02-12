@@ -9,8 +9,13 @@ import pyautogui
 from .base_bot import BaseBot
 from .interaction import DropdownSelector
 
+from PyQt6.QtCore import pyqtSignal
+
 class MarketBot(BaseBot):
     """Режим сканирования цен (Scanner Mode)"""
+    
+    # Сигнал для управления видимостью оверлея (True=Show, False=Hide)
+    overlay_status = pyqtSignal(bool) 
     
     def __init__(self):
         super().__init__()
@@ -54,6 +59,10 @@ class MarketBot(BaseBot):
             
         self.logger.info(f"Запуск сканирования {total_items} предметов...")
         
+        # ONE-TIME SELL TAB CLICK (Before Loop)
+        if self._is_black_market:
+            self._click_bm_sell_tab()
+        
         for i, item_name in enumerate(items):
             if self._stop_requested: break
             
@@ -75,6 +84,8 @@ class MarketBot(BaseBot):
                  if self._perform_character_switch(target_char_index=2):
                      self.logger.info("✅ Смена выполнена. Продолжаем...")
                      self._detect_current_city()
+                     # Restore Sell Tab after switch
+                     self._click_bm_sell_tab()
                  else:
                      self._stop_requested = True
                      break
@@ -186,6 +197,17 @@ class MarketBot(BaseBot):
         # 6. No Close Loop (User Request)
         # Просто переходим к следующему
 
+    def _click_bm_sell_tab(self):
+        """Клик по вкладке 'Продать' на Черном Рынке"""
+        if not self._is_black_market: return
+        
+        sell_tab = self.config.get_coordinate("bm_sell_tab")
+        if sell_tab:
+            self.logger.info(f"👉 Clicking 'bm_sell_tab' (One-time) {sell_tab}")
+            self._human_move_to(*sell_tab)
+            self._human_click()
+            time.sleep(random.uniform(0.3, 0.5))
+
     def _process_item_black_market(self, name: str):
         """
         Старая логика для ЧЕРНОГО рынка.
@@ -217,7 +239,12 @@ class MarketBot(BaseBot):
         pyautogui.press('enter')
         self.logger.debug("Нажат Enter...")
         
-        # 4. Wait Result & Buy Button
+        # 4. Verify Name (Before Clicking Buy)
+        # Мы проверяем найденный результат в списке, чтобы убедиться, что это тот предмет
+        if not self._verify_item_name_with_retry(name, max_retries=2, use_buy_button=False):
+            return
+        
+        # 4.1 Click Buy Button
         buy_coord = self.config.get_coordinate("buy_button")
         
         if buy_coord:
@@ -225,6 +252,10 @@ class MarketBot(BaseBot):
             self._human_move_to(*buy_coord)
             self._human_click()
             time.sleep(random.uniform(0.5, 0.8))
+            
+        # 4.1 Verify Name (IMMEDIATELY AFTER CLICK) - REMOVED (Moved up)
+        # if not self._verify_item_name_with_retry(name):
+        #    return
             
         # 5. Expand (First run)
         need_expand = True
@@ -241,9 +272,8 @@ class MarketBot(BaseBot):
                 self._human_click()
                 time.sleep(0.5)
 
-        # 4.1 Verify Name
-        if not self._verify_item_name_with_retry(name):
-            return
+        # 5.1 BM Check logic (Should be redundants this IS BM function, bu at kept for legacy structure)
+        # if not self._is_black_market: ... (Removed as we are in BM func)
 
         # 5.1 BM Check logic (Should be redundants this IS BM function, bu at kept for legacy structure)
         # if not self._is_black_market: ... (Removed as we are in BM func)
@@ -531,11 +561,6 @@ class MarketBot(BaseBot):
              tier_changed = (self._current_tier != tier)
              self._select_tier(tier)
              
-             # === T4.0 SPECIFIC WAIT ===
-             # Если это самый первый шаг (T4.0), ждем 1 сек по требованию
-             if tier == 4 and self._current_enchant == 0:
-                 time.sleep(1.0)
-             
              # === OPPORTUNISTIC CAPTURE ===
              # Если Tier изменился и текущий энчант на экране входит в фильтры
              if tier_changed and current_screen_enchant in enchants:
@@ -608,10 +633,70 @@ class MarketBot(BaseBot):
                  
     # === Helper Selectors ===
     
+    def _calculate_bm_tier_index(self, tier: int) -> int:
+        """
+        Рассчитывает индекс клика в выпадающем списке тиров для Черного Рынка.
+        Логика:
+        1. "Обычные" предметы начинаются с T4 (min_tier=4).
+        2. "Исключения" (в списках tier_exceptions) могут начинаться с T1, T2, T3.
+        """
+        min_tier = 4 # Default for standard items (T4-T8)
+        
+        # Проверяем наличие в списках исключений (снизу вверх)
+        # Если предмет есть в Tier_1 -> min_tier = 1
+        # Если нет, проверяем Tier_2 -> min_tier = 2
+        # И так далее.
+        
+        if self.config.is_tier_exception(1, self._current_item_name):
+            min_tier = 1
+        elif self.config.is_tier_exception(2, self._current_item_name):
+            min_tier = 2
+        elif self.config.is_tier_exception(3, self._current_item_name):
+            min_tier = 3
+            
+        # DEBUG LOG
+        # self.logger.info(f"DEBUG: BM Tier Calc: Item='{self._current_item_name}' TargetT={tier} MinTier={min_tier}")
+        
+        return tier - min_tier
+
     def _select_tier(self, tier: int):
         if self._current_tier == tier: return
         
         # Передаем только tier, так как метод в interaction.py не принимает другие аргументы
+        if self._is_black_market:
+            # BM override: use separate coordinate for dropdown open
+            dropdown_pos = self.config.get_coordinate("bm_tier_dropdown")
+            if dropdown_pos:
+                self.logger.info(f"👉 Clicking 'bm_tier_dropdown' {dropdown_pos}")
+                self._human_move_to(*dropdown_pos)
+                self._human_click()
+                time.sleep(random.uniform(0.2, 0.3))
+                pass
+            else:
+                 self.logger.warning("No BM Tier Dropdown coordinate!")
+
+            
+            # Use the calculated point for the ITEM
+            # Dynamic calculation based on item properties
+            bm_index = self._calculate_bm_tier_index(tier)
+            
+            # Additional check: If index < 0, fallback to standard T4-based logic?
+            # Or trust the config.
+            if bm_index < 0:
+                self.logger.warning(f"⚠️ BM Tier Index < 0 ({bm_index}) for T{tier}. Config might be wrong.")
+                return
+
+            coord = self.dropdowns.get_dropdown_click_point("bm_tier_dropdown", bm_index)
+            if coord:
+                self.logger.info(f"👉 Clicking 'BM Dropdown Item T{tier}' (Idx {bm_index}) {coord}")
+                self._human_move_to(*coord)
+                self._human_click()
+                self._current_tier = tier
+                self._current_quality = None
+                time.sleep(random.uniform(0.1, 0.2))
+            return
+
+        # Standard Market
         coord = self.dropdowns.get_tier_click_point(tier)
         if coord:
             self.dropdowns.open_tier_menu(self)
@@ -624,6 +709,30 @@ class MarketBot(BaseBot):
     def _select_enchant(self, enchant: int):
         if self._current_enchant == enchant: return
         
+        if self._is_black_market:
+             # BM override
+            dropdown_pos = self.config.get_coordinate("bm_enchant_dropdown")
+            if dropdown_pos:
+                self.logger.info(f"👉 Clicking 'bm_enchant_dropdown' {dropdown_pos}")
+                self._human_move_to(*dropdown_pos)
+                self._human_click()
+                time.sleep(random.uniform(0.2, 0.3))
+                
+                # Click item
+                # Logic from DropdownSelector.get_enchant_click_point: index = enchant + 1 (Skip "All")
+                # For BM: If no "All", index = enchant
+                coord = self.dropdowns.get_dropdown_click_point("bm_enchant_dropdown", enchant)
+                
+                if coord:
+                    self.logger.info(f"👉 Clicking 'BM Dropdown Item E{enchant}' {coord}")
+                    self._human_move_to(*coord)
+                    self._human_click()
+                    self._current_enchant = enchant
+                    self._current_quality = None
+                    time.sleep(random.uniform(0.1, 0.2))
+            return
+            
+        # Standard Market
         coord = self.dropdowns.get_enchant_click_point(enchant)
         if coord:
             self.dropdowns.open_enchant_menu(self)
@@ -790,15 +899,20 @@ class MarketBot(BaseBot):
         """
         self.logger.info("🔄 Запуск процедуры смены персонажа...")
         
+        # HIDE OVERLAY
+        self.overlay_status.emit(False)
+        
         # 1. Logout Sequence
         settings_btn = self.config.get_coordinate("bm_settings_btn")
         if not settings_btn:
              self.logger.error("Нет координат 'bm_settings_btn'!")
+             self.overlay_status.emit(True) # Restore
              return False
              
         logout_btn = self.config.get_coordinate("bm_logout_btn")
         if not logout_btn:
              self.logger.error("Нет координат 'bm_logout_btn'!")
+             self.overlay_status.emit(True) # Restore
              return False
              
         # Click Settings
@@ -817,6 +931,7 @@ class MarketBot(BaseBot):
         char_area = self.config.get_coordinate_area("bm_char2_area")
         if not char_area:
              self.logger.error("Нет координат 'bm_char2_area' (Area)!")
+             self.overlay_status.emit(True)
              return False
         
         # Calculate center for clicking
@@ -854,6 +969,7 @@ class MarketBot(BaseBot):
                 
             if not found_point:
                 self.logger.error("❌ Аватар 2-го персонажа не найден на экране (Таймаут)!")
+                self.overlay_status.emit(True)
                 return False
                 
             char_icon_click = found_point
@@ -950,14 +1066,25 @@ class MarketBot(BaseBot):
         Если цена равна старой -> продолжаем ждать (лаг).
         Если тайм-аут -> возвращаем 0.
         """
-        from ..utils.ocr import read_price_at
-        
-        area = self.config.get_coordinate_area("best_price_area")
-        if not area:
-            self.logger.error("Не задана область цены 'best_price_area'!")
-            return 0
-
         start_time = time.time()
+        
+        # Select Area Key based on Mode
+        area_key = "best_price_area"
+        if self._is_black_market:
+            area_key = "bm_price_area"
+            
+        area = self.config.get_coordinate_area(area_key)
+        
+        # Fallback for safe transition
+        if not area and self._is_black_market:
+             area = self.config.get_coordinate_area("best_price_area")
+             
+        if not area:
+            self.logger.error(f"Не задана область цены '{area_key}'!")
+            return 0
+            
+        from ..utils.ocr import read_price_at
+
         empty_read_count = 0
         max_empty_reads = 5
         
@@ -966,7 +1093,10 @@ class MarketBot(BaseBot):
             self._check_pause()
             
             # Считываем цену
-            price = read_price_at(area)
+            try:
+                price = read_price_at(area)
+            except Exception:
+                price = None
             
             # 1. Если цена None (не распозналась или пусто) -> Ждем
             if price is None:
@@ -975,26 +1105,24 @@ class MarketBot(BaseBot):
                     self.logger.debug(f"⚠️ Цена не обнаружена после {max_empty_reads} попыток. Считаем, что лота нет.")
                     return 0
                     
-                # self.logger.debug("Цена: None (Loading...)")
                 time.sleep(0.1)
                 continue
             
-            # Сброс счетчика, если что-то распознали (даже если старая цена)
+            # Сброс счетчика, если что-то распознали
             empty_read_count = 0
                 
             # 2. Если цена новая -> УСПЕХ
-            if price != old_price:
-                self.logger.debug(f"✅ Цена обновилась: {old_price} -> {price}")
+            if price != old_price and price > 0:
+                # self.logger.debug(f"✅ Цена обновилась: {old_price} -> {price}")
                 return price
                 
             # 3. Если цена совпадает со старой
             if price == old_price:
-                # Цены разных предметов не могут совпадать. Ждем обновления.
                 time.sleep(0.1)
                 continue
             
         # 4. Таймаут
-        self.logger.warning(f"⏰ Таймаут ожидания цены! (Old: {old_price}). Возвращаем 0.")
+        # self.logger.warning(f"⏰ Таймаут ожидания цены! (Old: {old_price}). Возвращаем 0.")
         return 0
 
     def _print_statistics(self):
