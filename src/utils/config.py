@@ -9,16 +9,20 @@ from pathlib import Path
 from typing import Any, Optional
 
 
+from .paths import get_app_root
+
+
 class ConfigManager:
     """Менеджер конфигурации для сохранения координат и настроек"""
     
     def __init__(self, config_path: Optional[str] = None):
         if config_path is None:
-            # Путь по умолчанию относительно корня проекта
-            base_dir = Path(__file__).parent.parent.parent
-            config_path = base_dir / "config" / "coordinates.json"
+            # Путь по умолчанию относительно корня проекта через централизованную утилиту
+            config_path = get_app_root() / "config" / "coordinates.json"
         
         self.config_path = Path(config_path)
+        # Убеждаемся, что папка существует
+        self.config_path.parent.mkdir(exist_ok=True)
         self._config = self._load_config()
     
     def _load_config(self) -> dict:

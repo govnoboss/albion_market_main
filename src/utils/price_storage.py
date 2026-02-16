@@ -9,8 +9,10 @@ from typing import Optional, Dict, List
 
 from .logger import get_logger
 
+from .paths import get_data_dir
+
 # Путь к файлу с ценами
-PRICES_FILE = os.path.join(os.getcwd(), "data", "prices.json")
+PRICES_FILE = get_data_dir() / "prices.json"
 
 
 class PriceStorage:

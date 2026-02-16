@@ -60,8 +60,9 @@ class ScreenValidator:
             return True, "Зона item_menu_check не задана (Skip)"
 
         # 1. Pixel Match
-        resources_dir = os.path.join(os.getcwd(), "resources")
-        ref_path = os.path.join(resources_dir, "ref_item_menu_check.png")
+        from ..utils.paths import get_app_root
+        resources_dir = get_app_root() / "resources"
+        ref_path = resources_dir / "ref_item_menu_check.png"
         
         if os.path.exists(ref_path):
             try:

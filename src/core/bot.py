@@ -940,10 +940,10 @@ class MarketBot(BaseBot):
         # --- Visual Check Loop (Template Match) ---
         self.logger.info("Поиск Аватара 2-го персонажа (Template Finding)...")
         
-        import os
+        from ..utils.paths import get_app_root
         from ..utils.image_utils import find_image_on_screen
         
-        ref_path = os.path.join(os.getcwd(), "resources", "ref_bm_char2_area.png")
+        ref_path = get_app_root() / "resources" / "ref_bm_char2_area.png"
         if not os.path.exists(ref_path):
             self.logger.error(f"❌ Нет эталона: {ref_path}. Невозможно найти персонажа!")
             if not self.config.get_coordinate("bm_char2_area"): 

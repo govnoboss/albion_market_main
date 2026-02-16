@@ -11,38 +11,35 @@ from ..utils.logger import get_logger
 
 logger = get_logger()
 
+from .paths import get_app_root, get_logs_dir
+
 # Попытка найти путь к Tesseract
 def _find_tesseract():
     """Найти путь к Tesseract OCR"""
-    import sys
+    app_dir = get_app_root()
+    log_file = get_logs_dir() / "debug_startup.log"
     
-    # Базовая директория приложения (где лежит exe или скрипт)
-    if getattr(sys, 'frozen', False):
-        # Если запущено как exe (Nuitka)
-        app_dir = os.path.dirname(sys.executable)
-    else:
-        # Если запущено как скрипт (src/utils/ocr.py -> ... -> src/ -> project_root)
-        app_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    with open(log_file, "a", encoding="utf-8") as f:
+        f.write(f"\n--- TESSERACT DETECTION {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n")
+        f.write(f"DEBUG: sys.frozen = {getattr(sys, 'frozen', False)}\n")
+        f.write(f"DEBUG: app_dir = {app_dir}\n")
 
     # 1. Проверяем папку 'tesseract' рядом с запускаемым файлом (Portable / Standalone)
-    # Структура: GBot.exe
-    #            tesseract/
-    #               tesseract.exe
-    local_tesseract = os.path.join(app_dir, "tesseract", "tesseract.exe")
-    if os.path.exists(local_tesseract):
-        return local_tesseract
+    local_tesseract = app_dir / "tesseract" / "tesseract.exe"
+    if local_tesseract.exists():
+        return str(local_tesseract)
         
     # 2. Проверяем assets/tesseract (для режима разработки/скрипта)
-    assets_tesseract = os.path.join(app_dir, "assets", "tesseract", "tesseract.exe")
-    if os.path.exists(assets_tesseract):
-        return assets_tesseract
+    assets_tesseract = app_dir / "assets" / "tesseract" / "tesseract.exe"
+    if assets_tesseract.exists():
+        return str(assets_tesseract)
 
     # 3. Fallback: Проверяем PATH (если вдруг пользователь удалил папку, но у него есть в системе)
     path_tesseract = shutil.which("tesseract")
     if path_tesseract:
         return path_tesseract
     
-    # 4. Fallback: Стандартные пути Windows (на крайний случай)
+    # 4. Fallback: Стандартные пути Windows
     possible_paths = [
         r"C:\Program Files\Tesseract-OCR\tesseract.exe",
         r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
@@ -54,34 +51,28 @@ def _find_tesseract():
     
     return None
 
-with open("debug_startup.log", "a", encoding="utf-8") as f: 
-    f.write(f"\n--- SESSION START {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n")
-    f.write("DEBUG: Finding Tesseract...\n")
-    f.write(f"DEBUG: sys.frozen = {getattr(sys, 'frozen', 'Not Set')}\n")
-    f.write(f"DEBUG: sys.executable = {sys.executable}\n")
-    f.write(f"DEBUG: os.getcwd() = {os.getcwd()}\n")
+# Lazy initialization
+TESSERACT_CMD = None
 
-try:
-    TESSERACT_CMD = _find_tesseract()
-    with open("debug_startup.log", "a", encoding="utf-8") as f: 
-        f.write(f"DEBUG: Tesseract found at: {TESSERACT_CMD}\n")
-        if TESSERACT_CMD:
-             f.write(f"DEBUG: Exists? {os.path.exists(TESSERACT_CMD)}\n")
-except Exception as e:
-    with open("debug_startup.log", "a", encoding="utf-8") as f: f.write(f"ERROR detecting Tesseract: {e}\n")
-    TESSERACT_CMD = None
-
-if TESSERACT_CMD:
-    pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
-    logger.info(f"Tesseract найден по пути: {TESSERACT_CMD}")
-    print(f"✅ Tesseract найден: {TESSERACT_CMD}")
-else:
-    logger.warning("Tesseract не найден! OCR функции будут недоступны.")
-    print("❌ Tesseract НЕ найден! OCR недоступен.")
+def init_ocr():
+    """Инициализация Tesseract если еще не была проведена"""
+    global TESSERACT_CMD
+    if TESSERACT_CMD is None:
+        try:
+            TESSERACT_CMD = _find_tesseract()
+            if TESSERACT_CMD:
+                pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
+                logger.info(f"Tesseract найден по пути: {TESSERACT_CMD}")
+            else:
+                logger.warning("Tesseract не найден! OCR функции будут недоступны.")
+        except Exception as e:
+            logger.error(f"Ошибка при инициализации OCR: {e}")
+            TESSERACT_CMD = None
+    return TESSERACT_CMD is not None
 
 def is_ocr_available() -> bool:
     """Проверка доступности OCR"""
-    return TESSERACT_CMD is not None
+    return init_ocr()
 
 def read_screen_text(x: int, y: int, w: int, h: int, lang: str = 'rus', whitelist: str = None) -> str:
     """

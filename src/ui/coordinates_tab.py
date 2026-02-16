@@ -11,6 +11,7 @@ from PyQt6.QtCore import Qt, pyqtSlot, QTimer
 from ..utils.config import get_config
 from ..utils.logger import get_logger
 from ..core.coordinate_capture import get_capture_manager
+from ..utils.paths import get_app_root
 
 class CoordinatesTab(QWidget):
     def __init__(self):
@@ -225,9 +226,9 @@ class CoordinatesTab(QWidget):
         from PyQt6.QtGui import QPixmap
         
         # Путь к картинке подсказки
-        help_dir = os.path.join(os.getcwd(), "resources", "help")
-        os.makedirs(help_dir, exist_ok=True)
-        image_path = os.path.join(help_dir, f"{key}.png")
+        help_dir = get_app_root() / "resources" / "help"
+        help_dir.mkdir(parents=True, exist_ok=True)
+        image_path = help_dir / f"{key}.png"
         
         # Если картинки нет — предлагаем создать
         if not os.path.exists(image_path):
@@ -302,9 +303,9 @@ class CoordinatesTab(QWidget):
             img = ImageGrab.grab(bbox=bbox)
             
             # Путь
-            help_dir = os.path.join(os.getcwd(), "resources", "help")
-            os.makedirs(help_dir, exist_ok=True)
-            save_path = os.path.join(help_dir, f"{key}.png")
+            help_dir = get_app_root() / "resources" / "help"
+            help_dir.mkdir(parents=True, exist_ok=True)
+            save_path = help_dir / f"{key}.png"
             
             img.save(save_path)
             
@@ -341,13 +342,13 @@ class CoordinatesTab(QWidget):
                 from PIL import ImageGrab
                 
                 # Создаем папку resources если нет
-                resources_dir = os.path.join(os.getcwd(), "resources")
-                os.makedirs(resources_dir, exist_ok=True)
+                resources_dir = get_app_root() / "resources"
+                resources_dir.mkdir(parents=True, exist_ok=True)
                 
                 # Захват и сохранение
                 bbox = (x, y, x + w, y + h)
                 img = ImageGrab.grab(bbox=bbox)
-                save_path = os.path.join(resources_dir, f"ref_{key}.png")
+                save_path = resources_dir / f"ref_{key}.png"
                 img.save(save_path)
                 
                 # Логируем
@@ -400,7 +401,7 @@ class CoordinatesTab(QWidget):
             import os
             from ..utils.image_utils import find_image_on_screen
             
-            ref_path = os.path.join(os.getcwd(), "resources", f"ref_{key}.png")
+            ref_path = get_app_root() / "resources" / f"ref_{key}.png"
             if not os.path.exists(ref_path):
                  QMessageBox.warning(self, "Ошибка", f"Нет эталона: {ref_path}\nСначала задайте область!")
                  return
@@ -422,7 +423,7 @@ class CoordinatesTab(QWidget):
             import numpy as np
             from PIL import Image, ImageGrab, ImageChops
             
-            ref_path = os.path.join(os.getcwd(), "resources", f"ref_{key}.png")
+            ref_path = get_app_root() / "resources" / f"ref_{key}.png"
             if not os.path.exists(ref_path):
                 QMessageBox.warning(self, "Ошибка", f"Нет эталона: {ref_path}\nСначала задайте область!")
                 return
@@ -450,8 +451,9 @@ class CoordinatesTab(QWidget):
             is_match = mean_diff < 15.0 # Порог
             
             # --- DEBUG SAVE ---
-            debug_curr_path = os.path.join(os.getcwd(), "resources", f"debug_current_{key}.png")
-            debug_diff_path = os.path.join(os.getcwd(), "resources", f"debug_diff_{key}.png")
+            resources_dir = get_app_root() / "resources"
+            debug_curr_path = resources_dir / f"debug_current_{key}.png"
+            debug_diff_path = resources_dir / f"debug_diff_{key}.png"
             
             try:
                 current_img.save(debug_curr_path)

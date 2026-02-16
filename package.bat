@@ -41,7 +41,7 @@ echo [2/4] Создание помощника для ярлыка...
 (
 echo @echo off
 echo echo Создание ярлыка на рабочем столе...
-echo powershell -Command "$s=(New-Object -ComObject WScript.Shell).CreateShortcut('%%USERPROFILE%%\Desktop\GBot.lnk');$s.TargetPath='%%~dp0%APP_NAME%.exe';$s.WorkingDirectory='%%~dp0';$s.Save()"
+echo powershell -Command "$s=^(New-Object -ComObject WScript.Shell^).CreateShortcut^('%%USERPROFILE%%\Desktop\GBot.lnk'^);$s.TargetPath='%%~dp0%APP_NAME%.exe';$s.WorkingDirectory='%%~dp0';$s.Save^()"
 echo echo ✅ Ярлык "GBot" создан на рабочем столе!
 echo pause
 ) > "%PACKAGE_DIR%\Создать ярлык.bat"

@@ -146,7 +146,7 @@ if exist "%TESS_SRC%" (
     robocopy "%TESS_SRC%\tessdata\configs" "%TESS_DST%\tessdata\configs" /E /NFL /NDL /NJH /NJS >nul 2>nul
     robocopy "%TESS_SRC%\tessdata\tessconfigs" "%TESS_DST%\tessdata\tessconfigs" /E /NFL /NDL /NJH /NJS >nul 2>nul
     
-    echo    ✅ Tesseract скопирован (eng + rus)
+    echo    ✅ Tesseract скопирован ^(eng + rus^)
 ) else (
     echo    ⚠️ Папка %TESS_SRC% не найдена — Tesseract не включён
 )
