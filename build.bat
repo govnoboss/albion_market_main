@@ -13,6 +13,10 @@ set "APP_NAME=GBot"
 set "ENTRY_POINT=src\main.py"
 set "OUTPUT_DIR=dist"
 
+:: Читаем версию из version.py (единый источник)
+for /f "tokens=2 delims=^""" %%v in ('findstr "CURRENT_VERSION" src\core\version.py') do set "APP_VERSION=%%v"
+if not defined APP_VERSION set "APP_VERSION=0.0.0"
+
 echo.
 echo ╔══════════════════════════════════════════╗
 echo ║   Albion Market Scanner — Build          ║
@@ -81,7 +85,7 @@ python -m nuitka ^
     --nofollow-import-to=scipy ^
     --nofollow-import-to=pandas ^
     --product-name="Albion Market Scanner" ^
-    --product-version=1.0.0 ^
+    --product-version=%APP_VERSION% ^
     --file-description="Albion Market Scanner & Buyer Bot" ^
     --copyright="© 2026" ^
     --assume-yes-for-downloads ^

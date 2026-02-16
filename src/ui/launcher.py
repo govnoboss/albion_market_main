@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-    QPushButton, QLabel, QFrame, QApplication, QMessageBox
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QPushButton, QLabel, QFrame, QApplication, QMessageBox,
+    QProgressBar
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QFont, QIcon
@@ -10,6 +11,8 @@ import sys
 from .styles import MAIN_STYLE, COLORS
 from .splash_screen import SplashScreen
 from ..core.license import license_manager
+from ..core.version import CURRENT_VERSION
+from ..core.updater import UpdateCheckWorker, UpdateDownloadWorker, install_update
 
 class LauncherWindow(QMainWindow):
     """
@@ -160,25 +163,96 @@ class LauncherWindow(QMainWindow):
         
         layout.addLayout(btn_layout)
         layout.addStretch()
-        
+
+        # --- Update Banner (скрыт по умолчанию) ---
+        self.update_frame = QFrame()
+        self.update_frame.setStyleSheet("""
+            QFrame {
+                background-color: #161b22;
+                border: 1px solid #1f6feb;
+                border-radius: 8px;
+                padding: 10px;
+            }
+        """)
+        update_inner = QVBoxLayout(self.update_frame)
+        update_inner.setSpacing(8)
+        update_inner.setContentsMargins(12, 8, 12, 8)
+
+        # Первая строка: текст + кнопка
+        update_top = QHBoxLayout()
+        self.update_lbl = QLabel("")
+        self.update_lbl.setStyleSheet("color: #58a6ff; font-size: 13px; border: none;")
+        update_top.addWidget(self.update_lbl)
+        update_top.addStretch()
+
+        self.btn_update = QPushButton("🔄 Обновить")
+        self.btn_update.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_update.setStyleSheet("""
+            QPushButton {
+                background-color: #1f6feb;
+                border: none;
+                border-radius: 6px;
+                padding: 6px 16px;
+                color: #ffffff;
+                font-weight: 600;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #388bfd;
+            }
+            QPushButton:disabled {
+                background-color: #21262d;
+                color: #484f58;
+            }
+        """)
+        self.btn_update.clicked.connect(self._start_update_download)
+        update_top.addWidget(self.btn_update)
+        update_inner.addLayout(update_top)
+
+        # Прогресс-бар (скрыт до скачивания)
+        self.update_progress = QProgressBar()
+        self.update_progress.setRange(0, 100)
+        self.update_progress.setValue(0)
+        self.update_progress.setFixedHeight(6)
+        self.update_progress.setTextVisible(False)
+        self.update_progress.setStyleSheet("""
+            QProgressBar {
+                background-color: #21262d;
+                border: none;
+                border-radius: 3px;
+            }
+            QProgressBar::chunk {
+                background-color: #1f6feb;
+                border-radius: 3px;
+            }
+        """)
+        self.update_progress.hide()
+        update_inner.addWidget(self.update_progress)
+
+        self.update_frame.hide()  # Скрыт до обнаружения обновления
+        layout.addWidget(self.update_frame)
+
         # --- License Info Footer ---
         footer_layout = QVBoxLayout()
         footer_layout.setSpacing(5)
-        
+
         self.license_lbl = QLabel()
         self.license_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._update_license_display() # Set text based on stored info
+        self._update_license_display()
         footer_layout.addWidget(self.license_lbl)
 
-        version_lbl = QLabel("v2.0 • 2026")
+        version_lbl = QLabel(f"v{CURRENT_VERSION}")
         version_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         version_lbl.setStyleSheet("color: #30363d; font-size: 11px;")
         footer_layout.addWidget(version_lbl)
-        
+
         layout.addLayout(footer_layout)
-        
+
         # Предзагрузка окон для быстрого переключения
         self._preload_windows()
+
+        # Фоновая проверка обновлений
+        self._check_for_updates()
 
     def _update_license_display(self):
         """Updates the license label text and color"""
@@ -299,8 +373,66 @@ class LauncherWindow(QMainWindow):
     def _launch_scanner(self):
         self.scanner_window.show()
         self.hide()
-        
+
     def _launch_buyer(self):
         self.buyer_window.show()
         self.hide()
 
+    # ── Auto-Update ──────────────────────────────────────
+
+    def _check_for_updates(self):
+        """Запускает фоновую проверку обновлений"""
+        self._update_info = None
+        self._update_worker = UpdateCheckWorker()
+        self._update_worker.update_available.connect(self._on_update_available)
+        self._update_worker.no_update.connect(lambda: None)  # Тихо
+        self._update_worker.check_error.connect(lambda e: None)  # Тихо
+        self._update_worker.start()
+
+    def _on_update_available(self, info: dict):
+        """Вызывается когда найдена новая версия"""
+        self._update_info = info
+        self.update_lbl.setText(f"Доступна версия {info['version']}")
+        self.update_frame.show()
+
+    def _start_update_download(self):
+        """Начинает скачивание обновления"""
+        if not self._update_info:
+            return
+
+        self.btn_update.setEnabled(False)
+        self.btn_update.setText("Скачивание...")
+        self.update_progress.setValue(0)
+        self.update_progress.show()
+
+        self._download_worker = UpdateDownloadWorker(self._update_info["download_url"])
+        self._download_worker.progress.connect(self._on_download_progress)
+        self._download_worker.download_complete.connect(self._on_download_complete)
+        self._download_worker.download_error.connect(self._on_download_error)
+        self._download_worker.start()
+
+    def _on_download_progress(self, downloaded: int, total: int):
+        """Обновление прогресс-бара скачивания"""
+        if total > 0:
+            percent = int(downloaded * 100 / total)
+            self.update_progress.setValue(percent)
+            mb_done = downloaded / 1024 / 1024
+            mb_total = total / 1024 / 1024
+            self.update_lbl.setText(f"Скачивание: {mb_done:.1f} / {mb_total:.1f} MB")
+
+    def _on_download_complete(self, zip_path):
+        """Скачивание завершено — устанавливаем"""
+        self.update_lbl.setText("Установка обновления...")
+        self.update_progress.setValue(100)
+        QApplication.processEvents()
+
+        # install_update() завершит приложение (sys.exit)
+        install_update(zip_path)
+
+    def _on_download_error(self, error: str):
+        """Ошибка скачивания"""
+        self.btn_update.setEnabled(True)
+        self.btn_update.setText("🔄 Повторить")
+        self.update_progress.hide()
+        self.update_lbl.setText(f"Ошибка: {error}")
+        self.update_lbl.setStyleSheet("color: #f85149; font-size: 13px; border: none;")
