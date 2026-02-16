@@ -5,7 +5,7 @@
 ---
 
 ## 1. Предварительные требования
-*   **Python 3.10 или 3.11** (рекомендуется 3.11). [Скачать Python](https://www.python.org/downloads/)
+*   **Python 3.14** (или 3.11+). [Скачать Python](https://www.python.org/downloads/)
     *   *Важно:* При установке поставьте галочку **"Add Python to PATH"**.
 *   **Git** для Windows. [Скачать Git](https://git-scm.com/download/win)
 *   **Tesseract OCR** (уже включен в проект в папке `assets/tesseract`).
@@ -83,3 +83,10 @@ python src/main.py
 1. Установите Nuitka: `pip install nuitka`
 2. Запустите скрипт сборки: `.\build.bat`
 3. Соберите архив для отправки: `.\package.bat`
+
+### Release Manager (GUI)
+Для полного цикла релиза (обновление версии → сборка → упаковка → публикация на GitHub):
+```powershell
+python tools/release_manager.py
+```
+Этот инструмент автоматически обновляет `CURRENT_VERSION` в `src/core/version.py`, собирает `.exe`, упаковывает ZIP и публикует GitHub Release.

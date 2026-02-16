@@ -4,7 +4,7 @@
 
 **Applies to:** `albion_market_main`
 **Type:** Automation Tool (Market Bot) for Albion Online
-**Tech Stack:** Python 3.x, PyQt6 (GUI), PyAutoGUI/Pynput (Input), OpenCV/Tesseract (OCR).
+**Tech Stack:** Python 3.14, PyQt6 (GUI), PyAutoGUI/Pynput (Input), OpenCV/Tesseract (OCR).
 
 ### Core Purpose
 A desktop application that automates market data collection (Scanner) and item purchasing (Buyer) in the Albion Online MMORPG. It uses Optical Character Recognition (OCR) and template matching to read the game state and emulates human input (mouse/keyboard) to interact with the game UI.
@@ -14,47 +14,88 @@ A desktop application that automates market data collection (Scanner) and item p
 *   **Buyer (Wholesale):** Purchases specific items up to a configured limit.
 *   **Buyer (Smart):** Automatically identifies and purchases profitable items based on the spread between City Market and Black Market prices.
 *   **Mini Overlay:** A compact, always-on-top interface for monitoring bot status without blocking the game view.
-*   **License System:** HWID-based licensing system to restrict usage.
+*   **License System:** HWID-based licensing system to restrict usage. RSA-signed server responses.
+*   **Auto-Update:** Проверка и скачивание новых версий через GitHub Releases с автоматической установкой.
 
 ---
 
 ## 2. Architecture & Directory Structure
 
-The project follows a layered architecture separating Logic (`core`), Interface (`ui`), and Helpers (`utils`).
+The project follows a layered architecture: **Launcher** → **Logic** (`core`) → **Interface** (`ui`) → **Helpers** (`utils`).
 
 ```text
 src/
-├── core/               # Business Logic & Bot Engines
-│   ├── base_bot.py     # Base thread, input emulation, common checks
-│   ├── bot.py          # Scanner Mode logic (incl. Black Market)
-│   ├── buyer.py        # Buyer Mode logic (Wholesale/Smart)
-│   ├── interaction.py  # UI Element calculation (Dropdowns)
-│   ├── license.py      # HWID generation and license validation
-│   └── validator.py    # Screen state validation (OCR/Visual)
-├── ui/                 # PyQt6 Interface
-│   ├── main_window.py  # Entry point, Tab management, Hotkeys
-│   ├── mini_overlay.py # Compact status overlay
-│   ├── overlay.py      # (Legacy) HUD components
-│   └── [tabs]          # Specific tab implementations:
-│       ├── control_panel.py   # Start/Stop controls
-│       ├── profits_tab.py     # Smart Buyer analysis view
-│       ├── prices_tab.py      # Database viewer
-│       ├── items_panel.py     # Item management
-│       ├── coordinates_tab.py # UI calibration
-│       └── settings_panel.py  # General config
-├── utils/              # Shared Utilities
-│   ├── config.py       # JSON Config Manager (Singleton)
-│   ├── logger.py       # Thread-safe logging system
-│   ├── price_storage.py# Price database (JSON)
-│   ├── image_utils.py  # Image comparison & search
-│   └── ocr.py          # Tesseract/Image-processing wrappers
-├── server/             # (Optional) Web Server for License/Distribution
-└── main.py             # Application Entry Point
+├── main.py                 # Точка входа (создаёт LauncherWindow)
+├── core/                   # Business Logic & Bot Engines
+│   ├── base_bot.py         # Base thread, input emulation, common checks
+│   ├── bot.py              # Scanner Mode logic (incl. Black Market)
+│   ├── buyer.py            # Buyer Mode logic (Wholesale/Smart)
+│   ├── coordinate_capture.py # Захват координат по клику (pynput)
+│   ├── interaction.py      # UI Element calculation (Dropdowns)
+│   ├── license.py          # HWID generation, RSA verification, license validation
+│   ├── updater.py          # Auto-Update: проверка/скачивание/установка через GitHub Releases
+│   ├── validator.py        # Screen state validation (OCR/Visual)
+│   └── version.py          # Single source of truth: CURRENT_VERSION, APP_NAME, GITHUB_REPO
+├── ui/                     # PyQt6 Interface
+│   ├── launcher.py         # ★ ENTRY POINT: Launcher window, режим выбора, auto-update banner
+│   ├── login_window.py     # Окно ввода лицензионного ключа
+│   ├── splash_screen.py    # Splash screen при загрузке
+│   ├── main_window.py      # Scanner Window: Tabs, Hotkeys (F5/F6)
+│   ├── buyer_window.py     # Buyer Window: управление закупкой
+│   ├── buyer/              # Компоненты Buyer-окна
+│   │   ├── profit_preview_tab.py   # Превью прибыли
+│   │   └── purchase_plan_tab.py    # План закупок
+│   ├── mini_overlay.py     # Compact status overlay (Always on Top)
+│   ├── log_overlay.py      # Оверлей логов
+│   ├── overlay.py          # (Legacy) HUD components
+│   ├── calibration_overlay.py # Оверлей калибровки координат
+│   ├── styles.py           # Стили и цветовая схема (MAIN_STYLE, COLORS)
+│   └── [tabs]              # Вкладки Scanner Window:
+│       ├── control_panel.py       # Start/Stop controls
+│       ├── profits_tab.py         # Smart Buyer analysis view
+│       ├── prices_tab.py          # Database viewer
+│       ├── items_panel.py         # Item management
+│       ├── coordinates_tab.py     # UI calibration
+│       └── settings_panel.py      # General config
+├── utils/                  # Shared Utilities
+│   ├── config.py           # JSON Config Manager (Singleton)
+│   ├── logger.py           # Thread-safe logging system
+│   ├── price_storage.py    # Price database (JSON)
+│   ├── image_utils.py      # Image comparison & search
+│   ├── ocr.py              # Tesseract/Image-processing wrappers
+│   ├── paths.py            # Определение путей приложения (get_app_root)
+│   ├── human_mouse.py      # Человекоподобное движение мыши (кривые Безье)
+│   ├── items_db.py         # База данных предметов
+│   ├── default_exceptions.py # Исключения по тирам (items без T1-T3)
+│   └── text_utils.py       # Утилиты обработки текста
+├── legacy/                 # Устаревший код
+│   └── debug_overlay.py    # Legacy debug overlay
+server/                     # License Server (FastAPI) — ОБЯЗАТЕЛЕН для работы бота
+tools/                      # Утилиты разработчика
+│   ├── release_manager.py  # GUI для сборки, упаковки и публикации релизов
+│   ├── generate_keys.py    # Генерация RSA ключей
+│   ├── migrate_db.py       # Миграция БД сервера
+│   ├── migrate_db_ip.py    # Миграция БД (IP поля)
+│   └── deploy_server.ps1   # Деплой сервера на Fly.io
 ```
 
 ---
 
-## 3. Core Components ("The Brain")
+## 3. Application Flow
+
+```text
+main.py → LauncherWindow
+             ├── [Нет лицензии] → LoginWindow → (ввод ключа) → LauncherWindow
+             ├── [Лицензия ОК] → Splash Screen → LauncherWindow
+             │                     ├── Фоновая проверка обновлений (GitHub API)
+             │                     │    └── [Есть обновление] → Баннер "🔄 Обновить"
+             │                     ├── Кнопка "СКАНЕР"  → MainWindow (Scanner)
+             │                     └── Кнопка "ЗАКУПЩИК" → BuyerWindow (Buyer)
+```
+
+---
+
+## 4. Core Components ("The Brain")
 
 ### BaseBot (`src/core/base_bot.py`)
 *   **Role:** Abstract parent class (QThread).
@@ -87,19 +128,64 @@ src/
 *   **DropdownSelector:** Calculates `(x, y)` for dynamic dropdowns (Tier, Enchant, Quality) handling specific offsets and row heights.
 *   **Tier Exceptions:** database of items that don't have specific tiers (e.g., T1 for some artifacts), adjusting dropdown clicks accordingly.
 
+### CoordinateCapture (`src/core/coordinate_capture.py`)
+*   **Role:** Глобальный захват координат по клику мыши.
+*   **Логика:** Использует `pynput` для прослушивания кликов, поддерживает захват точки и области.
+*   **Singleton:** Глобальный экземпляр через `get_capture_manager()`.
+
 ### LicenseManager (`src/core/license.py`)
 *   **Role:** Security & Access Control.
-*   **Logic:** Generates a stable HWID (Motherboard + CPU + MachineGUID), encrypts/decrypts keys locally, and validates against a remote server.
+*   **Logic:** Generates a stable HWID (Motherboard + CPU + MachineGUID), encrypts/decrypts keys locally, and validates against a remote server. Verifies RSA-signed responses.
 
 ---
 
-## 4. UI Architecture
+## 5. Auto-Update System
 
-### MainWindow (`src/ui/main_window.py`)
+### Компоненты
+| Файл | Роль |
+|:---|:---|
+| `src/core/version.py` | Единственный источник версии: `CURRENT_VERSION`, `APP_NAME`, `GITHUB_REPO` |
+| `src/core/updater.py` | Проверка, скачивание и установка обновлений |
+| `tools/release_manager.py` | GUI-инструмент для публикации релизов |
+
+### Как это работает
+1.  При запуске `LauncherWindow` вызывает `UpdateCheckWorker` (QThread).
+2.  Воркер делает `GET` к GitHub API: `/repos/{GITHUB_REPO}/releases/latest`.
+3.  Парсит `tag_name` (например `v1.2.0`) и сравнивает с `CURRENT_VERSION` как кортеж `(1, 2, 0)`.
+4.  Если `latest > current` — в UI появляется баннер с кнопкой **"🔄 Обновить"**.
+5.  По нажатию — `UpdateDownloadWorker` скачивает ZIP с прогресс-баром.
+6.  `install_update()` распаковывает ZIP, генерирует `update.bat`, запускает его и завершает приложение.
+7.  `update.bat`: ждёт завершения GBot.exe → копирует файлы (кроме `config/`, `data/`, `logs/`) → перезапускает.
+
+### Release Manager (`tools/release_manager.py`)
+GUI-приложение (PyQt6) для разработчика:
+1.  Обновляет `CURRENT_VERSION` в `version.py`.
+2.  Запускает `build.bat` (Nuitka сборка).
+3.  Упаковывает в `GBot.zip` через `package.bat`.
+4.  Публикует GitHub Release с тегом `vX.Y.Z` и приложенным ZIP.
+
+---
+
+## 6. UI Architecture
+
+### LauncherWindow (`src/ui/launcher.py`) — ★ Entry Point
+*   **Features:**
+    *   Splash Screen при загрузке.
+    *   Проверка лицензии (silent → LoginWindow если нет ключа).
+    *   Выбор режима: **Сканер** или **Закупщик**.
+    *   Фоновая проверка обновлений с баннером.
+    *   Отображение срока лицензии в footer.
+    *   Ежедневная ре-валидация лицензии с graceful shutdown.
+
+### MainWindow / Scanner Window (`src/ui/main_window.py`)
 *   **Features:**
     *   **Tabs:** Control, Profits, Prices, Items, Coordinates, Settings.
     *   **Hotkeys:** Global `F5` (Start/Stop) and `F6` (Pause) using `pynput` listener.
     *   **Mini Overlay Integration:** Automatically hides the main window and shows `MiniOverlay` on start.
+
+### BuyerWindow (`src/ui/buyer_window.py`)
+*   **Role:** Отдельное окно для режима закупки.
+*   **Features:** Управление Wholesale/Smart buyer, прогресс, логи. Включает вложенные табы `buyer/profit_preview_tab.py` и `buyer/purchase_plan_tab.py`.
 
 ### MiniOverlay (`src/ui/mini_overlay.py`)
 *   **Role:** Compact widget showing Status, Progress Bar, and Last Log Message.
@@ -112,7 +198,7 @@ src/
 
 ---
 
-## 5. Data Flow & Configuration
+## 7. Data Flow & Configuration
 
 ### ConfigManager (`src/utils/config.py`)
 *   **File:** `config/coordinates.json`.
@@ -132,24 +218,28 @@ src/
 
 ---
 
-## 6. License Server
+## 8. License Server
 
-The project includes a standalone **License Server** (FastAPI) to manage access control via HWID locking.
+The project includes a standalone **License Server** (FastAPI) to manage access control via HWID locking. **Сервер обязателен** — без него бот не запустится.
 
 *   **Documentation:** [LICENSE_SERVER.md](LICENSE_SERVER.md)
 *   **Source Code:** `server/` directory.
-*   **Features:** HWID Validation, Admin Panel, REST API.
+*   **Features:** HWID Validation, RSA Response Signing, Admin Panel, REST API.
 
 ---
 
-## 7. How AI Agents Should Use This Document
+## 9. How AI Agents Should Use This Document
 
 *   **Refactoring:**
     *   `base_bot.py` is the foundation. Changes here affect BOTH Scanner and Buyer.
     *   UI changes should be modular (create new Tab classes).
+    *   `launcher.py` is the actual entry point — NOT `main_window.py`.
 *   **New Features:**
     *   **Logic:** Add to `src/core/` (inherit BaseBot).
-    *   **UI:** Add to `src/ui/` and register in `MainWindow`.
+    *   **UI:** Add to `src/ui/` and register in the appropriate Window.
+*   **Version & Updates:**
+    *   Version is defined ONLY in `src/core/version.py`.
+    *   To release: use `tools/release_manager.py` (GUI) or manually update version → build → package → GitHub Release.
 *   **Critical Constraints:**
     *   **Coordinates:** The bot is blind without accurate coordinates. Any UI change in the Game requires recalibration.
     *   **OCR Reliability:** Always verify OCR output (`isdigit()`, `>0`) before critical actions (Buying).

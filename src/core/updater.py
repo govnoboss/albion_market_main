@@ -46,7 +46,7 @@ def check_for_update() -> dict | None:
         dict с ключами {version, download_url, size, changelog} или None
     """
     try:
-        logger.log("[UPDATE] Проверка обновлений...", "INFO")
+        logger.info("[UPDATE] Проверка обновлений...")
         
         headers = {
             "Accept": "application/vnd.github.v3+json",
@@ -56,7 +56,7 @@ def check_for_update() -> dict | None:
         response = requests.get(GITHUB_API_URL, headers=headers, timeout=10)
         
         if response.status_code == 404:
-            logger.log("[UPDATE] Релизов пока нет", "DEBUG")
+            logger.debug("[UPDATE] Релизов пока нет")
             return None
         
         response.raise_for_status()
@@ -67,7 +67,7 @@ def check_for_update() -> dict | None:
         current_version = _parse_version(CURRENT_VERSION)
         
         if latest_version <= current_version:
-            logger.log(f"[UPDATE] Версия актуальна ({CURRENT_VERSION})", "INFO")
+            logger.info(f"[UPDATE] Версия актуальна ({CURRENT_VERSION})")
             return None
         
         # Ищем .zip asset
@@ -80,13 +80,13 @@ def check_for_update() -> dict | None:
                 break
         
         if not download_url:
-            logger.log("[UPDATE] ZIP-файл не найден в релизе", "WARNING")
+            logger.warning("[UPDATE] ZIP-файл не найден в релизе")
             return None
         
         version_clean = latest_tag.lstrip("v")
         changelog = data.get("body", "Нет описания")
         
-        logger.log(f"[UPDATE] Доступна новая версия: {version_clean}", "INFO")
+        logger.info(f"[UPDATE] Доступна новая версия: {version_clean}")
         
         return {
             "version": version_clean,
@@ -97,13 +97,13 @@ def check_for_update() -> dict | None:
         }
         
     except requests.exceptions.ConnectionError:
-        logger.log("[UPDATE] Нет подключения к интернету", "DEBUG")
+        logger.debug("[UPDATE] Нет подключения к интернету")
         return None
     except requests.exceptions.Timeout:
-        logger.log("[UPDATE] Таймаут при проверке обновлений", "DEBUG")
+        logger.debug("[UPDATE] Таймаут при проверке обновлений")
         return None
     except Exception as e:
-        logger.log(f"[UPDATE] Ошибка проверки: {e}", "WARNING")
+        logger.warning(f"[UPDATE] Ошибка проверки: {e}")
         return None
 
 
@@ -126,7 +126,7 @@ def download_update(url: str, progress_callback=None) -> Path | None:
         
         zip_path = UPDATE_TEMP_DIR / f"{APP_NAME}.zip"
         
-        logger.log(f"[UPDATE] Скачивание обновления...", "INFO")
+        logger.info("[UPDATE] Скачивание обновления...")
         
         response = requests.get(url, stream=True, timeout=300)
         response.raise_for_status()
@@ -142,11 +142,11 @@ def download_update(url: str, progress_callback=None) -> Path | None:
                     if progress_callback and total_size > 0:
                         progress_callback(downloaded, total_size)
         
-        logger.log(f"[UPDATE] Скачано: {downloaded / 1024 / 1024:.1f} MB", "INFO")
+        logger.info(f"[UPDATE] Скачано: {downloaded / 1024 / 1024:.1f} MB")
         return zip_path
         
     except Exception as e:
-        logger.log(f"[UPDATE] Ошибка скачивания: {e}", "ERROR")
+        logger.error(f"[UPDATE] Ошибка скачивания: {e}")
         # Очистка при ошибке
         if UPDATE_TEMP_DIR.exists():
             shutil.rmtree(UPDATE_TEMP_DIR, ignore_errors=True)
@@ -171,7 +171,7 @@ def install_update(zip_path: Path) -> bool:
         extract_dir.mkdir(parents=True)
         
         # Распаковка
-        logger.log("[UPDATE] Распаковка обновления...", "INFO")
+        logger.info("[UPDATE] Распаковка обновления...")
         with zipfile.ZipFile(zip_path, 'r') as zf:
             zf.extractall(extract_dir)
         
@@ -198,12 +198,12 @@ def install_update(zip_path: Path) -> bool:
         with open(bat_path, "w", encoding="utf-8") as f:
             f.write(bat_content)
         
-        logger.log("[UPDATE] Запуск обновления, приложение перезапустится...", "INFO")
+        logger.info("[UPDATE] Запуск обновления, приложение перезапустится...")
         
-        # Запускаем bat отвязанным процессом
+        # Запускаем bat без отображения консоли
         subprocess.Popen(
             ["cmd.exe", "/c", str(bat_path)],
-            creationflags=subprocess.CREATE_NEW_CONSOLE | subprocess.DETACHED_PROCESS,
+            creationflags=subprocess.CREATE_NO_WINDOW,
             close_fds=True
         )
         
@@ -211,7 +211,7 @@ def install_update(zip_path: Path) -> bool:
         sys.exit(0)
         
     except Exception as e:
-        logger.log(f"[UPDATE] Ошибка установки: {e}", "ERROR")
+        logger.error(f"[UPDATE] Ошибка установки: {e}")
         return False
 
 
@@ -241,9 +241,8 @@ timeout /t 2 /nobreak >nul
 echo Копирование новых файлов...
 
 :: Копируем всё, КРОМЕ config, data, logs
-:: /E — все подпапки, /Y — без подтверждений
-:: /XD — исключить директории
-robocopy "{source_dir}" "{target_dir}" /E /Y /XD config data logs /NFL /NDL /NJH /NJS /R:3 /W:2
+:: /E — все подпапки, /XD — исключить директории
+robocopy "{source_dir}" "{target_dir}" /E /XD config data logs /NFL /NDL /NJH /NJS /R:3 /W:2
 
 if errorlevel 8 (
     echo ❌ Ошибка при копировании файлов!
