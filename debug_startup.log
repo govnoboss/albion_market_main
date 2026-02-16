@@ -26,3 +26,38 @@ DEBUG: Tesseract found at: None
 DEBUG: MainWindow.__init__ started
 DEBUG: Finding Tesseract...
 DEBUG: Tesseract found at: C:\Users\Student\DOCUME~1\GitHub\ALBION~1\dist_dev\MAIN~1.DIS\tesseract\tesseract.exe
+DEBUG: MainWindow.__init__ started
+
+--- SESSION START 2026-02-16 12:55:52 ---
+DEBUG: Finding Tesseract...
+DEBUG: MainWindow.__init__ started
+
+--- SESSION START 2026-02-16 12:56:51 ---
+DEBUG: Finding Tesseract...
+DEBUG: MainWindow.__init__ started
+
+--- SESSION START 2026-02-16 13:19:26 ---
+DEBUG: Finding Tesseract...
+DEBUG: sys.frozen = Not Set
+DEBUG: sys.executable = C:\Users\PCUSER~1\DOCUME~1\GitHub\ALBION~1\dist\GBOT~1.DIS\python.exe
+DEBUG: os.getcwd() = C:\Users\PC User\Documents\GitHub\albion_market_main
+DEBUG: Tesseract found at: C:\Users\PCUSER~1\DOCUME~1\GitHub\ALBION~1\dist\GBOT~1.DIS\tesseract\tesseract.exe
+DEBUG: Exists? True
+DEBUG: MainWindow.__init__ started
+
+--- SESSION START 2026-02-16 13:27:10 ---
+DEBUG: Finding Tesseract...
+DEBUG: sys.frozen = Not Set
+DEBUG: sys.executable = C:\Users\PCUSER~1\DOCUME~1\GitHub\ALBION~1\dist\GBOT~1.DIS\python.exe
+DEBUG: os.getcwd() = C:\Users\PC User\Documents\GitHub\albion_market_main
+DEBUG: Tesseract found at: C:\Users\PCUSER~1\DOCUME~1\GitHub\ALBION~1\dist\GBOT~1.DIS\tesseract\tesseract.exe
+DEBUG: Exists? True
+DEBUG: MainWindow.__init__ started
+
+--- SESSION START 2026-02-16 13:29:23 ---
+DEBUG: Finding Tesseract...
+DEBUG: sys.frozen = Not Set
+DEBUG: sys.executable = C:\Users\PCUSER~1\DOCUME~1\GitHub\ALBION~1\dist\GBOT~1.DIS\python.exe
+DEBUG: os.getcwd() = C:\Users\PC User\Documents\GitHub\albion_market_main
+DEBUG: Tesseract found at: C:\Users\PCUSER~1\DOCUME~1\GitHub\ALBION~1\dist\GBOT~1.DIS\tesseract\tesseract.exe
+DEBUG: Exists? True

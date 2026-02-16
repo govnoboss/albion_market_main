@@ -153,7 +153,7 @@ class LicenseManager:
             return network_time.replace(tzinfo=timezone.utc)
         except Exception as e:
             # Fallback to local time (UTC)
-            print(f"Time Check Failed: {e}")
+            print(f"Time Check Failed")
             return datetime.now(timezone.utc)
 
     def verify_signature(self, response_json: dict) -> bool:
@@ -297,11 +297,13 @@ class LicenseManager:
             else:
                  return {"success": False, "message": f"Invalid Key: {data.get('message')}", "code": "invalid"}
 
+        except requests.exceptions.Timeout:
+            return {"success": False, "message": "Connection timeout. Check internet.", "code": "connection_error"}
         except requests.exceptions.ConnectionError:
             return {"success": False, "message": "Server unavailable. Check internet.", "code": "connection_error"}
         except Exception as e:
-             # In case of verification error, return generic error
-            return {"success": False, "message": f"Error: {str(e)}", "code": "error"}
+             # Generic error — never expose server details
+            return {"success": False, "message": "Validation error. Try again later.", "code": "error"}
 
     def activate_key(self, key: str) -> dict:
         """
@@ -325,8 +327,12 @@ class LicenseManager:
             else:
                  return {"success": False, "message": data.get("message"), "code": "activation_failed"}
                  
+        except requests.exceptions.Timeout:
+            return {"success": False, "message": "Connection timeout. Check internet.", "code": "connection_error"}
+        except requests.exceptions.ConnectionError:
+            return {"success": False, "message": "Server unavailable. Check internet.", "code": "connection_error"}
         except Exception as e:
-            return {"success": False, "message": str(e), "code": "error"}
+            return {"success": False, "message": "Activation error. Try again later.", "code": "error"}
 
     # --- HEARTBEAT SYSTEM ---
     def start_heartbeat(self, key: str):

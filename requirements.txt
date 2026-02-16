@@ -1,22 +1,41 @@
-# Core Application Dependencies
-PyQt6>=6.4.0
+# ============================================
+# Albion Market Scanner & Buyer — Dependencies
+# ============================================
+
+# --- GUI Framework ---
+PyQt6>=6.5.0
+
+# --- Screen Automation ---
 pyautogui>=0.9.54
-pynput>=1.7.6
-cryptography>=46.0.5
-# Image Processing & OCR
-opencv-python>=4.8.0
-numpy>=1.24.0
-Pillow>=10.0.0
+
+# --- OCR (Optical Character Recognition) ---
 pytesseract>=0.3.10
 
-# HTTP Requests
+# --- Image Processing ---
+Pillow>=10.0.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+
+# --- Input Simulation & Global Hotkeys ---
+pynput>=1.7.6
+keyboard>=0.13.5
+
+# --- Networking (License System, Heartbeat) ---
 requests>=2.31.0
 
-# Server Dependencies (optional, for license server)
-fastapi>=0.100.0
-uvicorn>=0.23.0
-sqlalchemy>=2.0.0
-pydantic>=2.0.0
-slowapi>=0.1.8
-Jinja2>=3.1.0
-python-multipart>=0.0.6
+# --- Cryptography (License Verification, Key Management) ---
+cryptography>=41.0.0
+
+# --- Build Tools ---
+nuitka>=2.0.0
+zstandard>=0.22.0
+
+# --- Server Dependencies (also in server/requirements.txt) ---
+# fastapi>=0.100.0
+# uvicorn>=0.23.0
+# sqlalchemy>=2.0.0
+# pydantic>=2.0.0
+# slowapi>=0.1.8
+# Jinja2>=3.1.0
+# python-multipart>=0.0.6
+# pyjwt>=2.8.0

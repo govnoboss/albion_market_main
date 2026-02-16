@@ -1685,3 +1685,39 @@
 2026-02-12 13:46:51,615 [INFO] AlbionMarket: ИТОГО                     4.69 сек
 2026-02-12 13:46:51,616 [INFO] AlbionMarket: ────────────────────────────────────────────────────────────
 2026-02-12 13:46:51,616 [INFO] AlbionMarket: Сканирование завершено.
+2026-02-16 12:55:51,828 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 12:55:51,958 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 12:55:51,971 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 12:55:51,978 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 12:55:52,060 [INFO] AlbionMarket: База предметов обновлена: 91 записей
+2026-02-16 12:56:50,679 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 12:56:50,739 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 12:56:50,749 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 12:56:50,755 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 13:19:26,026 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 13:19:26,071 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 13:19:26,076 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 13:19:26,076 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 13:19:26,124 [INFO] AlbionMarket: База предметов обновлена: 91 записей
+2026-02-16 13:19:26,643 [INFO] AlbionMarket: Tesseract найден по пути: C:\Users\PCUSER~1\DOCUME~1\GitHub\ALBION~1\dist\GBOT~1.DIS\tesseract\tesseract.exe
+2026-02-16 13:19:26,643 [INFO] AlbionMarket: Albion Market Scanner & Buyer запущен
+2026-02-16 13:27:10,127 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 13:27:10,168 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 13:27:10,182 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 13:27:10,182 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 13:27:10,254 [INFO] AlbionMarket: База предметов обновлена: 91 записей
+2026-02-16 13:27:10,487 [INFO] AlbionMarket: Tesseract найден по пути: C:\Users\PCUSER~1\DOCUME~1\GitHub\ALBION~1\dist\GBOT~1.DIS\tesseract\tesseract.exe
+2026-02-16 13:27:10,508 [INFO] AlbionMarket: Albion Market Scanner & Buyer запущен
+2026-02-16 13:27:28,210 [INFO] AlbionMarket: Первый запуск: Применены дефолт-лимиты (2275)
+2026-02-16 13:27:30,313 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 13:27:30,318 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 13:29:09,532 [INFO] AlbionMarket: Возврат в главное меню
+2026-02-16 13:29:22,874 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 13:29:22,879 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 13:29:22,886 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 13:29:22,887 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 13:29:23,168 [INFO] AlbionMarket: Tesseract найден по пути: C:\Users\PCUSER~1\DOCUME~1\GitHub\ALBION~1\dist\GBOT~1.DIS\tesseract\tesseract.exe
+2026-02-16 13:29:23,176 [INFO] AlbionMarket: Albion Market Scanner & Buyer запущен
+2026-02-16 13:29:25,311 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 13:29:25,311 [DEBUG] AlbionMarket: Цены загружены: 2 городов
+2026-02-16 13:29:31,989 [INFO] AlbionMarket: Возврат в главное меню

@@ -1,3 +1,4 @@
+import sys
 import pytesseract
 from PIL import ImageGrab, ImageOps, Image
 import time
