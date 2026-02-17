@@ -10,6 +10,10 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from ..utils.price_storage import get_price_storage
+from ..utils.logger import get_logger
+from .styles import PROFITS_STYLE
+
+logger = get_logger()
 
 class ProfitLoader(QThread):
     """Фоновый поток для расчета профитов"""
@@ -23,58 +27,63 @@ class ProfitLoader(QThread):
         self.sell_city = sell_city
         
     def run(self):
-        # 1. IO: Обновляем цены
-        self.storage.reload()
-        
-        # 2. Получаем данные
-        buy_data = self.storage.get_city_prices(self.buy_city)
-        sell_data = self.storage.get_city_prices(self.sell_city)
-        
         rows = []
-        
-        if buy_data and sell_data:
-            # 3. CPU: Расчет
-            for item_name, variants in sell_data.items():
-                if item_name not in buy_data:
-                    continue
-                    
-                buy_variants = buy_data[item_name]
-                
-                for variant_key, sell_info in variants.items():
-                    if variant_key not in buy_variants:
+        try:
+            # 1. IO: Обновляем цены
+            self.storage.reload()
+            
+            # 2. Получаем данные
+            buy_data = self.storage.get_city_prices(self.buy_city)
+            sell_data = self.storage.get_city_prices(self.sell_city)
+            
+            if buy_data and sell_data:
+                # 3. CPU: Расчет
+                for item_name, variants in sell_data.items():
+                    if item_name not in buy_data:
                         continue
                         
-                    sell_price = sell_info['price']
-                    buy_info = buy_variants[variant_key]
-                    buy_price = buy_info['price']
+                    buy_variants = buy_data[item_name]
                     
-                    # Пропускаем вариации с нулевой ценой (невалидные данные)
-                    if sell_price <= 0 or buy_price <= 0: 
-                        continue
-                    
-                    # Taxes: 6.5% everywhere (as per USER feedback)
-                    tax_rate = 0.065
-                    revenue_after_tax = sell_price * (1 - tax_rate)
-                    
-                    profit = int(revenue_after_tax - buy_price)
-                    percent = (profit / buy_price) * 100 if buy_price > 0 else 0
-                    
-                    # Edge Case: OCR errors
-                    if percent > 1000:
-                        continue
-                    
-                    rows.append({
-                        "name": item_name,
-                        "variant": variant_key,
-                        "sell_price": sell_price,
-                        "buy_price": buy_price,
-                        "profit": profit,
-                        "percent": percent,
-                        "updated": sell_info['updated'].split('T')[1][:8]
-                    })
-            
-            # 4. CPU: Начальная сортировка
-            rows.sort(key=lambda x: x['profit'], reverse=True)
+                    for variant_key, sell_info in variants.items():
+                        if variant_key not in buy_variants:
+                            continue
+                            
+                        sell_price = sell_info.get('price', 0)
+                        buy_info = buy_variants[variant_key]
+                        buy_price = buy_info.get('price', 0)
+                        
+                        # Пропускаем вариации с нулевой ценой (невалидные данные)
+                        if sell_price <= 0 or buy_price <= 0: 
+                            continue
+                        
+                        # Taxes: 6.5% everywhere (as per USER feedback)
+                        tax_rate = 0.065
+                        revenue_after_tax = sell_price * (1 - tax_rate)
+                        
+                        profit = int(revenue_after_tax - buy_price)
+                        percent = (profit / buy_price) * 100 if buy_price > 0 else 0
+                        
+                        # Edge Case: OCR errors
+                        if percent > 1000:
+                            continue
+                        
+                        updated_raw = sell_info.get('updated', '')
+                        updated_str = updated_raw.split('T')[1][:8] if 'T' in updated_raw else updated_raw[:8]
+                        
+                        rows.append({
+                            "name": item_name,
+                            "variant": variant_key,
+                            "sell_price": sell_price,
+                            "buy_price": buy_price,
+                            "profit": profit,
+                            "percent": percent,
+                            "updated": updated_str
+                        })
+                
+                # 4. CPU: Начальная сортировка
+                rows.sort(key=lambda x: x['profit'], reverse=True)
+        except Exception:
+            rows = []
             
         self.data_ready.emit(rows)
         self.finished_loading.emit()
@@ -105,7 +114,7 @@ class ProfitsTab(QWidget):
         controls_layout = QHBoxLayout()
         
         lbl_buy = QLabel("🏙️ Купить в:")
-        lbl_buy.setStyleSheet("font-weight: bold; color: #8b949e;")
+        lbl_buy.setStyleSheet(PROFITS_STYLE["label"])
         controls_layout.addWidget(lbl_buy)
         
         self.buy_city_combo = QComboBox()
@@ -115,7 +124,7 @@ class ProfitsTab(QWidget):
         controls_layout.addWidget(self.buy_city_combo)
 
         lbl_sell = QLabel(" ➡️ Продать в:")
-        lbl_sell.setStyleSheet("font-weight: bold; color: #8b949e;")
+        lbl_sell.setStyleSheet(PROFITS_STYLE["label"])
         controls_layout.addWidget(lbl_sell)
         
         self.sell_city_combo = QComboBox()
@@ -125,41 +134,13 @@ class ProfitsTab(QWidget):
         controls_layout.addWidget(self.sell_city_combo)
         
         self.refresh_btn = QPushButton("🔄 Обновить")
-        self.refresh_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #21262d;
-                color: #c9d1d9;
-                border: 1px solid #30363d;
-                border-radius: 6px;
-                padding: 5px 15px;
-            }
-            QPushButton:hover {
-                background-color: #30363d;
-            }
-            QPushButton:disabled {
-                background-color: #161b22;
-                color: #484f58;
-            }
-        """)
+        self.refresh_btn.setStyleSheet(PROFITS_STYLE["refresh_btn"])
         self.refresh_btn.clicked.connect(self.refresh_data)
         controls_layout.addWidget(self.refresh_btn)
         
         self.clean_btn = QPushButton("🗑️ Очистить старые")
         self.clean_btn.setToolTip("Удалить записи предыдущих сканирований (оставить только текущие)")
-        self.clean_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #21262d;
-                color: #f85149;
-                border: 1px solid #30363d;
-                border-radius: 6px;
-                padding: 5px 15px;
-            }
-            QPushButton:hover {
-                background-color: #30363d;
-                background-color: #b31d28;
-                color: #ffffff;
-            }
-        """)
+        self.clean_btn.setStyleSheet(PROFITS_STYLE["clean_btn"])
         self.clean_btn.clicked.connect(self.request_clean_history)
         controls_layout.addWidget(self.clean_btn)
         
@@ -181,22 +162,7 @@ class ProfitsTab(QWidget):
         self.table.itemChanged.connect(self.on_item_changed)
         
         # Стилизация таблицы и редактора
-        self.table.setStyleSheet("""
-            QTableWidget {
-                background-color: #0d1117;
-                color: #c9d1d9;
-                gridline-color: #30363d;
-                selection-background-color: #1f6feb;
-                selection-color: #ffffff;
-            }
-            QTableWidget QLineEdit {
-                background-color: #161b22;
-                color: #ffffff;
-                border: 1px solid #1f6feb;
-                border-radius: 2px;
-                padding: 1px;
-            }
-        """)
+        self.table.setStyleSheet(PROFITS_STYLE["table"])
 
         # Начальная настройка заголовков (без ResizeToContents для скорости инициализации)
         header = self.table.horizontalHeader()
@@ -209,35 +175,16 @@ class ProfitsTab(QWidget):
         
     def _style_combo(self, combo):
         """Apply dark theme to combo boxes"""
-        combo.setStyleSheet("""
-            QComboBox {
-                background-color: #161b22;
-                color: #c9d1d9;
-                border: 1px solid #30363d;
-                border-radius: 6px;
-                padding: 5px;
-            }
-            QComboBox::drop-down { border: none; }
-            QComboBox::down-arrow {
-                image: none;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 5px solid #8b949e;
-                margin-right: 5px;
-            }
-            QComboBox QAbstractItemView {
-                background-color: #161b22;
-                color: #c9d1d9;
-                selection-background-color: #1f6feb;
-                border: 1px solid #30363d;
-            }
-        """)
+        combo.setStyleSheet(PROFITS_STYLE["combo"])
 
     def _load_cities(self):
         """Initial city loading and refresh"""
-        self.storage.reload()
-        all_cities = self.storage.get_cities()
-        all_cities.sort()
+        try:
+            self.storage.reload()
+            all_cities = self.storage.get_cities()
+            all_cities.sort()
+        except Exception:
+            all_cities = []
         
         # Запоминаем текущий выбор
         cur_buy = self.buy_city_combo.currentText()
@@ -248,6 +195,11 @@ class ProfitsTab(QWidget):
         
         self.buy_city_combo.clear()
         self.sell_city_combo.clear()
+        
+        if not all_cities:
+            self.buy_city_combo.blockSignals(False)
+            self.sell_city_combo.blockSignals(False)
+            return
         
         self.buy_city_combo.addItems(all_cities)
         self.sell_city_combo.addItems(all_cities)
@@ -271,7 +223,7 @@ class ProfitsTab(QWidget):
         self.buy_city_combo.blockSignals(False)
         self.sell_city_combo.blockSignals(False)
         
-        if all_cities and not cur_buy: # Только при первом запуске
+        if not cur_buy: # Только при первом запуске
             self.refresh_data()
         
     def refresh_data(self):
@@ -475,4 +427,4 @@ class ProfitsTab(QWidget):
                 self._is_updating = False
                 
         except Exception as e:
-            print(f"Edit error: {e}")
+            logger.error(f"Edit error: {e}")

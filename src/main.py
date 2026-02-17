@@ -26,12 +26,8 @@ except Exception as e:
 
 def run_app():
     """Запуск приложения"""
-    sys.stderr.write("DEBUG: run_app started. Creating QApplication...\n")
-    sys.stderr.flush()
     try:
         app = QApplication(sys.argv)
-        sys.stderr.write("DEBUG: QApplication created.\n")
-        sys.stderr.flush()
     except Exception as e:
         sys.stderr.write(f"CRASH: QApplication init failed: {e}\n")
         sys.stderr.flush()
@@ -40,21 +36,15 @@ def run_app():
     font = QFont("Segoe UI", 10)
     app.setFont(font)
     
-    sys.stderr.write("DEBUG: Initializing LauncherWindow...\n")
-    sys.stderr.flush()
     try:
         # Запускаем Лаунчер
         # Он сам решит, показать себя или окно входа
         _ = LauncherWindow()
-        sys.stderr.write("DEBUG: LauncherWindow initialized.\n")
-        sys.stderr.flush()
     except Exception as e:
         sys.stderr.write(f"CRASH: LauncherWindow init failed: {e}\n")
         sys.stderr.flush()
         raise e
     
-    sys.stderr.write("DEBUG: Entering app.exec()...\n")
-    sys.stderr.flush()
     sys.exit(app.exec())
 
 if __name__ == "__main__":

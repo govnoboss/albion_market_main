@@ -9,6 +9,9 @@ from PyQt6.QtGui import QIcon, QFont
 
 from .styles import MAIN_STYLE, COLORS
 from .log_overlay import LogOverlay  # Импорт лог-оверлея
+from ..utils.logger import get_logger
+
+logger = get_logger()
 
 class BudgetSpinBox(QSpinBox):
     """Спинбокс, который прячет 0, чтобы показать Placeholder"""
@@ -51,6 +54,28 @@ class BuyerWindow(QMainWindow):
         header_layout = QHBoxLayout()
         header_layout.setSpacing(10)
         
+        # Кнопка 'Меню' (всегда видна)
+        if self.launcher:
+            menu_btn = QPushButton("Меню")
+            menu_btn.setFixedSize(110, 36)
+            menu_btn.setStyleSheet("""
+                QPushButton { 
+                    background: #21262d; 
+                    color: #c9d1d9; 
+                    border: 1px solid #8b949e; 
+                    border-radius: 6px; 
+                    font-size: 14px; 
+                    font-weight: bold;
+                }
+                QPushButton:hover { 
+                    background: #30363d; 
+                    color: #ffffff; 
+                    border-color: #f0f6fc;
+                }
+            """)
+            menu_btn.clicked.connect(self._on_back_clicked)
+            header_layout.addWidget(menu_btn)
+        
         title = QLabel("🛒 GBot Закупщик")
         title.setStyleSheet("font-size: 18px; color: #3fb950; font-weight: bold;")
         header_layout.addWidget(title)
@@ -60,17 +85,6 @@ class BuyerWindow(QMainWindow):
         header_layout.addWidget(hotkeys_info)
         
         header_layout.addStretch()
-        
-        # Кнопка 'Меню' (всегда видна)
-        if self.launcher:
-            menu_btn = QPushButton("Меню")
-            menu_btn.setFixedSize(80, 30)
-            menu_btn.setStyleSheet("""
-                QPushButton { background: #21262d; color: #8b949e; border: 1px solid #30363d; border-radius: 4px; }
-                QPushButton:hover { background: #30363d; color: #f0f6fc; }
-            """)
-            menu_btn.clicked.connect(self._on_back_clicked)
-            header_layout.addWidget(menu_btn)
         
         # Кнопка 'Мини режим'
         self.mini_mode_btn = QPushButton("↘ Mini Mode")
@@ -188,12 +202,40 @@ class BuyerWindow(QMainWindow):
         city_group.setSpacing(10)
         
         buy_lbl = QLabel("Закупаем из:")
+        buy_lbl.setStyleSheet("color: #c9d1d9; font-weight: bold;")
         self.buy_city_combo = QComboBox()
         self.buy_city_combo.setFixedWidth(130)
         
         sell_lbl = QLabel("Продаем в:")
+        sell_lbl.setStyleSheet("color: #c9d1d9; font-weight: bold;")
         self.sell_city_combo = QComboBox()
         self.sell_city_combo.setFixedWidth(130)
+        
+        # Тёмная тема для комбобоксов городов
+        city_combo_style = """
+            QComboBox {
+                background: #0d1117;
+                color: #c9d1d9;
+                border: 1px solid #30363d;
+                padding: 5px;
+                border-radius: 4px;
+            }
+            QComboBox::drop-down { border: none; }
+            QComboBox::down-arrow {
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 5px solid #8b949e;
+                margin-right: 5px;
+            }
+            QComboBox QAbstractItemView {
+                background: #161b22;
+                color: #c9d1d9;
+                selection-background-color: #1f6feb;
+                border: 1px solid #30363d;
+            }
+        """
+        self.buy_city_combo.setStyleSheet(city_combo_style)
+        self.sell_city_combo.setStyleSheet(city_combo_style)
         
         city_group.addWidget(buy_lbl)
         city_group.addWidget(self.buy_city_combo)
@@ -284,7 +326,7 @@ class BuyerWindow(QMainWindow):
                 keyboard.add_hotkey("F6", self.hotkey_pause_sig.emit)
                 self._hotkeys_registered = True
             except Exception as e:
-                print(f"Ошибка регистрации хоткеев Buyer: {e}")
+                logger.error(f"Ошибка регистраци хоткеев Buyer: {e}")
 
         # Автоматическое обновление данных при открытии
         self._load_cities()
@@ -557,4 +599,9 @@ class BuyerWindow(QMainWindow):
             
         self.overlay.close()
         self.log_overlay.close()
+        
+        from PyQt6.QtWidgets import QApplication
+        from ..utils.logger import get_logger
+        get_logger().info("Закрытие программы через закупщик")
+        QApplication.quit()
         event.accept()

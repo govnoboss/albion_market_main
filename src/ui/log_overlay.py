@@ -4,10 +4,19 @@ Semi-transparent, draggable, and resizable log overlay.
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-    QPushButton, QFrame, QTextEdit, QSizeGrip
+    QPushButton, QFrame, QTextEdit
 )
-from PyQt6.QtCore import Qt, QPoint, QSize
-from PyQt6.QtGui import QColor, QFont
+from PyQt6.QtCore import Qt, QPoint, QSize, QRect
+from PyQt6.QtGui import QColor, QFont, QCursor
+from .styles import LOG_OVERLAY_STYLE
+
+# Resize edge flags
+_EDGE_NONE = 0
+_EDGE_LEFT = 1
+_EDGE_RIGHT = 2
+_EDGE_TOP = 4
+_EDGE_BOTTOM = 8
+_EDGE_MARGIN = 8  # px threshold for edge detection
 
 class LogOverlay(QWidget):
     """
@@ -15,9 +24,12 @@ class LogOverlay(QWidget):
     Features:
     - Semi-transparent background
     - Draggable
-    - Resizable
+    - Resizable from any edge/corner
     - Always on top
     """
+    
+    MIN_WIDTH = 200
+    MIN_HEIGHT = 100
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -27,6 +39,13 @@ class LogOverlay(QWidget):
         # State for dragging
         self._is_dragging = False
         self._drag_pos = QPoint()
+        
+        # State for resizing
+        self._resize_edge = _EDGE_NONE
+        self._resize_start_pos = QPoint()
+        self._resize_start_geo = QRect()
+        
+        self.setMouseTracking(True)
 
     def _setup_window(self):
         """Window configuration"""
@@ -48,13 +67,7 @@ class LogOverlay(QWidget):
         
         # Main Frame (with semi-transparent background)
         self.frame = QFrame()
-        self.frame.setStyleSheet("""
-            QFrame {
-                background-color: rgba(13, 17, 23, 180); 
-                border: 1px solid #30363d;
-                border-radius: 8px;
-            }
-        """)
+        self.frame.setStyleSheet(LOG_OVERLAY_STYLE["frame"])
         layout.addWidget(self.frame)
         
         # Frame Layout
@@ -67,13 +80,7 @@ class LogOverlay(QWidget):
         header_layout.setContentsMargins(5, 0, 5, 0)
         
         self.title_label = QLabel("📋 Logs")
-        self.title_label.setStyleSheet("""
-            color: #8b949e; 
-            font-weight: bold; 
-            font-size: 12px;
-            background: transparent;
-            border: none;
-        """)
+        self.title_label.setStyleSheet(LOG_OVERLAY_STYLE["title"])
         header_layout.addWidget(self.title_label)
         
         header_layout.addStretch()
@@ -83,16 +90,7 @@ class LogOverlay(QWidget):
         self.close_btn.setFixedSize(20, 20)
         self.close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.close_btn.setToolTip("Hide Overlay")
-        self.close_btn.setStyleSheet("""
-            QPushButton {
-                background: transparent;
-                color: #8b949e;
-                border: none;
-                font-size: 16px;
-                font-weight: bold;
-            }
-            QPushButton:hover { color: #f0f6fc; }
-        """)
+        self.close_btn.setStyleSheet(LOG_OVERLAY_STYLE["close_btn"])
         self.close_btn.clicked.connect(self.hide)
         header_layout.addWidget(self.close_btn)
         
@@ -101,35 +99,9 @@ class LogOverlay(QWidget):
         # --- Log Viewer ---
         self.log_viewer = QTextEdit()
         self.log_viewer.setReadOnly(True)
-        self.log_viewer.setStyleSheet("""
-            QTextEdit {
-                background-color: transparent;
-                border: none;
-                color: #f0f6fc;
-                font-family: 'Consolas', 'Courier New', monospace;
-                font-size: 11px;
-            }
-        """)
+        self.log_viewer.setStyleSheet(LOG_OVERLAY_STYLE["viewer"])
         self.log_viewer.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         frame_layout.addWidget(self.log_viewer)
-        
-        # --- Footer (Resize Grip) ---
-        footer_layout = QHBoxLayout()
-        footer_layout.setContentsMargins(0, 0, 0, 0)
-        footer_layout.addStretch()
-        
-        # Size Grip
-        self.size_grip = QSizeGrip(self.frame)
-        self.size_grip.setStyleSheet("""
-            QSizeGrip {
-                background: transparent;
-                width: 15px;
-                height: 15px;
-            }
-        """)
-        footer_layout.addWidget(self.size_grip, 0, Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignRight)
-        
-        frame_layout.addLayout(footer_layout)
 
     def add_log(self, message: str, level: str = "info"):
         """Add a log message"""
@@ -140,9 +112,6 @@ class LogOverlay(QWidget):
         elif level == "debug": color = "#8b949e"
         elif level == "success": color = "#3fb950"
 
-        # Strip existing HTML tags if needed, or wrap in span
-        # Note: Logger often sends raw text or simple HTML
-        
         html = f'<span style="color: {color};">{message}</span>'
         self.log_viewer.append(html)
         
@@ -153,22 +122,98 @@ class LogOverlay(QWidget):
     def clear_logs(self):
         self.log_viewer.clear()
 
-    # --- Dragging Logic ---
+    # --- Edge detection ---
+    def _detect_edge(self, pos) -> int:
+        """Detect which edge(s) the mouse is near"""
+        edge = _EDGE_NONE
+        rect = self.rect()
+        
+        if pos.x() <= _EDGE_MARGIN:
+            edge |= _EDGE_LEFT
+        elif pos.x() >= rect.width() - _EDGE_MARGIN:
+            edge |= _EDGE_RIGHT
+            
+        if pos.y() <= _EDGE_MARGIN:
+            edge |= _EDGE_TOP
+        elif pos.y() >= rect.height() - _EDGE_MARGIN:
+            edge |= _EDGE_BOTTOM
+            
+        return edge
+    
+    def _update_cursor(self, edge):
+        """Set cursor shape based on detected edge"""
+        if edge == _EDGE_LEFT or edge == _EDGE_RIGHT:
+            self.setCursor(Qt.CursorShape.SizeHorCursor)
+        elif edge == _EDGE_TOP or edge == _EDGE_BOTTOM:
+            self.setCursor(Qt.CursorShape.SizeVerCursor)
+        elif edge == (_EDGE_TOP | _EDGE_LEFT) or edge == (_EDGE_BOTTOM | _EDGE_RIGHT):
+            self.setCursor(Qt.CursorShape.SizeFDiagCursor)
+        elif edge == (_EDGE_TOP | _EDGE_RIGHT) or edge == (_EDGE_BOTTOM | _EDGE_LEFT):
+            self.setCursor(Qt.CursorShape.SizeBDiagCursor)
+        else:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+
+    # --- Mouse events ---
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            # Check if click is in the top header area (approx height 30)
-            if event.position().y() < 30:
+            pos = event.position().toPoint()
+            edge = self._detect_edge(pos)
+            
+            if edge != _EDGE_NONE:
+                # Start resizing
+                self._resize_edge = edge
+                self._resize_start_pos = event.globalPosition().toPoint()
+                self._resize_start_geo = self.geometry()
+                event.accept()
+            elif pos.y() < 30:
+                # Drag from header
                 self._is_dragging = True
                 self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
                 event.accept()
 
     def mouseMoveEvent(self, event):
-        if self._is_dragging:
+        if self._resize_edge != _EDGE_NONE:
+            # Resizing
+            delta = event.globalPosition().toPoint() - self._resize_start_pos
+            geo = QRect(self._resize_start_geo)
+            
+            if self._resize_edge & _EDGE_LEFT:
+                new_left = geo.left() + delta.x()
+                new_width = geo.width() - delta.x()
+                if new_width >= self.MIN_WIDTH:
+                    geo.setLeft(new_left)
+                    
+            if self._resize_edge & _EDGE_RIGHT:
+                new_width = geo.width() + delta.x()
+                if new_width >= self.MIN_WIDTH:
+                    geo.setWidth(new_width)
+                    
+            if self._resize_edge & _EDGE_TOP:
+                new_top = geo.top() + delta.y()
+                new_height = geo.height() - delta.y()
+                if new_height >= self.MIN_HEIGHT:
+                    geo.setTop(new_top)
+                    
+            if self._resize_edge & _EDGE_BOTTOM:
+                new_height = geo.height() + delta.y()
+                if new_height >= self.MIN_HEIGHT:
+                    geo.setHeight(new_height)
+            
+            self.setGeometry(geo)
+            event.accept()
+            
+        elif self._is_dragging:
             self.move(event.globalPosition().toPoint() - self._drag_pos)
             event.accept()
+        else:
+            # Update cursor shape on hover
+            edge = self._detect_edge(event.position().toPoint())
+            self._update_cursor(edge)
 
     def mouseReleaseEvent(self, event):
         self._is_dragging = False
+        self._resize_edge = _EDGE_NONE
+
     # --- Persistence ---
     def save_settings(self):
         """Save window geometry"""
@@ -191,3 +236,4 @@ class LogOverlay(QWidget):
     def hideEvent(self, event):
         self.save_settings()
         super().hideEvent(event)
+

@@ -25,7 +25,7 @@ echo ╚════════════════════════
 echo.
 
 :: --- Проверки ---
-echo [1/4] Проверка окружения...
+echo [1/5] Проверка окружения...
 
 where python >nul 2>&1
 if errorlevel 1 (
@@ -48,15 +48,27 @@ if not exist "%ENTRY_POINT%" (
 echo ✅ Окружение готово
 echo.
 
+:: --- Тесты ---
+echo [2/5] Запуск Unit-тестов...
+python -m pytest tests/test_core_systems.py
+if errorlevel 1 (
+    echo.
+    echo ❌ ТЕСТЫ НЕ ПРОШЛИ! Сборка отменена.
+    echo    Исправьте ошибки и попробуйте снова.
+    exit /b 1
+)
+echo ✅ Тесты пройдены!
+echo.
+
 :: --- Очистка предыдущей сборки ---
-echo [2/4] Очистка предыдущей сборки...
+echo [3/5] Очистка предыдущей сборки...
 if exist "%OUTPUT_DIR%\%APP_NAME%.dist" rmdir /s /q "%OUTPUT_DIR%\%APP_NAME%.dist"
 if exist "%OUTPUT_DIR%\%APP_NAME%.build" rmdir /s /q "%OUTPUT_DIR%\%APP_NAME%.build"
 echo ✅ Очищено
 echo.
 
 :: --- Компиляция ---
-echo [3/4] Компиляция через Nuitka (это займёт 5-15 минут)...
+echo [4/5] Компиляция через Nuitka (это займёт 5-15 минут)...
 echo.
 
 python -m nuitka ^

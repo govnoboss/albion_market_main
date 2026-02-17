@@ -48,15 +48,30 @@ class PriceStorage:
             self._data = {}
     
     def _save(self):
-        """Сохранение данных в файл"""
+        """Сохранение данных в файл (атомарная запись)"""
+        import tempfile
         try:
             # Создаем папку data если нет
             os.makedirs(os.path.dirname(PRICES_FILE), exist_ok=True)
             
-            with open(PRICES_FILE, 'w', encoding='utf-8') as f:
-                json.dump(self._data, f, ensure_ascii=False, indent=2)
+            # Атомарная запись: сначала во временный файл, потом os.replace
+            dir_name = os.path.dirname(PRICES_FILE)
+            with tempfile.NamedTemporaryFile(
+                mode='w', encoding='utf-8', suffix='.tmp',
+                dir=dir_name, delete=False
+            ) as tmp:
+                json.dump(self._data, tmp, ensure_ascii=False, indent=2)
+                tmp_path = tmp.name
+            
+            os.replace(tmp_path, str(PRICES_FILE))
         except Exception as e:
             self.logger.error(f"Ошибка сохранения цен: {e}")
+            # Cleanup temp file on error
+            try:
+                if 'tmp_path' in locals():
+                    os.remove(tmp_path)
+            except OSError:
+                pass
     
     def save_price(self, city: str, item_name: str, tier: int, enchant: int, quality: int, price: int):
         """

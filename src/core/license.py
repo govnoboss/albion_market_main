@@ -13,6 +13,10 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import serialization
 
+from ..utils.logger import get_logger
+
+logger = get_logger()
+
 # Production server URL
 SERVER_URL = "https://gbot-license.fly.dev/api/v1"
 
@@ -46,7 +50,7 @@ class LicenseManager:
         try:
             self.public_key = serialization.load_pem_public_key(PUBLIC_KEY_PEM)
         except Exception as e:
-            print(f"CRITICAL: Failed to load public key: {e}")
+            logger.critical(f"CRITICAL: Failed to load public key: {e}")
             self.public_key = None
 
     def get_hwid(self) -> str:
@@ -153,7 +157,7 @@ class LicenseManager:
             return network_time.replace(tzinfo=timezone.utc)
         except Exception as e:
             # Fallback to local time (UTC)
-            print(f"Time Check Failed")
+            logger.warning(f"Time Check Failed")
             return datetime.now(timezone.utc)
 
     def verify_signature(self, response_json: dict) -> bool:
@@ -195,13 +199,13 @@ class LicenseManager:
             # Allow 10 minutes drift
             delta = abs((network_time - server_time).total_seconds())
             if delta > 600:
-                print(f"Security: Time skew too large! Server: {server_time}, Network: {network_time}")
+                logger.error(f"Security: Time skew too large! Server: {server_time}, Network: {network_time}")
                 return False
                 
             return True
             
         except Exception as e:
-            print(f"Security: Signature verification failed! {e}")
+            logger.error(f"Security: Signature verification failed! {e}")
             return False
 
     def _save_last_known_time(self):
@@ -233,7 +237,7 @@ class LicenseManager:
         last_known = self._load_last_known_time()
         if last_known:
             if now < last_known - timedelta(minutes=5):
-                print(f"Time Rollback Detected! (Now: {now}, Last: {last_known})")
+                logger.critical(f"Time Rollback Detected! (Now: {now}, Last: {last_known})")
                 return True 
         
         # 2. Standard 24h Check

@@ -13,6 +13,9 @@ LINK_TELEGRAM = "https://t.me/nobrainchel"
 LINK_DISCORD = "https://discordapp.com/users/dendidima228" 
 
 from .styles import MAIN_STYLE, COLORS
+from ..utils.logger import get_logger
+
+logger = get_logger()
 from .splash_screen import SplashScreen
 from ..core.license import license_manager
 from ..core.version import CURRENT_VERSION
@@ -51,6 +54,22 @@ class LauncherWindow(QMainWindow):
         self._setup_daily_license_check()
         self.splash.close()
         self.show()
+        self._force_foreground()
+
+    def _force_foreground(self):
+        """Принудительно вывести окно на передний план (Windows workaround)"""
+        # Windows блокирует фоновым приложениям захват фокуса.
+        # Временно ставим WindowStaysOnTopHint, потом убираем.
+        flags = self.windowFlags()
+        self.setWindowFlags(flags | Qt.WindowType.WindowStaysOnTopHint)
+        self.show()
+        
+        def _remove_top_hint():
+            self.setWindowFlags(flags)
+            self.show()
+            self.activateWindow()
+        
+        QTimer.singleShot(500, _remove_top_hint)
 
     def _check_license_silent(self):
         """Silently checks if we have a stored valid key"""
@@ -131,6 +150,7 @@ class LauncherWindow(QMainWindow):
         
         # SplashScreen is closed at the end of _preload_windows (called inside _init_launcher_ui)
         self.show()
+        self._force_foreground()
 
     def _init_launcher_ui(self):
         self.setWindowTitle("GBot Launcher")
@@ -380,7 +400,7 @@ class LauncherWindow(QMainWindow):
             self.license_lbl.setStyleSheet(f"color: {color}; font-size: 13px; font-weight: bold;")
             
         except Exception as e:
-            print(f"Error parsing date: {e}")
+            logger.error(f"Error parsing date: {e}")
             self.license_lbl.setText(f"Лицензия активна: {self.license_expires}")
             self.license_lbl.setStyleSheet("color: #3fb950; font-size: 12px;")
 
@@ -433,12 +453,9 @@ class LauncherWindow(QMainWindow):
         QApplication.processEvents()
         
         # Ленивые импорты (тяжёлые модули)
-        sys.stderr.write("DEBUG: Importing ScannerWindow...\n"); sys.stderr.flush()
         try:
             from .main_window import MainWindow as ScannerWindow
-            sys.stderr.write("DEBUG: ScannerWindow imported. Initializing...\n"); sys.stderr.flush()
             self.scanner_window = ScannerWindow(launcher=self)
-            sys.stderr.write("DEBUG: ScannerWindow initialized.\n"); sys.stderr.flush()
         except Exception as e:
             sys.stderr.write(f"ERROR initializing ScannerWindow: {e}\n"); sys.stderr.flush()
             import traceback
@@ -449,10 +466,8 @@ class LauncherWindow(QMainWindow):
         self.splash.set_progress(60)
         QApplication.processEvents()
             
-        sys.stderr.write("DEBUG: Importing BuyerWindow...\n"); sys.stderr.flush()
         from .buyer_window import BuyerWindow
         self.buyer_window = BuyerWindow(launcher=self)
-        sys.stderr.write("DEBUG: BuyerWindow initialized.\n"); sys.stderr.flush()
         
         self.splash.set_status("Загрузка Настроек...")
         self.splash.set_progress(75)

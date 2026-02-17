@@ -5,6 +5,7 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QProgressBar
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
+from .styles import SPLASH_STYLE
 
 
 class SplashScreen(QWidget):
@@ -23,7 +24,7 @@ class SplashScreen(QWidget):
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
         self.setFixedSize(300, 150)
-        self.setStyleSheet("background-color: #0d1117;")
+        self.setStyleSheet(SPLASH_STYLE["window"])
         
         # Центрируем на экране
         from PyQt6.QtWidgets import QApplication
@@ -41,13 +42,13 @@ class SplashScreen(QWidget):
         # Заголовок
         title = QLabel("GBot")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setStyleSheet("font-size: 24px; font-weight: bold; color: #58a6ff;")
+        title.setStyleSheet(SPLASH_STYLE["title"])
         layout.addWidget(title)
         
         # Статус
         self.status_label = QLabel("Загрузка...")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.status_label.setStyleSheet("font-size: 12px; color: #8b949e;")
+        self.status_label.setStyleSheet(SPLASH_STYLE["status"])
         layout.addWidget(self.status_label)
         
         # Прогресс-бар
@@ -56,17 +57,7 @@ class SplashScreen(QWidget):
         self.progress.setValue(0)
         self.progress.setTextVisible(False)
         self.progress.setFixedHeight(4)
-        self.progress.setStyleSheet("""
-            QProgressBar {
-                background-color: #21262d;
-                border: none;
-                border-radius: 2px;
-            }
-            QProgressBar::chunk {
-                background-color: #58a6ff;
-                border-radius: 2px;
-            }
-        """)
+        self.progress.setStyleSheet(SPLASH_STYLE["progress"])
         layout.addWidget(self.progress)
         
         layout.addStretch()

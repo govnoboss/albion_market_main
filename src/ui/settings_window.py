@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt
 
-from .styles import MAIN_STYLE, COLORS
+from .styles import MAIN_STYLE, COLORS, SETTINGS_STYLE
 from .coordinates_tab import CoordinatesTab
 from .settings_panel import SettingsPanel
 
@@ -35,7 +35,7 @@ class SettingsWindow(QMainWindow):
         header.setSpacing(10)
 
         title = QLabel("⚙️ Настройки")
-        title.setStyleSheet("font-size: 18px; font-weight: bold; color: #f0f6fc;")
+        title.setStyleSheet(SETTINGS_STYLE["title"])
         header.addWidget(title)
         header.addStretch()
 
@@ -43,10 +43,7 @@ class SettingsWindow(QMainWindow):
             back_btn = QPushButton("← Меню")
             back_btn.setFixedSize(100, 32)
             back_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            back_btn.setStyleSheet("""
-                QPushButton { background: #21262d; color: #8b949e; border: 1px solid #30363d; border-radius: 6px; font-size: 13px; }
-                QPushButton:hover { background: #30363d; color: #f0f6fc; }
-            """)
+            back_btn.setStyleSheet(SETTINGS_STYLE["back_btn"])
             back_btn.clicked.connect(self._on_back)
             header.addWidget(back_btn)
 
@@ -54,25 +51,7 @@ class SettingsWindow(QMainWindow):
 
         # === Вкладки ===
         self.tabs = QTabWidget()
-        self.tabs.setStyleSheet("""
-            QTabWidget::pane { border: none; }
-            QTabBar::tab {
-                background: #161b22;
-                color: #8b949e;
-                padding: 10px 15px;
-                border: 1px solid #30363d;
-                border-bottom: none;
-                border-top-left-radius: 6px;
-                border-top-right-radius: 6px;
-                margin-right: 4px;
-            }
-            QTabBar::tab:selected {
-                background: #0d1117;
-                color: #f0f6fc;
-                border-bottom-color: #0d1117;
-            }
-            QTabBar::tab:hover { color: #f0f6fc; }
-        """)
+        self.tabs.setStyleSheet(SETTINGS_STYLE["tabs"])
 
         # Вкладка 1: Координаты
         self.coords_tab = CoordinatesTab()

@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer
 
 from ..utils.price_storage import get_price_storage
+from .styles import PRICES_STYLE
 
 
 class PricesTab(QWidget):
@@ -24,7 +25,7 @@ class PricesTab(QWidget):
         # Заголовок и кнопки
         top_layout = QHBoxLayout()
         header = QLabel("💰 Цены по городам")
-        header.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 5px;")
+        header.setStyleSheet(PRICES_STYLE["header"])
         top_layout.addWidget(header)
         
         top_layout.addStretch()
@@ -33,76 +34,26 @@ class PricesTab(QWidget):
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("🔍 Поиск предмета...")
         self.search_input.setFixedWidth(200)
-        self.search_input.setStyleSheet("""
-            QLineEdit {
-                background-color: #161b22;
-                color: #c9d1d9;
-                border: 1px solid #30363d;
-                border-radius: 6px;
-                padding: 5px;
-            }
-        """)
+        self.search_input.setStyleSheet(PRICES_STYLE["search"])
         self.search_input.textChanged.connect(self.filter_table)
         top_layout.addWidget(self.search_input)
         
         # Кнопка удаления
         self.delete_btn = QPushButton("🗑️ Удалить запись")
-        self.delete_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #21262d;
-                color: #c9d1d9;
-                border: 1px solid #30363d;
-                border-radius: 6px;
-                padding: 5px 15px;
-            }
-            QPushButton:hover {
-                background-color: #b33e3e; /* Red hover */
-                color: white;
-                border-color: #b33e3e;
-            }
-            QPushButton:disabled {
-                background-color: #161b22;
-                color: #484f58;
-                border-color: #30363d;
-            }
-        """)
+        self.delete_btn.setStyleSheet(PRICES_STYLE["btn_delete"])
         self.delete_btn.setEnabled(False)
-        self.delete_btn.clicked.connect(self.delete_selected_record)
         self.delete_btn.clicked.connect(self.delete_selected_record)
         top_layout.addWidget(self.delete_btn)
         
         # Кнопка очистки старых
         clean_old_btn = QPushButton("🧹 Очистить старые")
         clean_old_btn.setToolTip("Удалить цены, которым больше X часов")
-        clean_old_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #21262d;
-                color: #f85149;
-                border: 1px solid #30363d;
-                border-radius: 6px;
-                padding: 5px 15px;
-            }
-            QPushButton:hover {
-                background-color: #b31d28;
-                color: #ffffff;
-            }
-        """)
+        clean_old_btn.setStyleSheet(PRICES_STYLE["btn_danger"])
         clean_old_btn.clicked.connect(self.clean_old_records)
         top_layout.addWidget(clean_old_btn)
         
         refresh_btn = QPushButton("Обновить")
-        refresh_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #21262d;
-                color: #c9d1d9;
-                border: 1px solid #30363d;
-                border-radius: 6px;
-                padding: 5px 15px;
-            }
-            QPushButton:hover {
-                background-color: #30363d;
-            }
-        """)
+        refresh_btn.setStyleSheet(PRICES_STYLE["btn_normal"])
         refresh_btn.clicked.connect(self.refresh_data)
         top_layout.addWidget(refresh_btn)
         
@@ -277,33 +228,7 @@ class PricesTab(QWidget):
         dialog.setLabelText("Удалить цены старше (часов):")
         dialog.setIntValue(3)
         dialog.setIntRange(1, 168)
-        dialog.setStyleSheet("""
-            QInputDialog {
-                background-color: #0d1117;
-                color: #f0f6fc;
-            }
-            QLabel {
-                color: #f0f6fc;
-            }
-            QSpinBox {
-                background-color: #161b22;
-                color: #f0f6fc;
-                border: 1px solid #30363d;
-                border-radius: 4px;
-                padding: 5px;
-            }
-            QPushButton {
-                background-color: #21262d;
-                color: #f0f6fc;
-                border: 1px solid #30363d;
-                border-radius: 6px;
-                padding: 5px 15px;
-                min-width: 60px;
-            }
-            QPushButton:hover {
-                background-color: #30363d;
-            }
-        """)
+        dialog.setStyleSheet(PRICES_STYLE["dialog"])
         
         if dialog.exec():
             hours = dialog.intValue()
@@ -311,25 +236,7 @@ class PricesTab(QWidget):
             
             # Создаем кастомный QMessageBox с темной темой
             msg = QMessageBox(self)
-            msg.setStyleSheet("""
-                QMessageBox {
-                    background-color: #0d1117;
-                }
-                QLabel {
-                    color: #f0f6fc;
-                }
-                QPushButton {
-                    background-color: #21262d;
-                    color: #f0f6fc;
-                    border: 1px solid #30363d;
-                    border-radius: 6px;
-                    padding: 5px 15px;
-                    min-width: 60px;
-                }
-                QPushButton:hover {
-                    background-color: #30363d;
-                }
-            """)
+            msg.setStyleSheet(PRICES_STYLE["msgbox"])
             msg.setIcon(QMessageBox.Icon.Information)
             
             if count > 0:

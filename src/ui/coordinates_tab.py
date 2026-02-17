@@ -40,10 +40,9 @@ class CoordinatesTab(QWidget):
         layout.addWidget(header)
         
         instruction = QLabel(
-            "Для точечных координат: нажмите 'Задать', затем кликните в нужном месте.\n"
+            "Для точечных координат: нажмите 'Задать', наведите курсор и нажмите N.\n"
             "Для областей (OCR): нажмите 'Задать', затем выделите область с зажатой мышью."
         )
-        instruction.setStyleSheet("color: #888; margin-bottom: 2px;")
         instruction.setStyleSheet("color: #888; margin-bottom: 2px;")
         layout.addWidget(instruction)
 
@@ -247,30 +246,29 @@ class CoordinatesTab(QWidget):
             
         self._help_dialog = QDialog(self)
         self._help_dialog.setWindowTitle(f"📖 {name}")
-        # WindowStaysOnTopHint чтобы окно плавало поверх, но не блокировало
-        self._help_dialog.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)
-        self._help_dialog.setStyleSheet("""
-            QDialog {
-                background-color: #0d1117;
-            }
-            QLabel {
-                color: #f0f6fc;
-            }
-        """)
+        # Ресайзабельное окно поверх остальных
+        self._help_dialog.setWindowFlags(
+            Qt.WindowType.Window | 
+            Qt.WindowType.WindowStaysOnTopHint
+        )
+        from .styles import HELP_DIALOG_STYLE
+        self._help_dialog.setStyleSheet(HELP_DIALOG_STYLE)
         
         layout = QVBoxLayout(self._help_dialog)
-        layout.setContentsMargins(15, 15, 15, 15)
+        layout.setContentsMargins(5, 5, 5, 5)
         
-        # Показываем картинку
+        # Картинка масштабируется вместе с окном
         img_label = QLabel()
         pixmap = QPixmap(str(image_path))
-        # Масштабируем если слишком большая (увеличили лимит до 1200x900)
-        if pixmap.width() > 1200 or pixmap.height() > 900:
-            pixmap = pixmap.scaled(1200, 900, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
         img_label.setPixmap(pixmap)
+        img_label.setScaledContents(True)  # Картинка растягивается за лейблом
+        img_label.setMinimumSize(1, 1)     # Разрешаем сжимать меньше исходного размера
         layout.addWidget(img_label)
         
-        self._help_dialog.adjustSize()
+        # Начальный размер — подогнать под картинку, но не больше 1000x700
+        w = min(pixmap.width() + 10, 1000)
+        h = min(pixmap.height() + 30, 700)
+        self._help_dialog.resize(w, h)
         self._help_dialog.show()
 
     def _start_help_capture(self, key, name):
@@ -458,7 +456,7 @@ class CoordinatesTab(QWidget):
                 current_img.save(debug_curr_path)
                 diff.save(debug_diff_path)
             except Exception as e:
-                print(f"Debug save error: {e}")
+                get_logger().error(f"Debug save error: {e}")
 
             status = "👁️ Аватар на месте (UI Visible)" if is_match else "🕶️ Аватар скрыт (UI Hidden) или изменен"
             

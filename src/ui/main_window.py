@@ -208,6 +208,28 @@ class MainWindow(QMainWindow):
         header_layout = QHBoxLayout()
         header_layout.setSpacing(10)
         
+        # Кнопка 'Меню' (если запущен через лаунчер)
+        if self.launcher:
+            menu_btn = QPushButton("Меню")
+            menu_btn.setFixedSize(110, 36)
+            menu_btn.setStyleSheet("""
+                QPushButton { 
+                    background: #21262d; 
+                    color: #c9d1d9; 
+                    border: 1px solid #8b949e; 
+                    border-radius: 6px; 
+                    font-size: 14px; 
+                    font-weight: bold;
+                }
+                QPushButton:hover { 
+                    background: #30363d; 
+                    color: #ffffff; 
+                    border-color: #f0f6fc;
+                }
+            """)
+            menu_btn.clicked.connect(self._on_back_clicked) 
+            header_layout.addWidget(menu_btn)
+
         title = QLabel("GBot Market Scanner")
         title.setObjectName("title")
         header_layout.addWidget(title)
@@ -217,17 +239,6 @@ class MainWindow(QMainWindow):
         header_layout.addWidget(hotkeys_info)
         
         header_layout.addStretch()
-        
-        # Кнопка 'Меню' (если запущен через лаунчер)
-        if self.launcher:
-            menu_btn = QPushButton("Меню")
-            menu_btn.setFixedSize(100, 30)
-            menu_btn.setStyleSheet("""
-                QPushButton { background: #21262d; color: #8b949e; border: 1px solid #30363d; border-radius: 4px; padding: 5px 15px; font-size: 13px; }
-                QPushButton:hover { background: #30363d; color: #f0f6fc; }
-            """)
-            menu_btn.clicked.connect(self._on_back_clicked) 
-            header_layout.addWidget(menu_btn)
         
         # Кнопка 'Мини режим'
         self.mini_mode_btn = QPushButton("↘ Mini Mode")

@@ -1,5 +1,8 @@
 from PIL import Image, ImageChops, ImageStat
 import math
+from .logger import get_logger
+
+logger = get_logger()
 
 def find_image_on_screen(template_path: str, confidence: float = 0.8, region=None):
     """
@@ -22,7 +25,7 @@ def find_image_on_screen(template_path: str, confidence: float = 0.8, region=Non
              point = pyautogui.locateCenterOnScreen(template_path, region=region, grayscale=True)
              return point
         except Exception as e2:
-             print(f"Template match error: {repr(e2)} (Path: {template_path})")
+             logger.error(f"Template match error: {repr(e2)} (Path: {template_path})")
              return None
 
 def compare_images(img1: Image, img2: Image) -> float:

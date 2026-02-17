@@ -9,9 +9,9 @@ from PyQt6.QtWidgets import (
     QScrollArea
 )
 from ..utils.config import get_config
-from ..utils.config import get_config
 from ..utils.logger import get_logger
 from .calibration_overlay import CalibrationOverlay
+from .styles import PANEL_STYLE
 
 class SettingsPanel(QScrollArea):
     """Панель глобальных настроек"""
@@ -25,13 +25,7 @@ class SettingsPanel(QScrollArea):
         self.overlay = CalibrationOverlay()
         
         # Убираем рамки и ставим фон
-        self.setStyleSheet("""
-            QScrollArea { border: none; background-color: #0d1117; }
-            QWidget { background-color: #0d1117; color: #f0f6fc; }
-            QGroupBox { background-color: transparent; }
-            QLabel { background-color: transparent; }
-            QCheckBox { background-color: transparent; }
-        """)
+        self.setStyleSheet(PANEL_STYLE)
         
         self.content_widget = QWidget()
         self.content_widget.setObjectName("settingsContent") # Для CSS если нужно
@@ -257,8 +251,8 @@ class SettingsPanel(QScrollArea):
         x, y = anchor
         points = []
         
-        # Генерируем точки для 8 элементов (как пример)
-        for i in range(8):
+        # Генерируем точки для 9 элементов (8 тиров + пункт "Все")
+        for i in range(9):
             # Формула: anchor_y + offset + (index * row_height)
             py = y + offset + (i * row_height)
             points.append((x, py))
@@ -279,9 +273,7 @@ class SettingsPanel(QScrollArea):
         config.set_scan_filter("enchants", selected_enchants)
         config.set_scan_filter("qualities", selected_qualities)
 
-        # Mouse Settings loading logic (inserted here for context, ensure it goes into _load_settings)
-        # BUT wait, I need to edit _load_settings and add the handlers.
-        # I will do it as a separate edit or append to the file if it's new methods.
+
 
     def _on_mouse_speed_changed(self, value):
         get_config().set_mouse_setting("speed_pps", float(value))

@@ -5,11 +5,15 @@
 
 import json
 import os
+import threading
 from pathlib import Path
 from typing import Any, Optional
 
 
 from .paths import get_app_root
+from .logger import get_logger
+
+logger = get_logger()
 
 
 class ConfigManager:
@@ -21,20 +25,22 @@ class ConfigManager:
             config_path = get_app_root() / "config" / "coordinates.json"
         
         self.config_path = Path(config_path)
+        self._lock = threading.Lock()
         # Убеждаемся, что папка существует
         self.config_path.parent.mkdir(exist_ok=True)
         self._config = self._load_config()
     
     def _load_config(self) -> dict:
-        """Загрузка конфигурации из файла"""
-        if self.config_path.exists():
-            try:
-                with open(self.config_path, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except (json.JSONDecodeError, IOError) as e:
-                print(f"Ошибка загрузки конфигурации: {e}")
-                return self._default_config()
-        return self._default_config()
+        """Загрузка конфигурации из файла (thread-safe)"""
+        with self._lock:
+            if self.config_path.exists():
+                try:
+                    with open(self.config_path, "r", encoding="utf-8") as f:
+                        return json.load(f)
+                except (json.JSONDecodeError, IOError) as e:
+                    logger.error(f"Ошибка загрузки конфигурации: {e}")
+                    return self._default_config()
+            return self._default_config()
     
     def _default_config(self) -> dict:
         """Конфигурация по умолчанию"""
@@ -62,17 +68,18 @@ class ConfigManager:
         }
     
     def save(self) -> bool:
-        """Сохранение конфигурации в файл"""
-        try:
-            # Создаем директорию если не существует
-            self.config_path.parent.mkdir(parents=True, exist_ok=True)
-            
-            with open(self.config_path, "w", encoding="utf-8") as f:
-                json.dump(self._config, f, indent=4, ensure_ascii=False)
-            return True
-        except IOError as e:
-            print(f"Ошибка сохранения конфигурации: {e}")
-            return False
+        """Сохранение конфигурации в файл (thread-safe)"""
+        with self._lock:
+            try:
+                # Создаем директорию если не существует
+                self.config_path.parent.mkdir(parents=True, exist_ok=True)
+                
+                with open(self.config_path, "w", encoding="utf-8") as f:
+                    json.dump(self._config, f, indent=4, ensure_ascii=False)
+                return True
+            except IOError as e:
+                logger.error(f"Ошибка сохранения конфигурации: {e}")
+                return False
     
     # === Координаты ===
     
@@ -364,7 +371,7 @@ class ConfigManager:
                 json.dump(data, f, indent=4, ensure_ascii=False)
             return True
         except Exception as e:
-            print(f"Ошибка сохранения профиля: {e}")
+            logger.error(f"Ошибка сохранения профиля: {e}")
             return False
 
     def load_profile(self, name: str) -> bool:
@@ -385,7 +392,7 @@ class ConfigManager:
                 return True
             return False
         except Exception as e:
-            print(f"Ошибка загрузки профиля: {e}")
+            logger.error(f"Ошибка загрузки профиля: {e}")
             return False
 
     def delete_profile(self, name: str) -> bool:
@@ -399,7 +406,7 @@ class ConfigManager:
                 return True
             return False
         except Exception as e:
-            print(f"Ошибка удаления профиля: {e}")
+            logger.error(f"Ошибка удаления профиля: {e}")
             return False
 
 

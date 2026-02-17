@@ -4,7 +4,8 @@
 """
 
 from typing import Optional
-from PyQt6.QtCore import QObject, pyqtSignal, Qt
+from PyQt6.QtCore import pyqtSignal, QObject, Qt
+from ..utils.logger import get_logger
 from pynput import mouse, keyboard
 
 
@@ -44,7 +45,8 @@ class CoordinateCapture(QObject):
     def start_capture(self, key: str, display_name: str, mode: str = 'point') -> None:
         """Начать захват (point - клик, area - выделение области)"""
         if self._is_capturing:
-            return
+            # Отменяем предыдущий незавершенный захват
+            self._cleanup()
         
         self._is_capturing = True
         self._current_key = key
@@ -58,22 +60,28 @@ class CoordinateCapture(QObject):
         
         if mode == 'area':
             # Запуск визуального оверлея
-            # Импорт здесь, чтобы избежать циклических зависимостей, если они возникнут
-            # Но лучше вынести в начало, если не циклится. Пробуем локально для надежности.
-            from ..ui.overlay import AreaSelectionOverlay
-            
-            self._overlay = AreaSelectionOverlay()
-            self._overlay.area_selected.connect(self._handle_overlay_success)
-            self._overlay.cancelled.connect(self._handle_overlay_cancelled)
-            self._overlay.show()
+            try:
+                from ..ui.overlay import AreaSelectionOverlay
+                
+                self._overlay = AreaSelectionOverlay()
+                self._overlay.area_selected.connect(self._handle_overlay_success)
+                self._overlay.cancelled.connect(self._handle_overlay_cancelled)
+                self._overlay.show()
+            except Exception as e:
+                get_logger().error(f"[CoordinateCapture] Ошибка запуска оверлея: {e}")
+                self._cleanup()
             
         else:
             # Запуск слушателей pynput (для точки)
-            self._mouse_listener = mouse.Listener(on_click=self._on_click)
-            self._mouse_listener.start()
-            
-            self._keyboard_listener = keyboard.Listener(on_press=self._on_key_press)
-            self._keyboard_listener.start()
+            try:
+                self._mouse_listener = mouse.Listener(on_click=self._on_click)
+                self._mouse_listener.start()
+                
+                self._keyboard_listener = keyboard.Listener(on_press=self._on_key_press)
+                self._keyboard_listener.start()
+            except Exception as e:
+                get_logger().error(f"[CoordinateCapture] Ошибка запуска слушателей: {e}")
+                self._cleanup()
             
     def _handle_overlay_success(self, x, y, w, h):
         """Успешный выбор области через оверлей"""
@@ -95,15 +103,24 @@ class CoordinateCapture(QObject):
             if key == keyboard.Key.esc:
                 current_key = self._current_key
                 if current_key:
-                    # Эмитим сигнал для главного потока
                     self._internal_cancelled.emit(current_key)
                 return False  # Останавливаем listener
-        except:
-            pass
+            
+            # Клавиша N — подтвердить координату в текущей позиции курсора
+            if hasattr(key, 'char') and key.char and key.char.lower() == 'n':
+                current_key = self._current_key
+                if current_key and self._capture_mode == 'point':
+                    # Получаем текущую позицию курсора
+                    from pynput.mouse import Controller as MouseController
+                    pos = MouseController().position
+                    self._internal_captured.emit(current_key, int(pos[0]), int(pos[1]))
+                    return False
+        except Exception as e:
+            get_logger().error(f"[CoordinateCapture] _on_key_press error: {e}")
         return True
     
     def _on_click(self, x, y, button, pressed) -> bool:
-        """Обработчик клика мыши (вызывается из потока pynput)"""
+        """Обработчик клика мыши (для режима area — drag & drop)"""
         if button != mouse.Button.left:
             return True
 
@@ -112,10 +129,8 @@ class CoordinateCapture(QObject):
             return False
 
         if self._capture_mode == 'point':
-            # Режим точки: реагируем на нажатие (или отпускание, как удобнее, обычно нажатие быстрее)
-            if pressed:
-                self._internal_captured.emit(current_key, int(x), int(y))
-                return False
+            # В режиме точки клик ИГНОРИРУЕТСЯ (подтверждение через N)
+            return True
                 
         elif self._capture_mode == 'area':
             # Режим области: Drag & Drop
@@ -194,17 +209,6 @@ class CoordinateCapture(QObject):
                 pass
             self._keyboard_listener = None
 
-
-# Глобальный экземпляр
-_capture_manager: Optional[CoordinateCapture] = None
-
-
-def get_capture_manager() -> CoordinateCapture:
-    """Получить глобальный экземпляр CoordinateCapture"""
-    global _capture_manager
-    if _capture_manager is None:
-        _capture_manager = CoordinateCapture()
-    return _capture_manager
 
 # Глобальный экземпляр
 _capture_manager: Optional[CoordinateCapture] = None
