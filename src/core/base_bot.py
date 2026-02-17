@@ -8,6 +8,8 @@ from ..utils.config import get_config
 
 from ..utils.logger import get_logger
 from ..utils.human_mouse import move_mouse_human
+from .interaction import DropdownSelector
+from .market_opener import MarketOpener
 
 class BaseBot(QThread):
     """
@@ -16,7 +18,7 @@ class BaseBot(QThread):
     - Управление потоком (Start/Stop/Pause)
     - Эмуляция ввода (Мышь/Клавиатура)
     - Логирование и статистика
-    - Базовые проверки (Рынок открыт, Город)
+    - Базовые проверки (Рынок открыт, Город, Вылеты)
     """
     
     # Общие сигналы
@@ -28,6 +30,7 @@ class BaseBot(QThread):
         self._is_running = False
         self._is_paused = False
         self._stop_requested = False
+        self._recovery_performed_during_item = False # Flag for retrying items
         self.config = get_config()
         self.logger = get_logger()
         self._action_timings = {}
@@ -133,7 +136,7 @@ class BaseBot(QThread):
         self._action_timings[action_name]["total_ms"] += duration_ms
         self._action_timings[action_name]["count"] += 1
 
-    def _check_market_is_open(self) -> bool:
+    def _check_market_is_open(self, handle_kicks: bool = True) -> bool:
         """Проверка, что окно рынка открыто (OCR Name)"""
         start_time = time.time()
         area = self.config.get_coordinate_area("market_name_area")
@@ -148,9 +151,146 @@ class BaseBot(QThread):
                  self.logger.debug(f"Market Validation PASS: {msg}")
             return True
         else:
-            # Change to debug to avoid spam when Item Menu is open (which is valid state)
             self.logger.debug(f"Market Validation FAIL: {msg}")
+            
+            if handle_kicks:
+                # --- НОВОЕ: Проверка на кик в меню ---
+                self._detect_and_handle_kicks()
+            
             return False
+
+    def _detect_and_handle_kicks(self) -> bool:
+        """
+        Цикличный процесс восстановления (бесконечный, пока не зайдем или не стоп).
+        Возвращает True, если была попытка восстановления.
+        """
+        from .state_detector import StateDetector
+        
+        recovery_performed = False
+        self._recovery_performed_during_item = False # Reset before check
+        
+        # Сначала быстрая проверка — есть ли вообще проблемы?
+        is_kicked, _ = StateDetector.is_disconnected()
+        is_reconnect, _ = StateDetector.is_reconnect_screen()
+        is_menu, _ = StateDetector.is_main_menu()
+        
+        if not (is_kicked or is_reconnect or is_menu):
+            return False
+
+        self.logger.info("🔄 Обнаружены окна вылета. Запуск цикла восстановления...")
+        
+        last_action_time = time.time()
+        max_wait_after_action = 60.0 # Общий лимит на весь процесс
+        
+        # Бесконечный цикл пока не выйдем в мир или не нажмем СТОП
+        while not self._stop_requested:
+            # Свежая проверка состояний
+            is_kicked, _ = StateDetector.is_disconnected()
+            is_reconnect, _ = StateDetector.is_reconnect_screen()
+            is_menu, menu_msg = StateDetector.is_main_menu()
+            
+            # Если ни одного окна нет
+            if not (is_kicked or is_reconnect or is_menu):
+                # Если мы только что что-то нажали — подождем немного (загрузка)
+                if recovery_performed and (time.time() - last_action_time < 15.0):
+                    time.sleep(1.0)
+                    continue
+                else:
+                    if recovery_performed:
+                        self.logger.success("✅ Окна вылета исчезли. Бот в игре (или загрузился).")
+                    break
+
+            # --- ШАГ 1: ОК на ошибке ---
+            if is_kicked:
+                self.logger.error("🛑 ОБНАРУЖЕН ВЫЛЕТ (Окно с OK)")
+                ok_point = StateDetector.find_ok_button_coords()
+                if ok_point:
+                    self.logger.info(f"👉 Нажимаю 'OK': {ok_point}")
+                    self._human_move_to(ok_point[0], ok_point[1])
+                    self._human_click()
+                    recovery_performed = True
+                    last_action_time = time.time()
+                else:
+                    self.logger.warning("⚠️ Не найдена кнопка 'OK' на экране вылета.")
+                time.sleep(1.0)
+                continue
+            
+            # --- ШАГ 2: Переподключение ---
+            if is_reconnect:
+                self.logger.error("🛑 ОБНАРУЖЕН ЭКРАН ПЕРЕПОДКЛЮЧЕНИЯ")
+                rec_point = StateDetector.find_reconnect_button_coords()
+                if rec_point:
+                    self.logger.info(f"👉 Нажимаю 'ПЕРЕПОДКЛЮЧЕНИЕ': {rec_point}")
+                    self._human_move_to(rec_point[0], rec_point[1])
+                    self._human_click()
+                    recovery_performed = True
+                    last_action_time = time.time()
+                else:
+                    self.logger.warning("⚠️ Не найдена кнопка 'ПЕРЕПОДКЛЮЧЕНИЕ' на экране.")
+                time.sleep(1.0)
+                continue
+            
+            # --- ШАГ 3: Главное меню (Вход) ---
+            if is_menu:
+                self.logger.error(f"🛑 ОБНАРУЖЕНО ГЛАВНОЕ МЕНЮ ({menu_msg})")
+                login_point = StateDetector.get_login_button()
+                if login_point:
+                    self.logger.info(f"👉 Нажимаю 'ВОЙТИ': {login_point}")
+                    self._human_move_to(login_point[0], login_point[1])
+                    self._human_click()
+                    recovery_performed = True
+                    last_action_time = time.time()
+                    # После "Войти" часто идет долгая загрузка
+                    time.sleep(5.0)
+                else:
+                    self.logger.warning("⚠️ Не задана координата 'bm_login_btn' или кнопка не найдена! Остановка цикла.")
+                    break
+            
+            # Если мы видим Главное Меню, но иконки не распознаны (is_menu == False)
+            # Это состояние покроется внешним циклом бота, когда он не найдет рынок.
+            
+            if time.time() - last_action_time > max_wait_after_action:
+                self.logger.warning("⏰ Превышено время ожидания в цикле восстановления.")
+                break
+
+            time.sleep(0.5)
+        
+        if recovery_performed:
+            self.logger.warning("⏳ Попытка автоматического открытия рынка...")
+            opener = MarketOpener(self.logger, self.config)
+            
+            market_opened = False
+            for attempt in range(2): # 2 попытки поиска NPC
+                if self._stop_requested: break
+                
+                if opener.open_market():
+                    self.logger.info("⏳ Ожидание появления окна рынка...")
+                    time.sleep(2.5) # Даем время на отрисовку
+                    
+                    if self._check_market_is_open(handle_kicks=False):
+                        market_opened = True
+                        break
+                    else:
+                        self.logger.warning(f"❌ Окно рынка не открылось (попытка {attempt+1}/2).")
+                        # Проверяем, не вылетели ли мы снова во время клика?
+                        is_k, _ = StateDetector.is_disconnected()
+                        is_r, _ = StateDetector.is_reconnect_screen()
+                        if is_k or is_r:
+                            self.logger.error("🛑 Обнаружен повторный вылет во время открытия рынка!")
+                            break # Выходим к началу внешнего цикла
+                else:
+                    self.logger.warning(f"⚠️ NPC Рынка не найден (попытка {attempt+1}/2).")
+            
+            if market_opened:
+                self.logger.success("✅ Рынок успешно открыт автоматически.")
+            else:
+                self.logger.error("🛑 Не удалось открыть рынок автоматически.")
+
+            self.logger.warning("⏸️ Восстановление завершено. Бот на паузе.")
+            self._is_paused = True
+            self._recovery_performed_during_item = True
+            
+        return recovery_performed
 
     def _detect_current_city(self):
         """Определить город (OCR)"""

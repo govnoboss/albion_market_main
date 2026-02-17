@@ -52,7 +52,7 @@ class CoordinatesTab(QWidget):
         content = QWidget()
         content.setStyleSheet("background: transparent;")
         self.content_layout = QVBoxLayout(content)
-        self.content_layout.setSpacing(15)
+        self.content_layout.setSpacing(10)
         
         # Define categories
         self.categories = {
@@ -76,22 +76,15 @@ class CoordinatesTab(QWidget):
             "Окно меню предмета": [
                 # Основные кнопки
                 ("item_expand", "Раскрыть цену предмета", "point"),
-                ("create_buy_order", "Заказ на покупку", "point"),
                 # Элементы ордера
-                ("buyer_minus_btn", "Кнопка Минус", "point"),
-                ("buyer_plus_btn", "Кнопка Плюс", "point"),
                 ("buyer_amount_input", "Кнопка Количество (Ввод)", "point"),
-                ("price_input", "Ввод цены", "point"),
                 ("buyer_create_order_confirm", "Кнопка Заказать (confirm)", "point"),
-                ("buyer_tab_buy", "Вкладка 'Купить' (direct)", "point"),
                 ("menu_close", "Крестик закрытия меню предмета", "point"),
 
                 # OCR зоны
-                ("quality_text_region", "Название текущего качества (OCR)", "area"),
                 ("item_menu_check", "Надпись 'Заказы на продажу' (Check)", "area"),
                 ("buyer_top_lot_qty", "Кол-во в топ лоте (OCR)", "area"),
                 ("buyer_total_price", "Итоговая стоимость (OCR)", "area"),
-                ("buyer_order_yes_btn", "Кнопка 'Да' (Confirm Dialog)", "point"),
             ],
             "Black Market (New)": [
                 ("bm_sell_tab", "Вкладка 'Продать'", "point"),
@@ -117,7 +110,7 @@ class CoordinatesTab(QWidget):
             # --- Заголовок Раздела ---
             header_layout = QHBoxLayout()
             cat_label = QLabel(category)
-            cat_label.setStyleSheet("font-weight: bold; font-size: 14px; color: #58a6ff;")
+            cat_label.setStyleSheet("font-weight: bold; font-size: 13px; color: #58a6ff;")
             
             # Кнопка помощи раздела
             help_btn = QPushButton("?")
@@ -149,7 +142,7 @@ class CoordinatesTab(QWidget):
             line = QFrame()
             line.setFrameShape(QFrame.Shape.HLine)
             line.setFrameShadow(QFrame.Shadow.Sunken)
-            line.setStyleSheet("background-color: #30363d; margin-bottom: 5px;")
+            line.setStyleSheet("background-color: #30363d; margin-bottom: 2px;")
             group_layout.addWidget(line)
             
             # --- Элементы (с нумерацией) ---
@@ -264,7 +257,7 @@ class CoordinatesTab(QWidget):
         
         # Показываем картинку
         img_label = QLabel()
-        pixmap = QPixmap(image_path)
+        pixmap = QPixmap(str(image_path))
         # Масштабируем если слишком большая (увеличили лимит до 1200x900)
         if pixmap.width() > 1200 or pixmap.height() > 900:
             pixmap = pixmap.scaled(1200, 900, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)

@@ -125,7 +125,6 @@ class LoginWindow(QMainWindow):
         if res['success']:
             self.lbl_status.setStyleSheet("color: #238636;")
             self.lbl_status.setText("Success! Loading...")
-            QThread.msleep(500)
             self.close()
             self.on_success() # Open Launcher
         else:

@@ -63,8 +63,11 @@ class MarketBot(BaseBot):
         if self._is_black_market:
             self._click_bm_sell_tab()
         
-        for i, item_name in enumerate(items):
+        i = 0
+        while i < total_items:
             if self._stop_requested: break
+            
+            item_name = items[i]
             
             while self._is_paused:
                 if self._stop_requested: break
@@ -73,6 +76,7 @@ class MarketBot(BaseBot):
             # --- START INDEX LOGIC ---
             if i < self.start_index:
                 # Тихо пропускаем, пока не дойдем до нужного
+                i += 1
                 continue
             
             self.progress_updated.emit(i + 1, total_items, item_name)
@@ -91,7 +95,16 @@ class MarketBot(BaseBot):
                      break
                      
             try:
+                # Сбрасываем флаг перед обработкой предмета
+                self._recovery_performed_during_item = False
+                
                 self._process_item(item_name)
+                
+                if self._recovery_performed_during_item:
+                    self.logger.warning(f"🔄 Повторная обработка {item_name} (был вылет)")
+                    # НЕ инкрементируем i, чтобы пройти предмет заново
+                    continue
+
                 self._first_item_processed = True
                 
                 # Сохраняем прогресс (чтобы можно было продолжить)
@@ -100,6 +113,8 @@ class MarketBot(BaseBot):
                 
             except Exception as e:
                 self.logger.error(f"Ошибка при обработке '{item_name}': {e}")
+            
+            i += 1
                 
         self.logger.info("Цикл сканирования завершен")
         self._print_statistics()
@@ -120,10 +135,17 @@ class MarketBot(BaseBot):
         for attempt in range(10):
             if self._stop_requested: return
             self._check_pause()
+            
             if self._check_market_is_open():
                 market_found = True
                 break
             else:
+                # NEW: Проверка на вылеты если рынок закрыт
+                if self._detect_and_handle_kicks():
+                    # Если было восстановление, мы уже на паузе или готовы пробовать снова
+                    # Обычно после захода рынок закрыт, поэтому продолжаем цикл проверки
+                    continue
+
                 self.logger.warning(f"⏳ Окно рынка не найдено... ({attempt+1}/10)")
                 time.sleep(1.0)
                 
@@ -432,14 +454,6 @@ class MarketBot(BaseBot):
              
         # 5. УСПЕХ -> Восстанавливаем состояние
         self.logger.info("✅ Предмет восстановлен! Возвращаю фильтры...")
-        
-        # Переключаем на "Заказ"
-        if not self._is_black_market:
-            order_tab = self.config.get_coordinate("create_buy_order")
-            if order_tab:
-                self._human_move_to(*order_tab)
-                self._human_click()
-                time.sleep(0.5)
 
         # Восстанавливаем Tier / Enchant
         if self._current_tier:
@@ -583,6 +597,9 @@ class MarketBot(BaseBot):
                              tier, current_screen_enchant, 1, price
                          )
                          last_price = price
+                     else:
+                         if not self._check_market_is_open():
+                             return 
                      
                      scanned_variants.add(key)
              
@@ -619,6 +636,10 @@ class MarketBot(BaseBot):
                          price
                      )
                      last_price = price
+                 else:
+                     # NEW: Проверка на вылет
+                     if not self._check_market_is_open():
+                         return 
                      
                      # --- TRACKING ---
                      detected_prices[key] = price
@@ -998,35 +1019,19 @@ class MarketBot(BaseBot):
 
     def _wait_for_market_reopen(self) -> bool:
         """
-        Цикл открытия рынка: Кликаем NPC раз в секунду, пока рынок не откроется.
+        Цикл открытия рынка через MarketOpener.
         """
-        npc_coord = self.config.get_coordinate("bm_open_market_btn")
-        if not npc_coord:
-             self.logger.error("Нет координат 'bm_open_market_btn'!")
-             return False
+        self.logger.info("🔄 Запуск динамического поиска NPC Рынка...")
+        from .market_opener import MarketOpener
+        opener = MarketOpener(self.logger, self.config)
+        
+        # Мы просто вызываем open_market, он внутри содержит цикл систематического поиска
+        # И проверку self._check_market_is_open()
+        if opener.open_market():
+             self.logger.success("✅ Рынок успешно открыт автоматически.")
+             return True
              
-        self.logger.info("🔄 Ожидание открытия рынка (Клик по NPC)...")
-        
-        max_attempts = 60 # 60 секунд попыток (можно увеличить)
-        
-        for i in range(max_attempts):
-            if self._stop_requested: return False
-            self._check_pause()
-            
-            # 1. Проверка: Уже открыт?
-            if self._check_market_is_open():
-                self.logger.info("✅ Рынок успешно открыт!")
-                time.sleep(1.0) # Даем прогрузиться интерфейсу
-                return True
-                
-            # 2. Клик по NPC
-            self._human_move_to(*npc_coord)
-            self._human_click()
-            
-            # 3. Ждем секунду
-            time.sleep(1.0)
-            
-        self.logger.error("❌ Не удалось открыть рынок за 60 секунд!")
+        self.logger.error("❌ Не удалось найти и открыть рынок автоматически.")
         return False
         
     def _wait_for_search_result(self, timeout: float = 15.0, initial_pixels=None):

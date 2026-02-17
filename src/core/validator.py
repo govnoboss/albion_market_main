@@ -9,6 +9,14 @@ class ScreenValidator:
     """Класс для проверки состояния экрана (Валидация)"""
     
     @staticmethod
+    def check_disconnection_state() -> Tuple[bool, str]:
+        """
+        Проверяет, выкинуло ли нас в меню из-за отсутствия интернета или техработ.
+        """
+        from .state_detector import StateDetector
+        return StateDetector.is_disconnected()
+    
+    @staticmethod
     def check_market_open(area: Dict[str, int]) -> Tuple[bool, str]:
         """
         Проверяет, открыто ли окно рынка.

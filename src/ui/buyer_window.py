@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QPushButton, QLabel, QFrame, QTextEdit, QGroupBox,
-    QMessageBox, QTabWidget, QScrollArea, QSpinBox
+    QMessageBox, QTabWidget, QScrollArea, QSpinBox, QCheckBox, QComboBox
 )
 from PyQt6.QtGui import QIntValidator
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
@@ -9,6 +9,13 @@ from PyQt6.QtGui import QIcon, QFont
 
 from .styles import MAIN_STYLE, COLORS
 from .log_overlay import LogOverlay  # Импорт лог-оверлея
+
+class BudgetSpinBox(QSpinBox):
+    """Спинбокс, который прячет 0, чтобы показать Placeholder"""
+    def textFromValue(self, value):
+        if value == 0:
+            return ""
+        return super().textFromValue(value)
 
 class BuyerWindow(QMainWindow):
     """
@@ -64,6 +71,35 @@ class BuyerWindow(QMainWindow):
             """)
             menu_btn.clicked.connect(self._on_back_clicked)
             header_layout.addWidget(menu_btn)
+        
+        # Кнопка 'Мини режим'
+        self.mini_mode_btn = QPushButton("↘ Mini Mode")
+        self.mini_mode_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.mini_mode_btn.setStyleSheet("""
+            QPushButton { 
+                background-color: #21262d; 
+                color: #8b949e; 
+                border: 1px solid #30363d; 
+                border-radius: 6px;
+                padding: 5px 10px;
+                font-size: 12px;
+            }
+            QPushButton:hover { 
+                background-color: #30363d; 
+                color: #f0f6fc; 
+            }
+        """)
+        self.mini_mode_btn.clicked.connect(self._switch_to_mini_mode)
+        header_layout.addWidget(self.mini_mode_btn)
+        
+        # Переключатель "Поверх всех окон"
+        self.always_on_top_checkbox = QCheckBox("📌 Поверх всех окон")
+        self.always_on_top_checkbox.setStyleSheet("""
+            QCheckBox { color: #8b949e; font-size: 13px; spacing: 8px; }
+            QCheckBox:checked { color: #3fb950; }
+        """)
+        self.always_on_top_checkbox.toggled.connect(self._toggle_always_on_top)
+        header_layout.addWidget(self.always_on_top_checkbox)
         
         main_layout.addLayout(header_layout)
         
@@ -135,12 +171,12 @@ class BuyerWindow(QMainWindow):
         budget_lbl = QLabel("Бюджет:")
         budget_lbl.setStyleSheet("color: #8b949e; font-weight: bold;")
         
-        self.budget_spin = QSpinBox()
+        self.budget_spin = BudgetSpinBox()
         self.budget_spin.setRange(0, 999_999_999)
         self.budget_spin.setSingleStep(100_000)
-        self.budget_spin.setSpecialValueText("Безлимит")
         self.budget_spin.setValue(0)
-        self.budget_spin.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)  # Убираем +/-
+        self.budget_spin.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)
+        self.budget_spin.lineEdit().setPlaceholderText("Безлимит")
         self.budget_spin.setStyleSheet("""
             QSpinBox { 
                 background: #0d1117; 
@@ -150,50 +186,64 @@ class BuyerWindow(QMainWindow):
                 font-size: 13px;
                 border-radius: 4px;
             }
-            QSpinBox:focus {
-                border: 1px solid #58a6ff;
-            }
+            QSpinBox:focus { border: 1px solid #58a6ff; }
         """)
         
         budget_layout.addWidget(budget_lbl)
         budget_layout.addWidget(self.budget_spin)
         ctrl_layout.addLayout(budget_layout)
 
-        # Кнопка СТАРТ
-        self.start_btn = QPushButton("▶ Старт")
-        self.start_btn.setObjectName("primary")
-        self.start_btn.setMinimumHeight(45)
-        self.start_btn.setStyleSheet("font-size: 14px; font-weight: bold; background-color: #238636;")
-        self.start_btn.clicked.connect(self._on_start_clicked)
-        ctrl_layout.addWidget(self.start_btn)
+        # --- Выбор города (Закупка/Продажа) ---
+        city_group = QHBoxLayout()
+        city_group.setSpacing(10)
         
-        # Чекбокс "Умный закупщик"
-        from PyQt6.QtWidgets import QCheckBox
+        buy_lbl = QLabel("Закупаем из:")
+        self.buy_city_combo = QComboBox()
+        self.buy_city_combo.setFixedWidth(130)
+        
+        sell_lbl = QLabel("Продаем в:")
+        self.sell_city_combo = QComboBox()
+        self.sell_city_combo.setFixedWidth(130)
+        
+        city_group.addWidget(buy_lbl)
+        city_group.addWidget(self.buy_city_combo)
+        city_group.addSpacing(10)
+        city_group.addWidget(sell_lbl)
+        city_group.addWidget(self.sell_city_combo)
+        city_group.addStretch()
+        
+        ctrl_layout.addLayout(city_group)
+
+        # Режимы
         self.smart_mode_check = QCheckBox("🧠 Умный закупщик (Smart Buyer)")
         self.smart_mode_check.setToolTip("Покупать самые выгодные товары на основе сканирования,\nа не по фиксированному списку.")
         self.smart_mode_check.setStyleSheet("color: #c9d1d9; font-weight: bold; padding: 4px;")
         ctrl_layout.addWidget(self.smart_mode_check)
         
-        # Чекбокс "Сортировать по %"
         self.sort_by_percent_check = QCheckBox("   📊 Сортировать по % профита")
-        self.sort_by_percent_check.setToolTip("Если включено — приоритет предметам с высоким процентом прибыли.\nЕсли выключено — приоритет предметам с высокой абсолютной прибылью в серебре.")
         self.sort_by_percent_check.setStyleSheet("color: #8b949e; margin-left: 20px;")
-        self.sort_by_percent_check.setVisible(False)  # Скрыт по умолчанию
+        self.sort_by_percent_check.setVisible(False)
         ctrl_layout.addWidget(self.sort_by_percent_check)
-        
-        # Связываем видимость с smart_mode_check
-        self.smart_mode_check.toggled.connect(self.sort_by_percent_check.setVisible)
 
+        # Кнопки Старт/Стоп
+        self.start_btn = QPushButton("▶ ЗАПУСТИТЬ")
+        self.start_btn.setObjectName("primary")
+        self.start_btn.setMinimumHeight(45)
+        self.start_btn.clicked.connect(self._on_start_clicked)
+        ctrl_layout.addWidget(self.start_btn)
         
-        # Кнопка СТОП
-        self.stop_btn = QPushButton("⏹ ОСТАНОВИТЬ (F5)")
+        self.stop_btn = QPushButton("🛑 ОСТАНОВИТЬ")
+        self.stop_btn.setMinimumHeight(45)
         self.stop_btn.setObjectName("danger")
-        self.stop_btn.setMinimumHeight(40)
         self.stop_btn.setVisible(False)
         self.stop_btn.clicked.connect(self._on_stop_clicked)
         ctrl_layout.addWidget(self.stop_btn)
-        
 
+        # Загрузка городов
+        self._load_cities()
+        
+        # Связываем видимость
+        self.smart_mode_check.toggled.connect(self.sort_by_percent_check.setVisible)
         
         layout.addWidget(control_group)
 
@@ -245,6 +295,11 @@ class BuyerWindow(QMainWindow):
                 self._hotkeys_registered = True
             except Exception as e:
                 print(f"Ошибка регистрации хоткеев Buyer: {e}")
+
+        # Автоматическое обновление данных при открытии
+        self._load_cities()
+        if hasattr(self, 'plan_tab'):
+            self.plan_tab.refresh_data()
     
     def hideEvent(self, event):
         """Удаление хоткеев при скрытии окна"""
@@ -270,63 +325,81 @@ class BuyerWindow(QMainWindow):
         else:
             self._on_start_clicked()
 
+    def _load_cities(self):
+        """Загрузка доступных городов из хранилища"""
+        from ..utils.price_storage import price_storage
+        all_cities = price_storage.get_cities()
+        all_cities.sort()
+        
+        # Сохраняем текущий выбор, чтобы не сбрасывать его при каждом открытии
+        old_buy = self.buy_city_combo.currentText()
+        old_sell = self.sell_city_combo.currentText()
+        
+        self.buy_city_combo.blockSignals(True)
+        self.sell_city_combo.blockSignals(True)
+        
+        self.buy_city_combo.clear()
+        self.sell_city_combo.clear()
+        
+        self.buy_city_combo.addItems(all_cities)
+        self.sell_city_combo.addItems(all_cities)
+        
+        # Восстанавливаем или ставим дефолты
+        if old_buy in all_cities:
+            self.buy_city_combo.setCurrentText(old_buy)
+        elif "Martlock" in all_cities:
+            self.buy_city_combo.setCurrentText("Martlock")
+        
+        if old_sell in all_cities:
+            self.sell_city_combo.setCurrentText(old_sell)
+        elif "Black Market" in all_cities:
+            self.sell_city_combo.setCurrentText("Black Market")
+        elif "Черный рынок" in all_cities:
+            self.sell_city_combo.setCurrentText("Черный рынок")
+            
+        self.buy_city_combo.blockSignals(False)
+        self.sell_city_combo.blockSignals(False)
+
     def _on_start_clicked(self):
         # Блокировка двойного запуска
         if self._is_starting or self.bot.isRunning():
             return
         self._is_starting = True
         
+        buy_city = self.buy_city_combo.currentText()
+        sell_city = self.sell_city_combo.currentText()
+        
+        if not buy_city or not sell_city:
+            QMessageBox.warning(self, "Ошибка", "Выберите города закупки и продажи!")
+            self._is_starting = False
+            return
+
         # 0. Проверка наличия данных о ценах
         from ..utils.price_storage import price_storage
         from datetime import datetime
         
-        cities = price_storage.get_cities()
-        bm_prices = price_storage.get_city_prices("Black Market")
+        buy_prices = price_storage.get_city_prices(buy_city)
+        sell_prices = price_storage.get_city_prices(sell_city)
         
-        if not cities or len(cities) == 0:
-            QMessageBox.warning(
-                self,
-                "⚠️ Нет данных",
-                "Таблица профитов пуста!\n\n"
-                "Сначала запустите Сканер для сбора цен,\n"
-                "затем возвращайтесь в Закупщик."
-            )
+        if not buy_prices:
+            QMessageBox.warning(self, "⚠️ Нет данных", f"В базе нет цен для города закупки: {buy_city}")
             self._is_starting = False
             return
         
-        if not bm_prices or len(bm_prices) == 0:
-            QMessageBox.warning(
-                self,
-                "⚠️ Нет цен ЧР",
-                "Нет данных о ценах Чёрного Рынка!\n\n"
-                "Без них невозможно рассчитать профит.\n"
-                "Сначала просканируйте ЧР."
-            )
+        if not sell_prices:
+            QMessageBox.warning(self, "⚠️ Нет данных", f"В базе нет цен для города продажи: {sell_city}")
             self._is_starting = False
             return
         
         is_smart = self.smart_mode_check.isChecked()
         
         if is_smart:
-            
-            # Simple check: Iterate valid items in current config city (if known) or just all cities
-            # Since we don't know the city yet (bot detects it), we check ALL data?
-            # Or assume Config uses current location?
-            # Let's check "Any stale data" in the storage.
-            
+            # Проверка устаревания данных (только для выбранных городов)
             has_stale = False
-            
-            # Helper to check
             now = datetime.now()
             hours_threshold = 10
             
-            # Direct access to verify (Optimization: backend execution)
-            # We can use a simple logic: Check ALL items.
-            cities = price_storage.get_cities()
-            for city in cities:
-                if city == "Black Market": continue 
-                
-                prices = price_storage.get_city_prices(city)
+            for prices in [buy_prices, sell_prices]:
                 for item, variants in prices.items():
                     for variant, data in variants.items():
                         try:
@@ -360,6 +433,8 @@ class BuyerWindow(QMainWindow):
         self.stop_btn.setVisible(True)
         
         # Update Bot configuration
+        self.bot.buy_city = buy_city
+        self.bot.sell_city = sell_city
         self.bot.mode = "smart" if is_smart else "wholesale"
         self.bot.manual_confirm_mode = False
         self.bot.max_budget = self.budget_spin.value()
@@ -383,8 +458,7 @@ class BuyerWindow(QMainWindow):
         self.log_overlay.show()
         self.log_overlay.clear_logs()
         
-        self.is_mini_mode = True
-        self.hide() # Скрываем основное окно
+        self._switch_to_mini_mode()
         
     def _on_stop_clicked(self):
         if not self.bot.isRunning(): return
@@ -431,15 +505,50 @@ class BuyerWindow(QMainWindow):
         self.show()
         self.activateWindow()
 
+    def _switch_to_mini_mode(self):
+        """Переключение в мини-режим"""
+        from PyQt6.QtWidgets import QApplication
+        from PyQt6.QtGui import QGuiApplication
+        
+        self.is_mini_mode = True
+        self.hide()
+        
+        # Позиционировать оверлей по ЦЕНТРУ сверху
+        screen_geo = QGuiApplication.primaryScreen().availableGeometry()
+        overlay_w = self.overlay.width()
+        
+        x = (screen_geo.width() - overlay_w) // 2
+        y = screen_geo.top() + 20
+        
+        self.overlay.move(x, y)
+        self.overlay.show()
+        self.overlay.update_status(self.bot.isRunning(), self.bot._is_paused)
+
     def _restore_window(self):
+        """Возврат из мини-режима"""
         self.is_mini_mode = False
+        self.overlay.hide()
         self.show()
         self.activateWindow()
 
+    def _toggle_always_on_top(self, checked: bool):
+        """Переключить режим 'поверх всех окон'"""
+        from ..utils.logger import get_logger
+        if checked:
+            self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+            get_logger().info("Buyer: Режим 'Поверх всех окон' включен")
+        else:
+            self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowStaysOnTopHint)
+            get_logger().info("Buyer: Режим 'Поверх всех окон' выключен")
+        self.show()
+
     def _on_back_clicked(self):
+        if self.bot.isRunning():
+            self._on_stop_clicked()
+            
         if self.launcher:
             self.launcher.show()
-            self.close()
+            self.hide()
         else:
             self.close()
             

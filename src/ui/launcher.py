@@ -108,9 +108,24 @@ class LauncherWindow(QMainWindow):
 
     def _show_launcher(self):
         """Called when login is successful"""
+        # Show splash screen during preloading
+        if not self.splash.isVisible():
+            self.splash.show()
+        
+        self.splash.set_progress(10)
+        self.splash.set_status("Активация лицензии...")
+        QApplication.processEvents()
+
         # Force re-check to get fresh expiry data
         self._check_license_silent()
+        
+        self.splash.set_progress(20)
+        self.splash.set_status("Загрузка интерфейса...")
+        QApplication.processEvents()
+
         self._init_launcher_ui()
+        
+        # SplashScreen is closed at the end of _preload_windows (called inside _init_launcher_ui)
         self.show()
 
     def _init_launcher_ui(self):
@@ -333,15 +348,12 @@ class LauncherWindow(QMainWindow):
     
     def _preload_windows(self):
         """Предзагрузка окон для быстрого переключения"""
-        if hasattr(self, 'splash') and self.splash and self.splash.isVisible():
-            self.splash.set_progress(0)
-            self.splash.set_status("Загрузка Сканера...")
-            self.splash.set_progress(25)
-        
-        if hasattr(self, 'splash') and self.splash and self.splash.isVisible():
-            self.splash.set_progress(0)
-            self.splash.set_status("Загрузка Сканера...")
-            self.splash.set_progress(25)
+        if not hasattr(self, 'splash') or not self.splash:
+            return
+
+        self.splash.set_status("Загрузка Сканера...")
+        self.splash.set_progress(30)
+        QApplication.processEvents()
         
         # Ленивые импорты (тяжёлые модули)
         sys.stderr.write("DEBUG: Importing ScannerWindow...\n"); sys.stderr.flush()
@@ -356,19 +368,28 @@ class LauncherWindow(QMainWindow):
             traceback.print_exc()
             raise e
         
-        if hasattr(self, 'splash') and self.splash and self.splash.isVisible():
-            self.splash.set_progress(50)
-            self.splash.set_status("Загрузка Закупщика...")
-            self.splash.set_progress(75)
+        self.splash.set_status("Загрузка Закупщика...")
+        self.splash.set_progress(60)
+        QApplication.processEvents()
             
         sys.stderr.write("DEBUG: Importing BuyerWindow...\n"); sys.stderr.flush()
         from .buyer_window import BuyerWindow
         self.buyer_window = BuyerWindow(launcher=self)
         sys.stderr.write("DEBUG: BuyerWindow initialized.\n"); sys.stderr.flush()
         
-        if hasattr(self, 'splash') and self.splash and self.splash.isVisible():
-            self.splash.set_progress(100)
-            self.splash.set_status("Готово!")
+        self.splash.set_progress(90)
+        self.splash.set_status("Подготовка...")
+        QApplication.processEvents()
+
+        # Small delay for visual consistency
+        import time
+        time.sleep(0.5)
+        
+        self.splash.set_progress(100)
+        self.splash.set_status("Готово!")
+        QApplication.processEvents()
+        
+        self.splash.close()
 
     def _launch_scanner(self):
         self.scanner_window.show()

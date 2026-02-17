@@ -113,8 +113,8 @@ class MainWindow(QMainWindow):
     def _setup_window(self):
         """Настройка окна"""
         self.setWindowTitle("Albion Market Scanner & Buyer")
-        self.setMinimumSize(800, 600)
-        self.resize(1000, 700)
+        self.setMinimumSize(700, 550)
+        self.resize(850, 600)
         self.setStyleSheet(MAIN_STYLE)
 
     def _switch_to_mini_mode(self):
@@ -202,8 +202,8 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
         
         main_layout = QVBoxLayout(central)
-        main_layout.setContentsMargins(15, 15, 15, 15)
-        main_layout.setSpacing(10)
+        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setSpacing(8)
         
         # === Заголовок ===
         header_layout = QHBoxLayout()
@@ -227,7 +227,7 @@ class MainWindow(QMainWindow):
                 QPushButton { background: #21262d; color: #8b949e; border: 1px solid #30363d; border-radius: 4px; padding: 5px 15px; font-size: 13px; }
                 QPushButton:hover { background: #30363d; color: #f0f6fc; }
             """)
-            menu_btn.clicked.connect(self.close) # Закрытие вернет в меню через closeEvent
+            menu_btn.clicked.connect(self._on_back_clicked) 
             header_layout.addWidget(menu_btn)
         
         # Кнопка 'Мини режим'
@@ -418,6 +418,15 @@ class MainWindow(QMainWindow):
             get_logger().info("Режим 'Поверх всех окон' выключен")
         self.show()
     
+    def _on_back_clicked(self):
+        """Возврат в меню лаунчера"""
+        if self.bot.isRunning():
+            self._on_stop_bot()
+            
+        if self.launcher:
+            self.launcher.show()
+            self.hide()
+    
     def closeEvent(self, event):
         """Обработчик закрытия окна"""
         # Close hotkey listener
@@ -435,10 +444,10 @@ class MainWindow(QMainWindow):
         self.mini_overlay.close()
         self.log_overlay.close()
         
-        # Если есть лаунчер -> возвращаемся в меню
+        # Закрываем программу полностью через QApplication.quit()
         if self.launcher:
-            self.launcher.show()
-            get_logger().info("Возврат в главное меню")
+            get_logger().info("Закрытие программы через сканер")
+            QApplication.quit()
         else:
             get_logger().info("Приложение закрыто")
             

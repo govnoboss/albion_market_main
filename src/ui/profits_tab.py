@@ -16,63 +16,61 @@ class ProfitLoader(QThread):
     data_ready = pyqtSignal(list)
     finished_loading = pyqtSignal()
     
-    def __init__(self, storage, source_city):
+    def __init__(self, storage, buy_city, sell_city):
         super().__init__()
         self.storage = storage
-        self.source_city = source_city
+        self.buy_city = buy_city
+        self.sell_city = sell_city
         
     def run(self):
         # 1. IO: Обновляем цены
         self.storage.reload()
         
         # 2. Получаем данные
-        bm_data = self.storage.get_city_prices("Black Market")
-        if not bm_data:
-            bm_data = self.storage.get_city_prices("Черный рынок")
-            
-        source_data = self.storage.get_city_prices(self.source_city)
+        buy_data = self.storage.get_city_prices(self.buy_city)
+        sell_data = self.storage.get_city_prices(self.sell_city)
         
         rows = []
         
-        if bm_data and source_data:
+        if buy_data and sell_data:
             # 3. CPU: Расчет
-            for item_name, variants in bm_data.items():
-                if item_name not in source_data:
+            for item_name, variants in sell_data.items():
+                if item_name not in buy_data:
                     continue
                     
-                source_variants = source_data[item_name]
+                buy_variants = buy_data[item_name]
                 
-                for variant_key, bm_info in variants.items():
-                    if variant_key not in source_variants:
+                for variant_key, sell_info in variants.items():
+                    if variant_key not in buy_variants:
                         continue
                         
-                    bm_price = bm_info['price']
-                    source_info = source_variants[variant_key]
-                    source_price = source_info['price']
+                    sell_price = sell_info['price']
+                    buy_info = buy_variants[variant_key]
+                    buy_price = buy_info['price']
                     
-                    # Пропускаем вариации с нулевой ценой на любом рынке (невалидные данные)
-                    if bm_price <= 0 or source_price <= 0: 
+                    # Пропускаем вариации с нулевой ценой (невалидные данные)
+                    if sell_price <= 0 or buy_price <= 0: 
                         continue
                     
-                    # Taxes: 6.5%
+                    # Taxes: 6.5% everywhere (as per USER feedback)
                     tax_rate = 0.065
-                    revenue_after_tax = bm_price * (1 - tax_rate)
+                    revenue_after_tax = sell_price * (1 - tax_rate)
                     
-                    profit = int(revenue_after_tax - source_price)
-                    percent = (profit / source_price) * 100 if source_price > 0 else 0
+                    profit = int(revenue_after_tax - buy_price)
+                    percent = (profit / buy_price) * 100 if buy_price > 0 else 0
                     
-                    # Edge Case: OCR errors can lead to unrealistic profits (e.g. >1000%)
+                    # Edge Case: OCR errors
                     if percent > 1000:
                         continue
                     
                     rows.append({
                         "name": item_name,
                         "variant": variant_key,
-                        "bm_price": bm_price,
-                        "source_price": source_price,
+                        "sell_price": sell_price,
+                        "buy_price": buy_price,
                         "profit": profit,
                         "percent": percent,
-                        "updated": bm_info['updated'].split('T')[1][:8]
+                        "updated": sell_info['updated'].split('T')[1][:8]
                     })
             
             # 4. CPU: Начальная сортировка
@@ -106,42 +104,25 @@ class ProfitsTab(QWidget):
         # === Controls ===
         controls_layout = QHBoxLayout()
         
-        lbl = QLabel("🏙️ Город закупки:")
-        lbl.setStyleSheet("font-weight: bold; color: #8b949e;")
-        controls_layout.addWidget(lbl)
+        lbl_buy = QLabel("🏙️ Купить в:")
+        lbl_buy.setStyleSheet("font-weight: bold; color: #8b949e;")
+        controls_layout.addWidget(lbl_buy)
         
-        self.city_combo = QComboBox()
-        self.city_combo.setMinimumWidth(150)
-        # Темная тема для ComboBox
-        self.city_combo.setStyleSheet("""
-            QComboBox {
-                background-color: #161b22;
-                color: #c9d1d9;
-                border: 1px solid #30363d;
-                border-radius: 6px;
-                padding: 5px;
-            }
-            QComboBox::drop-down {
-                border: none;
-            }
-            QComboBox::down-arrow {
-                image: none;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 5px solid #8b949e;
-                margin-right: 5px;
-            }
-            QComboBox QAbstractItemView {
-                background-color: #161b22;
-                color: #c9d1d9;
-                selection-background-color: #1f6feb;
-                border: 1px solid #30363d;
-            }
-        """)
-        # self.city_combo.currentIndexChanged.connect(self._calculate_profits) # Убираем авто-расчет для стабильности или оставляем?
-        # Лучше оставить, но запускать через refresh_data логику
-        self.city_combo.currentIndexChanged.connect(self.refresh_data)
-        controls_layout.addWidget(self.city_combo)
+        self.buy_city_combo = QComboBox()
+        self.buy_city_combo.setMinimumWidth(130)
+        self._style_combo(self.buy_city_combo)
+        self.buy_city_combo.currentIndexChanged.connect(self.refresh_data)
+        controls_layout.addWidget(self.buy_city_combo)
+
+        lbl_sell = QLabel(" ➡️ Продать в:")
+        lbl_sell.setStyleSheet("font-weight: bold; color: #8b949e;")
+        controls_layout.addWidget(lbl_sell)
+        
+        self.sell_city_combo = QComboBox()
+        self.sell_city_combo.setMinimumWidth(130)
+        self._style_combo(self.sell_city_combo)
+        self.sell_city_combo.currentIndexChanged.connect(self.refresh_data)
+        controls_layout.addWidget(self.sell_city_combo)
         
         self.refresh_btn = QPushButton("🔄 Обновить")
         self.refresh_btn.setStyleSheet("""
@@ -190,7 +171,7 @@ class ProfitsTab(QWidget):
         self.table.setColumnCount(7)
         self.table.setHorizontalHeaderLabels([
             "Предмет", "Тир.Чары", 
-            "Цена BM", "Цена Города", 
+            "Цена Продажи", "Цена Покупки", 
             "Профит", "%", "Обновлено"
         ])
         
@@ -226,36 +207,95 @@ class ProfitsTab(QWidget):
         # Initial Load Cities
         self._load_cities()
         
+    def _style_combo(self, combo):
+        """Apply dark theme to combo boxes"""
+        combo.setStyleSheet("""
+            QComboBox {
+                background-color: #161b22;
+                color: #c9d1d9;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                padding: 5px;
+            }
+            QComboBox::drop-down { border: none; }
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 5px solid #8b949e;
+                margin-right: 5px;
+            }
+            QComboBox QAbstractItemView {
+                background-color: #161b22;
+                color: #c9d1d9;
+                selection-background-color: #1f6feb;
+                border: 1px solid #30363d;
+            }
+        """)
+
     def _load_cities(self):
-        """Initial city loading"""
+        """Initial city loading and refresh"""
         self.storage.reload()
         all_cities = self.storage.get_cities()
+        all_cities.sort()
         
-        sources = [c for c in all_cities if c not in ["Black Market", "Черный рынок"]]
-        sources.sort()
+        # Запоминаем текущий выбор
+        cur_buy = self.buy_city_combo.currentText()
+        cur_sell = self.sell_city_combo.currentText()
         
-        self.city_combo.blockSignals(True)
-        self.city_combo.clear()
-        self.city_combo.addItems(sources)
-        self.city_combo.blockSignals(False)
+        self.buy_city_combo.blockSignals(True)
+        self.sell_city_combo.blockSignals(True)
         
-        # Trigger initial data load if cities exist
-        if sources:
+        self.buy_city_combo.clear()
+        self.sell_city_combo.clear()
+        
+        self.buy_city_combo.addItems(all_cities)
+        self.sell_city_combo.addItems(all_cities)
+        
+        # Восстанавливаем выбор или ставим дефолты
+        if cur_buy and cur_buy in all_cities:
+            self.buy_city_combo.setCurrentText(cur_buy)
+        elif "Martlock" in all_cities:
+            idx = all_cities.index("Martlock")
+            self.buy_city_combo.setCurrentIndex(idx)
+        
+        if cur_sell and cur_sell in all_cities:
+            self.sell_city_combo.setCurrentText(cur_sell)
+        elif "Black Market" in all_cities:
+            idx = all_cities.index("Black Market")
+            self.sell_city_combo.setCurrentIndex(idx)
+        elif "Черный рынок" in all_cities:
+            idx = all_cities.index("Черный рынок")
+            self.sell_city_combo.setCurrentIndex(idx)
+            
+        self.buy_city_combo.blockSignals(False)
+        self.sell_city_combo.blockSignals(False)
+        
+        if all_cities and not cur_buy: # Только при первом запуске
             self.refresh_data()
         
     def refresh_data(self):
         """Start data reload in background"""
-        source_city = self.city_combo.currentText()
-        if not source_city:
+        # Сначала обновляем список городов (вдруг просканировали новый)
+        self._load_cities()
+        
+        buy_city = self.buy_city_combo.currentText()
+        sell_city = self.sell_city_combo.currentText()
+        if not buy_city or not sell_city:
             return
+        
+        if buy_city == sell_city:
+            # Maybe show warning? But user might want to see prices in one city.
+            pass
 
         # UI State: Loading
         self.refresh_btn.setEnabled(False)
         self.refresh_btn.setText("⏳ Загрузка...")
-        self.city_combo.setEnabled(False)
+        self.buy_city_combo.setEnabled(False)
+        self.sell_city_combo.setEnabled(False)
         
         # Start Thread
-        self.loader = ProfitLoader(self.storage, source_city)
+        self.loader = ProfitLoader(self.storage, buy_city, sell_city)
         self.loader.data_ready.connect(self.on_data_ready)
         self.loader.finished_loading.connect(self.on_loading_finished)
         self.loader.start()
@@ -264,7 +304,8 @@ class ProfitsTab(QWidget):
         """Cleanup after thread"""
         self.refresh_btn.setEnabled(True)
         self.refresh_btn.setText("🔄 Обновить")
-        self.city_combo.setEnabled(True)
+        self.buy_city_combo.setEnabled(True)
+        self.sell_city_combo.setEnabled(True)
         
     def on_data_ready(self, rows):
         """Populate table with optimized batch updates"""
@@ -282,14 +323,14 @@ class ProfitsTab(QWidget):
                 self.table.setItem(r, 1, QTableWidgetItem(row['variant']))
                 
                 # Format Prices (Editable)
-                bm_item = NumericTableWidgetItem(f"{row['bm_price']:,}")
+                sell_item = NumericTableWidgetItem(f"{row['sell_price']:,}")
                 # Разрешаем редактирование
-                bm_item.setFlags(bm_item.flags() | Qt.ItemFlag.ItemIsEditable) 
-                self.table.setItem(r, 2, bm_item)
+                sell_item.setFlags(sell_item.flags() | Qt.ItemFlag.ItemIsEditable) 
+                self.table.setItem(r, 2, sell_item)
                 
-                source_item = NumericTableWidgetItem(f"{row['source_price']:,}")
-                source_item.setFlags(source_item.flags() | Qt.ItemFlag.ItemIsEditable)
-                self.table.setItem(r, 3, source_item)
+                buy_item = NumericTableWidgetItem(f"{row['buy_price']:,}")
+                buy_item.setFlags(buy_item.flags() | Qt.ItemFlag.ItemIsEditable)
+                self.table.setItem(r, 3, buy_item)
                 
                 # Profit Color
                 profit_item = NumericTableWidgetItem(f"{row['profit']:,}")
@@ -373,7 +414,7 @@ class ProfitsTab(QWidget):
             enchant = int(match.group(2))
             
             # Определяем город
-            target_city = "Black Market" if col == 2 else self.city_combo.currentText()
+            target_city = self.sell_city_combo.currentText() if col == 2 else self.buy_city_combo.currentText()
             variant_key = f"T{tier}.{enchant}"
             
             # 1. Если цена 0 — удаляем запись из БД и строку из таблицы
@@ -392,21 +433,21 @@ class ProfitsTab(QWidget):
             
             # 3. Мгновенный пересчет профита для этой строки
             # Считываем актуальные данные из ячеек (учитывая что другую цену могли не менять)
-            bm_text = table.item(row, 2).text().replace(',', '')
-            source_text = table.item(row, 3).text().replace(',', '')
+            sell_text = table.item(row, 2).text().replace(',', '')
+            buy_text = table.item(row, 3).text().replace(',', '')
             
             # Если одну из цен удалили/сломали, берем 0
-            try: bm_p = int(float(bm_text))
-            except: bm_p = 0
+            try: sell_p = int(float(sell_text))
+            except: sell_p = 0
             
-            try: src_p = int(float(source_text))
-            except: src_p = 0
+            try: buy_p = int(float(buy_text))
+            except: buy_p = 0
             
             # Формула
-            tax_rate = 0.065
-            revenue = bm_p * (1 - tax_rate)
-            profit = int(revenue - src_p)
-            percent = (profit / src_p) * 100 if src_p > 0 else 0
+            tax_rate = 0.065 # Fixed 6.5% everywhere
+            revenue = sell_p * (1 - tax_rate)
+            profit = int(revenue - buy_p)
+            percent = (profit / buy_p) * 100 if buy_p > 0 else 0
             
             # 4. Обновляем UI (Profit & %)
             self._is_updating = True # Блокируем сигналы, т.к. меняем ячейки

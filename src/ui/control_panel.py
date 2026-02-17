@@ -31,8 +31,8 @@ class ControlPanel(QWidget):
     
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(15, 15, 15, 15)
-        main_layout.setSpacing(20)
+        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setSpacing(15)
         
         # === Статус ===
         status_group = QGroupBox("📊 Статус")

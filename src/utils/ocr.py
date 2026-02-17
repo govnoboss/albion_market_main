@@ -286,7 +286,6 @@ def read_price_at(area: dict) -> Optional[int]:
 def read_qty_text(area: dict) -> int:
     """
     Специализированный метод для чтения КОЛИЧЕСТВА (buyer_top_lot_qty).
-    Использует жесткие фильтры: Scale x5, Invert, Simple Threshold 55% (~140).
     """
     if not is_ocr_available() or not area:
         return 0
@@ -296,28 +295,28 @@ def read_qty_text(area: dict) -> int:
         bbox = (area['x'], area['y'], area['x'] + area['w'], area['y'] + area['h'])
         screenshot = ImageGrab.grab(bbox=bbox)
         
-        # 2. Scale x5
-        scale = 5
+        # 2. Scale x3 (User optimized)
+        scale = 3
         new_size = (screenshot.width * scale, screenshot.height * scale)
         processed = screenshot.resize(new_size, Image.Resampling.LANCZOS)
         
         # Convert to numpy
         img_np = np.array(processed)
         
-        # 3. Grayscale
+        # 3. Grayscale (Required for Threshold)
         if len(img_np.shape) == 3:
             img_np = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
             
-        # 4. Invert
+        # 4. Invert (User optimized)
         img_np = cv2.bitwise_not(img_np)
         
-        # 5. Simple Threshold 55% (0.55 * 255 = 140.25 -> 140)
-        _, img_np = cv2.threshold(img_np, 120, 255, cv2.THRESH_BINARY)
+        # 5. Threshold Binary 125 (User optimized)
+        _, img_np = cv2.threshold(img_np, 125, 255, cv2.THRESH_BINARY)
         
-        # Convert back to PIL for Tesseract (or pass numpy directly if supported, but PIL is safer here)
+        # Convert back to PIL for Tesseract
         final_img = Image.fromarray(img_np)
-        
-        # 6. OCR
+        final_img.save("test_qty.png")
+        # 6. OCR (PSM 6, Numeric Whitelist)
         whitelist = "0123456789"
         config = f'--psm 6 -c tessedit_char_whitelist={whitelist}'
         

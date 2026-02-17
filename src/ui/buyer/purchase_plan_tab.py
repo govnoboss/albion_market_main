@@ -40,6 +40,20 @@ class PurchasePlanTab(QWidget):
         collapse_btn.clicked.connect(lambda: self.tree.collapseAll())
         toolbar.addWidget(collapse_btn)
         
+        self.refresh_btn = QPushButton("🔄 Обновить список")
+        self.refresh_btn.setStyleSheet("""
+            QPushButton { 
+                background-color: #21262d; 
+                color: #c9d1d9; 
+                border: 1px solid #30363d; 
+                border-radius: 6px;
+                padding: 5px 15px;
+            }
+            QPushButton:hover { background-color: #30363d; }
+        """)
+        self.refresh_btn.clicked.connect(self.refresh_data)
+        toolbar.addWidget(self.refresh_btn)
+        
         toolbar.addStretch()
         layout.addLayout(toolbar)
         
@@ -50,6 +64,7 @@ class PurchasePlanTab(QWidget):
         self.tree.setColumnWidth(1, 100)
         self.tree.setColumnWidth(2, 100)
         self.tree.setAlternatingRowColors(True)
+        self.tree.setAnimated(False) # Отключаем анимацию для скорости
         self.tree.setStyleSheet("""
             QTreeWidget {
                 background-color: #0d1117;
@@ -118,32 +133,56 @@ class PurchasePlanTab(QWidget):
              self.refresh_data()
 
     def refresh_data(self):
-        """Пересоздать дерево на основе списка предметов сканера"""
-        self.tree.clear()
-        self._items_cache = {}
-        
-        items = self.config.get_known_items() # Или get_items()? Лучше items (активные)
-        # Используем known_items, так как именно они сканируются ботом
-        target_items = self.config.get_known_items()
-        
-        if not target_items:
-            # Fallback если активно ничего не сканится
-            return
-
-        for item_name in sorted(target_items):
-            # Root Item Node
-            item_node = QTreeWidgetItem(self.tree)
-            item_node.setText(0, item_name)
-            item_node.setExpanded(False)
+         """Инкрементальное обновление дерева на основе списка предметов сканера"""
+         self.tree.setUpdatesEnabled(False)
+         try:
+            target_items = set(self.config.get_known_items())
             
-            # Добавляем Tiers (4-8)
-            for tier in range(4, 9):
-                tier_node = QTreeWidgetItem(item_node)
-                tier_node.setText(0, f"Tier {tier}")
+            # 1. Находим что удалить
+            existing_items = set(self._items_cache.keys())
+            to_remove = existing_items - target_items
+            
+            for item_name in to_remove:
+                root_node = self._items_cache.pop(item_name)
+                index = self.tree.indexOfTopLevelItem(root_node)
+                if index >= 0:
+                    self.tree.takeTopLevelItem(index)
+            
+            # 2. Находим что добавить
+            to_add = target_items - existing_items
+            
+            for item_name in sorted(to_add):
+                # Root Item Node
+                item_node = QTreeWidgetItem(self.tree)
+                item_node.setText(0, item_name)
+                item_node.setExpanded(False)
+                self._items_cache[item_name] = item_node
                 
-                # Enchant (0-4)
-                for enchant in range(5):
-                    self._create_variant_row(tier_node, item_name, tier, enchant)
+                # Добавляем Tiers (4-8)
+                for tier in range(4, 9):
+                    tier_node = QTreeWidgetItem(item_node)
+                    tier_node.setText(0, f"Tier {tier}")
+                    
+                    # Enchant (0-4)
+                    for enchant in range(5):
+                        self._create_variant_row(tier_node, item_name, tier, enchant)
+            
+            # 3. Если дерево было пустое (первая загрузка)
+            if not self._items_cache and target_items:
+                # В этом случае cache пустой, проходим по всем
+                for item_name in sorted(target_items):
+                    item_node = QTreeWidgetItem(self.tree)
+                    item_node.setText(0, item_name)
+                    self._items_cache[item_name] = item_node
+                    for tier in range(4, 9):
+                        tier_node = QTreeWidgetItem(item_node)
+                        tier_node.setText(0, f"Tier {tier}")
+                        for enchant in range(5):
+                            self._create_variant_row(tier_node, item_name, tier, enchant)
+
+         finally:
+            self.tree.setUpdatesEnabled(True)
+            self.tree.update()
                     
     def _create_variant_row(self, parent, item_name, tier, enchant):
         """Создать строку для конкретной вариации"""

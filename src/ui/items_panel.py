@@ -26,19 +26,17 @@ class ItemsPanel(QWidget):
         self._load_exceptions()
     
     def _init_known_items(self):
-        """Инъекция базы предметов в конфиг при запуске"""
+        """Инъекция базы предметов в конфиг при запуске (только если база пуста)"""
         config = get_config()
         current_db = config.get_known_items()
         
-        updated = False
-        for item in DEFAULT_ITEMS:
-            if item not in current_db:
-                current_db.append(item)
-                updated = True
-        
-        if updated:
-            config.set_known_items(current_db)
-            get_logger().info(f"База предметов обновлена: {len(current_db)} записей")
+        # Если база уже содержит предметы, не восстанавливаем дефолтные
+        if current_db:
+            return
+            
+        # Если база пуста — загружаем стандартный набор из 91 предмета
+        config.set_known_items(DEFAULT_ITEMS)
+        get_logger().info(f"База предметов инициализирована: {len(DEFAULT_ITEMS)} дефолтных записей")
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
