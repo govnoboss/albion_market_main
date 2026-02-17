@@ -25,6 +25,12 @@ class ItemsPanel(QWidget):
         self._load_database_list()
         self._load_exceptions()
     
+    def showEvent(self, event):
+        """Обновить данные при каждом показе вкладки"""
+        super().showEvent(event)
+        self._load_database_list()
+        self._load_exceptions()
+    
     def _init_known_items(self):
         """Инъекция базы предметов в конфиг при запуске (только если база пуста)"""
         config = get_config()

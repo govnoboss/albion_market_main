@@ -138,17 +138,7 @@ class BuyerWindow(QMainWindow):
         self.plan_tab = PurchasePlanTab()
         self.tabs.addTab(self.plan_tab, "📋 План закупки")
         
-        # --- Вкладка 3: Координаты ---
-        from .coordinates_tab import CoordinatesTab
-        self.coords_tab = CoordinatesTab()
-        self.tabs.addTab(self.coords_tab, "📍 Координаты")
-        
-        # --- Вкладка 4: Настройки (из сканера) ---
-        from .settings_panel import SettingsPanel
-        self.settings_tab = SettingsPanel()
-        self.tabs.addTab(self.settings_tab, "⚙️ Настройки")
-        
-        # --- Вкладка 5: Профиты (из сканера) ---
+        # --- Вкладка 3: Профиты ---
         from .profits_tab import ProfitsTab
         self.profit_tab = ProfitsTab()
         self.tabs.addTab(self.profit_tab, "📊 Профиты")

@@ -40,6 +40,11 @@ class SettingsPanel(QScrollArea):
         self._setup_ui()
         self._load_settings()
     
+    def showEvent(self, event):
+        """Обновить настройки при каждом показе вкладки"""
+        super().showEvent(event)
+        self._load_settings()
+    
     def _setup_ui(self):
         layout = QVBoxLayout(self.content_widget)
         layout.setContentsMargins(15, 15, 15, 15)
@@ -123,7 +128,7 @@ class SettingsPanel(QScrollArea):
 
         layout.addWidget(mouse_group)
         # === Фильтры сканирования ===
-        filters_group = QGroupBox("🔍 Фильтры сканирования")
+        filters_group = QGroupBox("🔍 Фильтры предметов")
         filters_layout = QVBoxLayout(filters_group)
         filters_layout.setSpacing(15)
         

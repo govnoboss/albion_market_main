@@ -3,10 +3,14 @@ from PyQt6.QtWidgets import (
     QPushButton, QLabel, QFrame, QApplication, QMessageBox,
     QProgressBar
 )
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QFont, QIcon
+from PyQt6.QtCore import Qt, QTimer, QUrl
+from PyQt6.QtGui import QFont, QIcon, QDesktopServices
 import sys
+import webbrowser
 
+# --- CONTACT LINKS ---
+LINK_TELEGRAM = "https://t.me/nobrainchel" 
+LINK_DISCORD = "https://discordapp.com/users/dendidima228" 
 
 from .styles import MAIN_STYLE, COLORS
 from .splash_screen import SplashScreen
@@ -130,7 +134,7 @@ class LauncherWindow(QMainWindow):
 
     def _init_launcher_ui(self):
         self.setWindowTitle("GBot Launcher")
-        self.resize(600, 450) # Increased height slightly
+        self.resize(600, 530)
         self.setStyleSheet(MAIN_STYLE)
         
         # Центрирование окна (если возможно)
@@ -140,8 +144,8 @@ class LauncherWindow(QMainWindow):
         self.setCentralWidget(central_widget)
         
         layout = QVBoxLayout(central_widget)
-        layout.setSpacing(30)
-        layout.setContentsMargins(40, 40, 40, 40)
+        layout.setSpacing(20)
+        layout.setContentsMargins(40, 30, 40, 30)
         
         # Заголовок
         title_lbl = QLabel("GBOT Albion")
@@ -177,6 +181,30 @@ class LauncherWindow(QMainWindow):
         btn_layout.addWidget(self.btn_buyer)
         
         layout.addLayout(btn_layout)
+
+        # Кнопка Настройки (по центру, под режимами)
+        self.btn_settings = QPushButton()
+        self.btn_settings.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_settings.setStyleSheet(f"""
+            QPushButton {{
+                background-color: #161b22;
+                border: 2px solid {COLORS['border']};
+                border-radius: 10px;
+                padding: 12px 20px;
+            }}
+            QPushButton:hover {{
+                border-color: #8b949e;
+                background-color: #21262d;
+            }}
+        """)
+        settings_btn_layout = QHBoxLayout(self.btn_settings)
+        settings_icon = QLabel("⚙️ НАСТРОЙКИ")
+        settings_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        settings_icon.setStyleSheet("font-size: 15px; font-weight: bold; color: #8b949e; border: none; background: transparent;")
+        settings_btn_layout.addWidget(settings_icon)
+        self.btn_settings.clicked.connect(self._launch_settings)
+        layout.addWidget(self.btn_settings)
+
         layout.addStretch()
 
         # --- Update Banner (скрыт по умолчанию) ---
@@ -263,6 +291,54 @@ class LauncherWindow(QMainWindow):
 
         layout.addLayout(footer_layout)
 
+        # --- Contacts (Footer) ---
+        contacts_layout = QHBoxLayout()
+        contacts_layout.setSpacing(15)
+        contacts_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # Telegram
+        btn_tg = QPushButton("Telegram")
+        btn_tg.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_tg.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: #24A1DE;
+                border: 1px solid #24A1DE;
+                border-radius: 15px;
+                padding: 5px 15px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #24A1DE;
+                color: white;
+            }
+        """)
+        btn_tg.clicked.connect(lambda: webbrowser.open(LINK_TELEGRAM))
+        contacts_layout.addWidget(btn_tg)
+
+        # Discord
+        btn_ds = QPushButton("Discord")
+        btn_ds.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_ds.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: #5865F2;
+                border: 1px solid #5865F2;
+                border-radius: 15px;
+                padding: 5px 15px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #5865F2;
+                color: white;
+            }
+        """)
+        btn_ds.clicked.connect(lambda: webbrowser.open(LINK_DISCORD))
+        contacts_layout.addWidget(btn_ds)
+
+        layout.addLayout(contacts_layout)
+
+
         # Предзагрузка окон для быстрого переключения
         self._preload_windows()
 
@@ -311,6 +387,7 @@ class LauncherWindow(QMainWindow):
 
     def _create_mode_button(self, title, desc, color):
         btn = QPushButton()
+        btn.setMinimumHeight(100)
         btn.setSizePolicy(
             btn.sizePolicy().horizontalPolicy().Expanding,
             btn.sizePolicy().verticalPolicy().Expanding
@@ -377,6 +454,13 @@ class LauncherWindow(QMainWindow):
         self.buyer_window = BuyerWindow(launcher=self)
         sys.stderr.write("DEBUG: BuyerWindow initialized.\n"); sys.stderr.flush()
         
+        self.splash.set_status("Загрузка Настроек...")
+        self.splash.set_progress(75)
+        QApplication.processEvents()
+        
+        from .settings_window import SettingsWindow
+        self.settings_window = SettingsWindow(launcher=self)
+        
         self.splash.set_progress(90)
         self.splash.set_status("Подготовка...")
         QApplication.processEvents()
@@ -397,6 +481,10 @@ class LauncherWindow(QMainWindow):
 
     def _launch_buyer(self):
         self.buyer_window.show()
+        self.hide()
+
+    def _launch_settings(self):
+        self.settings_window.show()
         self.hide()
 
     # ── Auto-Update ──────────────────────────────────────

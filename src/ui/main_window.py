@@ -14,7 +14,6 @@ from PyQt6.QtGui import QFont, QIcon
 from .styles import MAIN_STYLE, COLORS
 from .control_panel import ControlPanel
 from .items_panel import ItemsPanel
-from .settings_panel import SettingsPanel  # Панель настроек
 from .mini_overlay import MiniOverlay  # Импорт мини-оверлея
 from ..utils.logger import get_logger
 from ..utils.config import get_config
@@ -327,15 +326,6 @@ class MainWindow(QMainWindow):
         # --- Вкладка 4: Предметы ---
         self.items_panel = ItemsPanel()
         self.tabs.addTab(self.items_panel, "📦 Предметы")
-
-        # --- Вкладка 5: Координаты ---
-        from .coordinates_tab import CoordinatesTab
-        self.coords_tab = CoordinatesTab()
-        self.tabs.addTab(self.coords_tab, "🗺️ Координаты")
-
-        # --- Вкладка 6: Настройки ---
-        self.settings_panel = SettingsPanel()
-        self.tabs.addTab(self.settings_panel, "⚙️ Настройки")
         
         main_layout.addWidget(self.tabs, stretch=1)
 

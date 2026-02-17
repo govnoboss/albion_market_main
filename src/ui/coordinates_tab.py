@@ -25,6 +25,12 @@ class CoordinatesTab(QWidget):
         self._connect_signals()
         self._refresh_values()
 
+    def showEvent(self, event):
+        """Обновить значения при каждом показе вкладки"""
+        super().showEvent(event)
+        self._refresh_values()
+        self._refresh_profiles()
+
     def _setup_ui(self):
         layout = QVBoxLayout(self)
         

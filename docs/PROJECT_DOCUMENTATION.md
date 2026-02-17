@@ -11,9 +11,11 @@ A desktop application that automates market data collection (Scanner) and item p
 
 ### Key Features
 *   **Scanner:** Automatically iterates through items, tiers, and enchants to record market prices. Supports **Black Market** specific logic (character switching).
-*   **Buyer (Wholesale):** Purchases specific items up to a configured limit.
-*   **Buyer (Smart):** Automatically identifies and purchases profitable items based on the spread between City Market and Black Market prices.
+*   **Buyer (Wholesale):** Purchases specific items up to a configured limit with loop-based buying and budget tracking.
+*   **Buyer (Smart):** Automatically identifies and purchases profitable items based on the spread between any two cities (configurable buy/sell city arbitrage).
+*   **Multi-City Arbitrage:** Динамический выбор города покупки и продажи (не только Black Market).
 *   **Mini Overlay:** A compact, always-on-top interface for monitoring bot status without blocking the game view.
+*   **Auto-Recovery:** Автоматическое восстановление при вылетах, дисконнектах и закрытии рынка.
 *   **License System:** HWID-based licensing system to restrict usage. RSA-signed server responses.
 *   **Auto-Update:** Проверка и скачивание новых версий через GitHub Releases с автоматической установкой.
 
@@ -27,12 +29,14 @@ The project follows a layered architecture: **Launcher** → **Logic** (`core`) 
 src/
 ├── main.py                 # Точка входа (создаёт LauncherWindow)
 ├── core/                   # Business Logic & Bot Engines
-│   ├── base_bot.py         # Base thread, input emulation, common checks
+│   ├── base_bot.py         # Base thread, input emulation, common checks, kick recovery
 │   ├── bot.py              # Scanner Mode logic (incl. Black Market)
-│   ├── buyer.py            # Buyer Mode logic (Wholesale/Smart)
+│   ├── buyer.py            # Buyer Mode logic (Wholesale/Smart, multi-city)
 │   ├── coordinate_capture.py # Захват координат по клику (pynput)
 │   ├── interaction.py      # UI Element calculation (Dropdowns)
 │   ├── license.py          # HWID generation, RSA verification, license validation
+│   ├── market_opener.py    # Поиск и открытие NPC Рынка через OCR тултипов
+│   ├── state_detector.py   # Обнаружение вылетов, дисконнектов, экрана переподключения
 │   ├── updater.py          # Auto-Update: проверка/скачивание/установка через GitHub Releases
 │   ├── validator.py        # Screen state validation (OCR/Visual)
 │   └── version.py          # Single source of truth: CURRENT_VERSION, APP_NAME, GITHUB_REPO
@@ -73,6 +77,7 @@ src/
 server/                     # License Server (FastAPI) — ОБЯЗАТЕЛЕН для работы бота
 tools/                      # Утилиты разработчика
 │   ├── release_manager.py  # GUI для сборки, упаковки и публикации релизов
+│   ├── ocr_tester.py       # GUI для тестирования OCR фильтров с превью и пресетами
 │   ├── generate_keys.py    # Генерация RSA ключей
 │   ├── migrate_db.py       # Миграция БД сервера
 │   ├── migrate_db_ip.py    # Миграция БД (IP поля)
@@ -101,8 +106,10 @@ main.py → LauncherWindow
 *   **Role:** Abstract parent class (QThread).
 *   **Responsibilities:**
     *   Thread management (`start`, `stop`, `pause`).
-    *   **Human-like Input:** `_human_move_to` (with randomization), `_human_click`, `_human_type`.
+    *   **Human-like Input:** `_human_move_to` (Bezier curves), `_human_click`, `_human_type` (pynput).
     *   **Market Validation:** Checks if the Market or Item Menu is open (`_check_market_is_open`, `_detect_current_city`).
+    *   **Kick Recovery:** `_detect_and_handle_kicks` — полный цикл восстановления при дисконнекте (OCR-детекция → нажатие OK → переподключение → вход → повторное открытие рынка через `MarketOpener`).
+    *   **Item Name Verification:** `_verify_item_name_with_retry` — OCR-верификация имени предмета с нормализацией текста и SequenceMatcher (порог 90%).
     *   **Pause Logic:** Handles graceful pausing via `_check_pause`.
 
 ### MarketBot (Scanner) (`src/core/bot.py`)
@@ -115,13 +122,18 @@ main.py → LauncherWindow
 
 ### BuyerBot (Buyer) (`src/core/buyer.py`)
 *   **Role:** Executes buy orders based on logic.
+*   **Multi-City:** Динамический выбор `buy_city` и `sell_city` — поддержка произвольных маршрутов (не только Black Market).
 *   **Modes:**
-    1.  **Wholesale**: Buys items from a user-defined list up to a specific limit.
-    2.  **Smart**: Analyzes `PriceStorage`, finds items where `(BlackMarketPrice * 0.935) - MarketPrice` > `MinProfit`, and buys them.
+    1.  **Wholesale**: Buys items from a user-defined list up to a specific limit. Циклическая покупка всего лота.
+    2.  **Smart**: Analyzes `PriceStorage`, finds items where `(SellCityPrice * 0.935) - MarketPrice` > `MinProfit`, and buys them.
 *   **Key Logic:**
-    *   **Target Price Calculation:** `Target = (BM_Price * 0.935) / (1.025 * Margin)`.
-    *   **Verification:** Reads the "Total Buy Order" price via OCR ensuring the total cost matches expected `Price * Qty`.
+    *   **Target Price Calculation:** `Target = (SellCity_Price * 0.935) / (1 + MinProfitPercent / 100)`.
+    *   **Loop-Based Buying:** `_process_variant` содержит цикл `while items_bought < limit` — покупает несколько лотов подряд до выполнения лимита.
+    *   **Budget Tracking:** `max_budget` / `spent_amount` — отслеживание трат, автоматическая остановка при превышении бюджета.
+    *   **Verification:** Reads the "Total Buy Order" price via OCR ensuring the total cost matches expected `Price * Qty` (5% buffer).
     *   **Input:** Uses keyboard input with mouse-hold logic for setting quantities.
+    *   **Simulation Mode:** `simulation_mode = True` по умолчанию — безопасный режим без реальных покупок.
+    *   **Sort Options:** Сортировка профитов по % или абсолютному серебру.
 
 ### Interaction (`src/core/interaction.py`)
 *   **Role:** UI Coordinate Logic.
@@ -132,6 +144,20 @@ main.py → LauncherWindow
 *   **Role:** Глобальный захват координат по клику мыши.
 *   **Логика:** Использует `pynput` для прослушивания кликов, поддерживает захват точки и области.
 *   **Singleton:** Глобальный экземпляр через `get_capture_manager()`.
+
+### StateDetector (`src/core/state_detector.py`)
+*   **Role:** Обнаружение специфических состояний игры (вылеты, ошибки).
+*   **Methods:**
+    *   `is_disconnected()` — OCR-детекция окна ошибки подключения (popup с кнопкой OK).
+    *   `is_reconnect_screen()` — детекция экрана «Информация» с кнопкой «Переподключение».
+    *   `is_main_menu()` — проверка главного меню через Template Matching аватаров персонажей.
+    *   `find_ok_button_coords()` / `find_reconnect_button_coords()` — расчёт координат кнопок относительно экрана.
+*   **Resolution-Independent:** Работает на любом разрешении, используя процентные отступы от центра экрана.
+
+### MarketOpener (`src/core/market_opener.py`)
+*   **Role:** Систематический поиск и открытие NPC Рынка на экране.
+*   **Logic:** Зигзагообразное сканирование экрана (шаг 350px по X, 10% по Y) с человекоподобным движением мыши. Детекция тултипа «Рынок» через OCR.
+*   **Integration:** Используется в `BaseBot._detect_and_handle_kicks` для автоматического повторного открытия рынка после восстановления.
 
 ### LicenseManager (`src/core/license.py`)
 *   **Role:** Security & Access Control.
@@ -185,7 +211,14 @@ GUI-приложение (PyQt6) для разработчика:
 
 ### BuyerWindow (`src/ui/buyer_window.py`)
 *   **Role:** Отдельное окно для режима закупки.
-*   **Features:** Управление Wholesale/Smart buyer, прогресс, логи. Включает вложенные табы `buyer/profit_preview_tab.py` и `buyer/purchase_plan_tab.py`.
+*   **Features:**
+    *   Управление Wholesale/Smart buyer, прогресс, логи.
+    *   **Multi-City:** Дропдауны «Откуда» (`buy_city_combo`) и «Куда» (`sell_city_combo`) для выбора маршрута.
+    *   **Budget Input:** Поле бюджета с placeholder «Безлимит» (кастомный `BudgetSpinBox`).
+    *   **Always on Top:** Чекбокс для закрепления окна поверх всех.
+    *   **Mini Overlay:** Интеграция с компактным оверлеем при запуске бота.
+    *   **Auto-Refresh:** Списки городов и План закупки обновляются автоматически при каждом показе окна (`showEvent`).
+    *   Вложенные табы: `buyer/profit_preview_tab.py` и `buyer/purchase_plan_tab.py`.
 
 ### MiniOverlay (`src/ui/mini_overlay.py`)
 *   **Role:** Compact widget showing Status, Progress Bar, and Last Log Message.

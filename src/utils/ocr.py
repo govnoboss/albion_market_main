@@ -315,7 +315,7 @@ def read_qty_text(area: dict) -> int:
         
         # Convert back to PIL for Tesseract
         final_img = Image.fromarray(img_np)
-        final_img.save("test_qty.png")
+
         # 6. OCR (PSM 6, Numeric Whitelist)
         whitelist = "0123456789"
         config = f'--psm 6 -c tessedit_char_whitelist={whitelist}'
