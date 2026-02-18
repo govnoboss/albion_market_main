@@ -31,6 +31,7 @@ class BuyerWindow(QMainWindow):
     hotkey_stop_sig = pyqtSignal()
     hotkey_pause_sig = pyqtSignal()
     hotkey_toggle_sig = pyqtSignal() # F5 Toggle
+    hotkey_skip_sig = pyqtSignal()   # F7 Skip
 
     def __init__(self, launcher=None):
         super().__init__()
@@ -80,7 +81,7 @@ class BuyerWindow(QMainWindow):
         title.setStyleSheet("font-size: 18px; color: #3fb950; font-weight: bold;")
         header_layout.addWidget(title)
         
-        hotkeys_info = QLabel("  [ F5: Start/Stop  |  F6: Pause ]")
+        hotkeys_info = QLabel("  [ F5: Start/Stop  |  F6: Pause  |  F7: Skip ]")
         hotkeys_info.setStyleSheet("color: #636e7b; font-size: 12px; font-weight: bold;")
         header_layout.addWidget(hotkeys_info)
         
@@ -161,6 +162,7 @@ class BuyerWindow(QMainWindow):
         self.hotkey_stop_sig.connect(self._on_stop_clicked)
         self.hotkey_pause_sig.connect(self._toggle_pause)
         self.hotkey_toggle_sig.connect(self._toggle_bot)
+        self.hotkey_skip_sig.connect(lambda: self.bot.skip_item() if self.bot.isRunning() else None)
 
 
 
@@ -324,6 +326,7 @@ class BuyerWindow(QMainWindow):
             try:
                 keyboard.add_hotkey("F5", self.hotkey_toggle_sig.emit)
                 keyboard.add_hotkey("F6", self.hotkey_pause_sig.emit)
+                keyboard.add_hotkey("F7", self.hotkey_skip_sig.emit)
                 self._hotkeys_registered = True
             except Exception as e:
                 logger.error(f"Ошибка регистраци хоткеев Buyer: {e}")
@@ -346,6 +349,7 @@ class BuyerWindow(QMainWindow):
             try:
                 keyboard.remove_hotkey("F5")
                 keyboard.remove_hotkey("F6")
+                keyboard.remove_hotkey("F7")
                 self._hotkeys_registered = False
             except Exception as e:
                 pass  # Игнорируем если хоткеи уже удалены
@@ -590,6 +594,7 @@ class BuyerWindow(QMainWindow):
         try:
             keyboard.remove_hotkey("F5")
             keyboard.remove_hotkey("F6")
+            keyboard.remove_hotkey("F7")
         except:
             pass
             

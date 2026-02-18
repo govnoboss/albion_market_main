@@ -313,12 +313,25 @@ def read_qty_text(area: dict) -> int:
         # 5. Threshold Binary 125 (User optimized)
         _, img_np = cv2.threshold(img_np, 125, 255, cv2.THRESH_BINARY)
         
+        # --- Кроп краев, чтобы убрать рамки и лишние линии (0% по бокам, 10% сверху/снизу) ---
+        h, w = img_np.shape
+        dy = int(h * 0.10)
+        dx = 0
+        img_np = img_np[dy:h-dy, 0:w]
+        
         # Convert back to PIL for Tesseract
         final_img = Image.fromarray(img_np)
+        
+        # --- DEBUG: Сохранение изображения для откладки (в корень проекта) ---
+        try:
+            debug_path = get_app_root() / "debug_qty_ocr.png"
+            final_img.save(debug_path)
+        except Exception as e:
+            logger.warning(f"Failed to save debug OCR image: {e}")
 
-        # 6. OCR (PSM 6, Numeric Whitelist)
+        # 6. OCR (PSM 7 - Single text line, Numeric Whitelist)
         whitelist = "0123456789"
-        config = f'--psm 6 -c tessedit_char_whitelist={whitelist}'
+        config = f'--psm 7 -c tessedit_char_whitelist={whitelist}'
         
         text = pytesseract.image_to_string(final_img, lang='eng', config=config)
         clean_text = text.strip()

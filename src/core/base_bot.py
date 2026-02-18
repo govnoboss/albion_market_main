@@ -79,8 +79,8 @@ class BaseBot(QThread):
         # offset уже включен в реализацию human_mouse (хотя там он start/end, но мы можем добавить final offset и тут)
         
         # Добавляем небольшой случайный оффсет к ЦЕЛЕВОЙ точке, чтобы не кликать в один пиксель
-        target_x = x + random.randint(-1, 1)
-        target_y = y + random.randint(-1, 1)
+        target_x = x + random.randint(-5, 5)
+        target_y = y + random.randint(-5, 5)
         
         move_mouse_human(target_x, target_y, check_pause_func=self._check_pause)
         
@@ -358,7 +358,7 @@ class BaseBot(QThread):
                 item_name_area['w'], item_name_area['h'],
                 lang='rus'
             )
-            ocr_name_clean = re.sub(r'\s*\([^)]*\)\s*', '', ocr_name).strip()
+            ocr_name_clean = re.sub(r'\s*\(.*', '', ocr_name).strip()
             ocr_clean = ocr_name_clean.lower()
             
             if not ocr_clean:
@@ -373,7 +373,7 @@ class BaseBot(QThread):
                     )
                     if ocr_name_retry.strip():
                         ocr_name = ocr_name_retry
-                        ocr_name_clean = re.sub(r'\s*\([^)]*\)\s*', '', ocr_name).strip()
+                        ocr_name_clean = re.sub(r'\s*\(.*', '', ocr_name).strip()
                         ocr_clean = ocr_name_clean.lower()
                         text_found = True
                         break

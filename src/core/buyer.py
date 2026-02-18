@@ -8,6 +8,7 @@ import random
 import pyautogui
 from .base_bot import BaseBot
 from .interaction import DropdownSelector
+from .finance import finance_manager
 from ..utils.price_storage import price_storage
 
 class BuyerBot(BaseBot):
@@ -22,7 +23,7 @@ class BuyerBot(BaseBot):
         super().__init__()
         self.dropdowns = DropdownSelector()
         self._items_to_buy = [] # Список задач [(name, tier, enchant, limit)]
-        self.simulation_mode = True # По умолчанию True для безопасности
+        self.simulation_mode = False
         self.manual_confirm_mode = False # Debug F1/F2 mode
         self.max_budget = 0 # 0 = Unlimited
         self.spent_amount = 0 # Отслеживание трат сессии
@@ -37,7 +38,8 @@ class BuyerBot(BaseBot):
         
         # Current Item State (Context for specific tier logic)
         self._current_item_name = None
-        self._current_enchant = 0
+        self._current_enchant = None
+        self._skip_item_requested = False
         
     def run(self):
         """Основной цикл закупки"""
@@ -63,6 +65,12 @@ class BuyerBot(BaseBot):
         self.logger.info("🏁 Закупка завершена.")
         self._is_running = False
         self.finished.emit()
+
+    def skip_item(self):
+        """Пропустить текущий предмет (вызывается из UI по F7)"""
+        if self._is_running and not self._skip_item_requested:
+            self.logger.info("⏭️ Пропуск текущего предмета запрошен...")
+            self._skip_item_requested = True
 
     def _run_wholesale(self):
         """Логика ОПТОВОЙ закупки (по лимитам из конфига)"""
@@ -94,6 +102,8 @@ class BuyerBot(BaseBot):
             item_name, variants = v_list[v_idx]
             if self._stop_requested: break
             self._check_pause()
+            
+            self._skip_item_requested = False # Reset for new item
             
             # --- Safety Check: Is Market Open? ---
             market_found = False
@@ -129,6 +139,12 @@ class BuyerBot(BaseBot):
                  v_idx += 1
                  continue
 
+            # Check skip after search
+            if self._skip_item_requested:
+                self.logger.info(f"⏭️ Пропуск {item_name} по запросу.")
+                v_idx += 1
+                continue
+
             # 2. Перебор вариаций (while для возможности Retry)
             var_idx = 0
             while var_idx < len(variants):
@@ -146,6 +162,11 @@ class BuyerBot(BaseBot):
                 processed_count += 1
                 self._process_variant(item_name, tier, enchant, limit, processed_count, total_tasks)
                 
+                if self._skip_item_requested:
+                    self.logger.info(f"⏭️ Вариант T{tier}.{enchant} пропущен.")
+                    # Если пропущен во время обработки варианта, выходим из цикла вариантов этого предмета
+                    break 
+
                 if self._recovery_performed_during_item:
                     self.logger.warning(f"🔄 Повтор варианта {item_name} T{tier}.{enchant} (был вылет)")
                     continue # Перезапуск того же var_idx
@@ -204,6 +225,8 @@ class BuyerBot(BaseBot):
             if self._stop_requested: break
             self._check_pause()
             
+            self._skip_item_requested = False # Reset for new item in smart mode
+            
             processed_count += 1
             # Отображаем % или серебро в зависимости от режима сортировки
             if self.sort_by_percent:
@@ -241,6 +264,9 @@ class BuyerBot(BaseBot):
 
                 # Запускаем процессор вариации
                 self._process_variant(item_name, tier, enchant, final_limit, processed_count, total_items)
+                
+                if self._skip_item_requested:
+                    self.logger.info(f"⏭️ Smart Item {item_name} T{tier}.{enchant} пропущен.")
                 
                 self._close_menu()
                 
@@ -345,7 +371,7 @@ class BuyerBot(BaseBot):
         consecutive_fails = 0 # Для выхода если лоты закончились или OCR сбоит
         
         while items_bought < limit:
-            if self._stop_requested: break
+            if self._stop_requested or self._skip_item_requested: break
             self._check_pause()
             
             remaining = limit - items_bought
@@ -466,6 +492,19 @@ class BuyerBot(BaseBot):
                  self._human_move_to(*confirm_btn)
                  self._human_click()
                  self.logger.info(f"💰 Куплено {actual_qty} шт.!")
+                 
+                 # Логируем транзакцию в БД финансов
+                 finance_manager.log_transaction(
+                     item_name=item_name,
+                     tier=tier,
+                     enchant=enchant,
+                     price=current_price,
+                     qty=actual_qty,
+                     city=self.buy_city,
+                     profit_est=int((bm_price * 0.935 - current_price) * actual_qty),
+                     is_simulation=self.simulation_mode
+                 )
+                 
                  self.spent_amount += (current_price * actual_qty)
                  items_bought += actual_qty
                  time.sleep(0.8) # Ждем пока диалог закроется и список обновится
@@ -535,8 +574,7 @@ class BuyerBot(BaseBot):
 
     def _select_tier(self, tier):
         """Выбор тира (с поддержкой исключений и сбросом качества)"""
-        if self._current_tier_value == tier:
-             return
+        # Убрана оптимизация self._current_tier_value == tier, чтобы гарантировать выбор
              
         coord = self.dropdowns.get_tier_click_point(tier)
         if coord:
@@ -548,7 +586,7 @@ class BuyerBot(BaseBot):
             self._current_quality = None
 
     def _select_enchant(self, enchant):
-        if self._current_enchant == enchant: return
+        # Убрана оптимизация self._current_enchant == enchant, чтобы гарантировать выбор
         
         coord = self.dropdowns.get_enchant_click_point(enchant)
         if coord:

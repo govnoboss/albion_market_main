@@ -34,18 +34,32 @@ class SettingsWindow(QMainWindow):
         header = QHBoxLayout()
         header.setSpacing(10)
 
+        if self.launcher:
+            back_btn = QPushButton("Меню")
+            back_btn.setFixedSize(110, 36)
+            back_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            back_btn.setStyleSheet("""
+                QPushButton { 
+                    background: #21262d; 
+                    color: #c9d1d9; 
+                    border: 1px solid #8b949e; 
+                    border-radius: 6px; 
+                    font-size: 14px; 
+                    font-weight: bold;
+                }
+                QPushButton:hover { 
+                    background: #30363d; 
+                    color: #ffffff; 
+                    border-color: #f0f6fc;
+                }
+            """)
+            back_btn.clicked.connect(self._on_back)
+            header.addWidget(back_btn)
+
         title = QLabel("⚙️ Настройки")
         title.setStyleSheet(SETTINGS_STYLE["title"])
         header.addWidget(title)
         header.addStretch()
-
-        if self.launcher:
-            back_btn = QPushButton("← Меню")
-            back_btn.setFixedSize(100, 32)
-            back_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            back_btn.setStyleSheet(SETTINGS_STYLE["back_btn"])
-            back_btn.clicked.connect(self._on_back)
-            header.addWidget(back_btn)
 
         layout.addLayout(header)
 

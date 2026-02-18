@@ -298,10 +298,10 @@ class ConfigManager:
         
         # Если в списке исключений для этого тира есть этот предмет -> True
         if key in exceptions:
-            # Нормализация для надежности
-            target = item_name.strip()
+            # Нормализация для надежности (регистронезависимо)
+            target = item_name.strip().lower()
             # Проверяем, есть ли совпадение
-            if target in exceptions[key]:
+            if any(target == ex.strip().lower() for ex in exceptions[key]):
                  return True
                  
         return False

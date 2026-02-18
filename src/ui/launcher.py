@@ -202,7 +202,34 @@ class LauncherWindow(QMainWindow):
         
         layout.addLayout(btn_layout)
 
-        # Кнопка Настройки (по центру, под режимами)
+        # Кнопки Настройки и Финансы
+        secondary_btns_layout = QHBoxLayout()
+        secondary_btns_layout.setSpacing(15)
+
+        # Кнопка ФИНАНСЫ
+        self.btn_finance = QPushButton()
+        self.btn_finance.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_finance.setStyleSheet(f"""
+            QPushButton {{
+                background-color: #161b22;
+                border: 2px solid {COLORS['border']};
+                border-radius: 10px;
+                padding: 12px 15px;
+            }}
+            QPushButton:hover {{
+                border-color: {COLORS['success']};
+                background-color: #21262d;
+            }}
+        """)
+        fin_btn_layout = QHBoxLayout(self.btn_finance)
+        fin_lbl = QLabel("💰 ФИНАНСЫ")
+        fin_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        fin_lbl.setStyleSheet("font-size: 14px; font-weight: bold; color: #f0f6fc; border: none; background: transparent;")
+        fin_btn_layout.addWidget(fin_lbl)
+        self.btn_finance.clicked.connect(self._launch_finance)
+        secondary_btns_layout.addWidget(self.btn_finance)
+
+        # Кнопка Настройки
         self.btn_settings = QPushButton()
         self.btn_settings.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_settings.setStyleSheet(f"""
@@ -210,7 +237,7 @@ class LauncherWindow(QMainWindow):
                 background-color: #161b22;
                 border: 2px solid {COLORS['border']};
                 border-radius: 10px;
-                padding: 12px 20px;
+                padding: 12px 15px;
             }}
             QPushButton:hover {{
                 border-color: #8b949e;
@@ -220,10 +247,12 @@ class LauncherWindow(QMainWindow):
         settings_btn_layout = QHBoxLayout(self.btn_settings)
         settings_icon = QLabel("⚙️ НАСТРОЙКИ")
         settings_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        settings_icon.setStyleSheet("font-size: 15px; font-weight: bold; color: #8b949e; border: none; background: transparent;")
+        settings_icon.setStyleSheet("font-size: 14px; font-weight: bold; color: #8b949e; border: none; background: transparent;")
         settings_btn_layout.addWidget(settings_icon)
         self.btn_settings.clicked.connect(self._launch_settings)
-        layout.addWidget(self.btn_settings)
+        secondary_btns_layout.addWidget(self.btn_settings)
+
+        layout.addLayout(secondary_btns_layout)
 
         layout.addStretch()
 
@@ -476,7 +505,14 @@ class LauncherWindow(QMainWindow):
         from .settings_window import SettingsWindow
         self.settings_window = SettingsWindow(launcher=self)
         
-        self.splash.set_progress(90)
+        self.splash.set_status("Загрузка Финансов...")
+        self.splash.set_progress(85)
+        QApplication.processEvents()
+        
+        from .finance_window import FinanceWindow
+        self.finance_window = FinanceWindow(launcher=self)
+        
+        self.splash.set_progress(95)
         self.splash.set_status("Подготовка...")
         QApplication.processEvents()
 
@@ -502,6 +538,11 @@ class LauncherWindow(QMainWindow):
         self.settings_window.show()
         self.hide()
 
+    def _launch_finance(self):
+        if hasattr(self, 'finance_window') and self.finance_window:
+            self.finance_window.show()
+            self.hide()
+
     # ── Auto-Update ──────────────────────────────────────
 
     def _check_for_updates(self):
@@ -516,7 +557,18 @@ class LauncherWindow(QMainWindow):
     def _on_update_available(self, info: dict):
         """Вызывается когда найдена новая версия"""
         self._update_info = info
-        self.update_lbl.setText(f"Доступна версия {info['version']}")
+        # Подчеркиваем текст, чтобы показать интерактивность
+        self.update_lbl.setText(f"<u>Доступна версия {info['version']}</u>")
+        
+        # Список изменений в подсказку текста
+        changelog = info.get('changelog', 'Нет описания изменений')
+        # Делаем текст подсказки чисто белым
+        tooltip_text = f"<div style='color: #ffffff;'><b>Что нового в v{info['version']}:</b><br><br>{changelog.replace('\n', '<br>')}</div>"
+        
+        self.update_lbl.setToolTip(tooltip_text)
+        self.update_lbl.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_update.setToolTip("") # Убеждаемся, что на кнопке нет дубликата
+        
         self.update_frame.show()
 
     def _start_update_download(self):

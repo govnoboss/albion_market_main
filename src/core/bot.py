@@ -654,30 +654,28 @@ class MarketBot(BaseBot):
                  
     # === Helper Selectors ===
     
-    def _calculate_bm_tier_index(self, tier: int) -> int:
+    def _calculate_bm_tier_index(self, tier: int, enchant: int = 0) -> int:
         """
         Рассчитывает индекс клика в выпадающем списке тиров для Черного Рынка.
         Логика:
         1. "Обычные" предметы начинаются с T4 (min_tier=4).
         2. "Исключения" (в списках tier_exceptions) могут начинаться с T1, T2, T3.
+        3. КРИТИЧНО: Если выбран энчант > 0, то тиры 1-3 пропадают из списка!
         """
-        min_tier = 4 # Default for standard items (T4-T8)
-        
-        # Проверяем наличие в списках исключений (снизу вверх)
-        # Если предмет есть в Tier_1 -> min_tier = 1
-        # Если нет, проверяем Tier_2 -> min_tier = 2
-        # И так далее.
-        
-        if self.config.is_tier_exception(1, self._current_item_name):
-            min_tier = 1
-        elif self.config.is_tier_exception(2, self._current_item_name):
-            min_tier = 2
-        elif self.config.is_tier_exception(3, self._current_item_name):
-            min_tier = 3
+        # Если выбран энчант, то список всегда начинается с T4
+        if enchant > 0:
+            min_tier = 4
+        else:
+            min_tier = 4 # Default for standard items (T4-T8)
             
-        # DEBUG LOG
-        # self.logger.info(f"DEBUG: BM Tier Calc: Item='{self._current_item_name}' TargetT={tier} MinTier={min_tier}")
-        
+            # Проверяем наличие в списках исключений (снизу вверх)
+            if self.config.is_tier_exception(1, self._current_item_name):
+                min_tier = 1
+            elif self.config.is_tier_exception(2, self._current_item_name):
+                min_tier = 2
+            elif self.config.is_tier_exception(3, self._current_item_name):
+                min_tier = 3
+            
         return tier - min_tier
 
     def _select_tier(self, tier: int):
@@ -699,7 +697,7 @@ class MarketBot(BaseBot):
             
             # Use the calculated point for the ITEM
             # Dynamic calculation based on item properties
-            bm_index = self._calculate_bm_tier_index(tier)
+            bm_index = self._calculate_bm_tier_index(tier, enchant=self._current_enchant or 0)
             
             # Additional check: If index < 0, fallback to standard T4-based logic?
             # Or trust the config.
