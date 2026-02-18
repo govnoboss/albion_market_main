@@ -121,11 +121,6 @@ class TestPriceStorage:
         # Patch the file path constant where it's used
         test_file = tmp_path / "data" / "prices.json"
         
-        # We need to patch 'src.utils.price_storage.PRICES_FILE'
-        # BUT since it's imported in the module scope, patching it might be tricky if not done before import.
-        # However, PriceStorage reads from attributes or global. 
-        # The class methods use global PRICES_FILE.
-        
         with patch("src.utils.price_storage.PRICES_FILE", test_file):
             storage = PriceStorage()
             yield storage
@@ -183,23 +178,13 @@ class TestPriceStorage:
         storage._data = {
             city: {
                 item: {
-                    "OLD": {"price": 100, "updated": old_time}, # This format is wrong based on code, but logic allows variants
-                    # Actually code uses variant_key = f"T{tier}.{enchant}"
-                    # Let's use two different variants
+                    "OLD": {"price": 100, "updated": old_time}, 
                     "T4.0": {"price": 100, "updated": old_time},
                     "T4.1": {"price": 200, "updated": recent_time}
                 }
             }
         }
         
-        # clean_history removes records if gap > gap_minutes
-        # It sorts all records by time.
-        # Records: T4.1 (now), T4.0 (now-60m). Diff = 60m.
-        # If gap=30, T4.0 should be removed via logic?
-        # Logic: 
-        # all_records sorted: [T4.1, T4.0]
-        # diff between T4.1 and T4.0 is 60m.
-        # if diff > 30 -> cutoff found. T4.0 and everything after is deleted.
         
         deleted = storage.clean_history(gap_minutes=30)
         assert deleted == 2

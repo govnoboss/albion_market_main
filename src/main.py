@@ -5,9 +5,17 @@
 
 import sys
 import os
+import ctypes
 
 # Fix for QFont point size error on HighDPI displays
 os.environ["QT_FONT_DPI"] = "96"
+
+# Set AppUserModelID for Windows Taskbar Icon
+try:
+    myappid = 'govnoboss.albionmarket.scanner.v1' # arbitrary string
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+except ImportError:
+    pass
 
 # Добавляем корневую папку проекта в путь
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -36,9 +44,14 @@ def run_app():
     font = QFont("Segoe UI", 10)
     app.setFont(font)
     
+    # --- Set Application Icon ---
+    from PyQt6.QtGui import QIcon
+    icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "icon.png")
+    if os.path.exists(icon_path):
+        app.setWindowIcon(QIcon(icon_path))
+    # ---------------------------
+
     try:
-        # Запускаем Лаунчер
-        # Он сам решит, показать себя или окно входа
         _ = LauncherWindow()
     except Exception as e:
         sys.stderr.write(f"CRASH: LauncherWindow init failed: {e}\n")

@@ -25,7 +25,7 @@ echo ╚════════════════════════
 echo.
 
 :: --- Проверки ---
-echo [1/5] Проверка окружения...
+echo [1/6] Проверка окружения...
 
 where python >nul 2>&1
 if errorlevel 1 (
@@ -49,7 +49,7 @@ echo ✅ Окружение готово
 echo.
 
 :: --- Тесты ---
-echo [2/5] Запуск Unit-тестов...
+echo [2/6] Запуск Unit-тестов...
 python -m pytest tests/test_core_systems.py
 if errorlevel 1 (
     echo.
@@ -61,14 +61,19 @@ echo ✅ Тесты пройдены!
 echo.
 
 :: --- Очистка предыдущей сборки ---
-echo [3/5] Очистка предыдущей сборки...
+echo [3/6] Очистка предыдущей сборки...
 if exist "%OUTPUT_DIR%\%APP_NAME%.dist" rmdir /s /q "%OUTPUT_DIR%\%APP_NAME%.dist"
 if exist "%OUTPUT_DIR%\%APP_NAME%.build" rmdir /s /q "%OUTPUT_DIR%\%APP_NAME%.build"
 echo ✅ Очищено
 echo.
 
+:: --- Icon Conversion ---
+echo [4/6] Icon Conversion...
+python tools/convert_icon.py
+echo.
+
 :: --- Компиляция ---
-echo [4/5] Компиляция через Nuitka (это займёт 5-15 минут)...
+echo [5/6] Компиляция через Nuitka (это займёт 5-15 минут)...
 echo.
 
 python -m nuitka ^
@@ -76,6 +81,7 @@ python -m nuitka ^
     --jobs=%NUMBER_OF_PROCESSORS% ^
     --output-dir=%OUTPUT_DIR% ^
     --output-filename=%APP_NAME%.exe ^
+    --windows-icon-from-ico=assets/icon.ico ^
     --enable-plugin=pyqt6 ^
     --include-package=src ^
     --include-data-dir=resources=resources ^
