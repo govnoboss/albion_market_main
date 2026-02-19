@@ -9,6 +9,7 @@ from PyQt6.QtGui import QIcon, QFont
 
 from .styles import MAIN_STYLE, COLORS
 from .log_overlay import LogOverlay  # Импорт лог-оверлея
+from .log_viewer import LogViewer, LogPanel # Импорт общего компонента логов
 from ..utils.logger import get_logger
 
 logger = get_logger()
@@ -140,7 +141,7 @@ class BuyerWindow(QMainWindow):
         # --- Вкладка 1: Управление (Monitor) ---
         self.monitor_tab = QWidget()
         self.monitor_layout = QVBoxLayout(self.monitor_tab)
-        self.monitor_layout.setSpacing(15)
+        self.monitor_layout.setSpacing(10)
         self.monitor_layout.setContentsMargins(10, 10, 10, 10)
         
         self._setup_controls(self.monitor_layout)
@@ -311,12 +312,13 @@ class BuyerWindow(QMainWindow):
 
     def _setup_log_area(self, layout):
         """Лог событий"""
-        self.log_viewer = QTextEdit()
-        self.log_viewer.setObjectName("logViewer")
-        self.log_viewer.setReadOnly(True)
-        self.log_viewer.setPlaceholderText("Лог событий закупки...")
-        self.log_viewer.setMaximumHeight(100)
-        layout.addWidget(self.log_viewer)
+        self.log_panel = LogPanel()
+        self.log_panel.connect_logger()
+        self.log_viewer = self.log_panel.viewer # Совместимость
+        
+        # Ограничиваем высоту для закупщика, но через панель
+        self.log_panel.setMaximumHeight(150) 
+        layout.addWidget(self.log_panel)
 
     def showEvent(self, event):
         """Регистрация хоткеев при показе окна"""
@@ -463,7 +465,7 @@ class BuyerWindow(QMainWindow):
         self.log_viewer.clear()
         # self.overlay.clear_logs()  # Removed
         mode_str = "🧠 УМНЫЙ" if is_smart else "📦 СТАНДАРТНЫЙ"
-        self.log_viewer.append(f"🚀 Инициализация... Режим: {mode_str}")
+        self.log_viewer.append_styled(f"🚀 Инициализация... Режим: {mode_str}", "info")
         
         self.start_btn.setVisible(False)
         self.stop_btn.setVisible(True)
@@ -499,7 +501,7 @@ class BuyerWindow(QMainWindow):
     def _on_stop_clicked(self):
         if not self.bot.isRunning(): return
         
-        self.log_viewer.append("🛑 Остановка...")
+        self.log_viewer.append_styled("🛑 Остановка...", "warning")
         self.bot.stop()
         
         # Update Overlay
@@ -513,10 +515,10 @@ class BuyerWindow(QMainWindow):
         is_paused = self.bot._is_paused
         
         self.overlay.update_status(True, is_paused)
-        self.log_viewer.append(f"⏯️ Пауза: {is_paused}")
+        self.log_viewer.append_styled(f"⏯️ Пауза: {is_paused}", "warning")
 
     def _on_progress(self, current, total, message):
-        self.log_viewer.append(f"[{current}/{total}] {message}")
+        self.log_viewer.append_styled(f"[{current}/{total}] {message}", "info")
         try:
             sb = self.log_viewer.verticalScrollBar()
             sb.setValue(sb.maximum())
@@ -531,7 +533,7 @@ class BuyerWindow(QMainWindow):
         self.is_mini_mode = False
         self.start_btn.setVisible(True)
         self.stop_btn.setVisible(False)
-        self.log_viewer.append("🏁 Завершена.")
+        self.log_viewer.append_styled("🏁 Завершена.", "success")
         
         self.overlay.update_status(False, False)
         self.overlay.hide()

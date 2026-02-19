@@ -83,9 +83,6 @@ class Logger:
             self._ui_handler.setLevel(logging.INFO)
             self.logger.addHandler(self._ui_handler)
             
-        # 2. Подключаем сигнал к callback (слоту)
-        # Обратите внимание: Qt автоматически определит QueuedConnection,
-        # если сигнал идет из другого потока.
         self.emitter.log_signal.connect(callback)
     
     def debug(self, msg: str) -> None:

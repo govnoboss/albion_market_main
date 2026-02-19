@@ -12,6 +12,7 @@ from PyQt6.QtCore import Qt
 from .styles import MAIN_STYLE, COLORS, SETTINGS_STYLE
 from .coordinates_tab import CoordinatesTab
 from .settings_panel import SettingsPanel
+from .faq_tab import FAQTab
 
 
 class SettingsWindow(QMainWindow):
@@ -74,6 +75,10 @@ class SettingsWindow(QMainWindow):
         # Вкладка 2: Настройки
         self.settings_tab = SettingsPanel()
         self.tabs.addTab(self.settings_tab, "⚙️ Настройки")
+
+        # Вкладка 3: FAQ / Гайд
+        self.faq_tab = FAQTab()
+        self.tabs.addTab(self.faq_tab, "❓ Гайд / FAQ")
 
         layout.addWidget(self.tabs, stretch=1)
 

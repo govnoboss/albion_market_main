@@ -56,10 +56,14 @@ class SettingsPanel(QScrollArea):
         self.timeout_spin.setSuffix(" сек")
         self.timeout_spin.setSingleStep(0.5)
         self.timeout_spin.valueChanged.connect(self._on_timeout_changed)
-        timeouts_layout.addRow("Ожидание обновления цены:", self.timeout_spin)
+        
+        timeout_lbl = QLabel("Ожидание обновления цены:")
+        timeout_lbl.setToolTip("Сколько секунд мы ждем перед тем как пропустить предмет, цена которого не обновилась.")
+        timeouts_layout.addRow(timeout_lbl, self.timeout_spin)
 
         layout.addWidget(timeouts_group)
-        
+
+
         # === Калибровка меню ===
         dropdown_group = QGroupBox("📏 Калибровка выпадающих меню")
         dropdown_layout = QFormLayout(dropdown_group)
@@ -76,14 +80,20 @@ class SettingsPanel(QScrollArea):
         self.row_height_spin.setRange(10, 100)
         self.row_height_spin.setSuffix(" px")
         self.row_height_spin.valueChanged.connect(self._on_row_height_changed)
-        dropdown_layout.addRow("Высота строки:", self.row_height_spin)
+        
+        row_height_lbl = QLabel("Высота строки:")
+        row_height_lbl.setToolTip("Точки которые помогают откалибровать клики по Тирам.")
+        dropdown_layout.addRow(row_height_lbl, self.row_height_spin)
         
         # Смещение первого элемента
         self.offset_spin = QSpinBox()
         self.offset_spin.setRange(0, 200)
         self.offset_spin.setSuffix(" px")
         self.offset_spin.valueChanged.connect(self._on_offset_changed)
-        dropdown_layout.addRow("Смещение списка:", self.offset_spin)
+        
+        offset_lbl = QLabel("Смещение списка:")
+        offset_lbl.setToolTip("Точки которые помогают откалибровать клики по Тирам.")
+        dropdown_layout.addRow(offset_lbl, self.offset_spin)
         
         layout.addWidget(dropdown_group)
         
@@ -99,30 +109,59 @@ class SettingsPanel(QScrollArea):
         self.mouse_speed_spin.setRange(500, 5000)
         self.mouse_speed_spin.setSingleStep(100)
         self.mouse_speed_spin.setSuffix(" px/sec")
-        self.mouse_speed_spin.setToolTip("Скорость перемещения курсора (больше = быстрее)")
         self.mouse_speed_spin.valueChanged.connect(self._on_mouse_speed_changed)
-        mouse_layout.addRow("Скорость:", self.mouse_speed_spin)
+        
+        speed_lbl = QLabel("Скорость:")
+        speed_lbl.setToolTip("с какой скоростью двигается мышь.")
+        mouse_layout.addRow(speed_lbl, self.mouse_speed_spin)
 
         # Min Duration
         self.mouse_mindur_spin = QDoubleSpinBox()
         self.mouse_mindur_spin.setRange(0.01, 1.0)
         self.mouse_mindur_spin.setSingleStep(0.01)
         self.mouse_mindur_spin.setSuffix(" сек")
-        self.mouse_mindur_spin.setToolTip("Минимальное время движения (даже на короткие дистанции)")
         self.mouse_mindur_spin.valueChanged.connect(self._on_mouse_mindur_changed)
-        mouse_layout.addRow("Мин. время:", self.mouse_mindur_spin)
+        
+        mindur_lbl = QLabel("Мин. время:")
+        mindur_lbl.setToolTip("Минимальное время за которое бот доводит мышь на координату.")
+        mouse_layout.addRow(mindur_lbl, self.mouse_mindur_spin)
 
         # Curvature
         self.mouse_curve_spin = QDoubleSpinBox()
         self.mouse_curve_spin.setRange(0.0, 1.0)
         self.mouse_curve_spin.setSingleStep(0.05)
-        self.mouse_curve_spin.setToolTip("Сила искривления траектории (0 = прямая, 1 = сильная дуга)")
         self.mouse_curve_spin.valueChanged.connect(self._on_mouse_curve_changed)
-        mouse_layout.addRow("Кривизна:", self.mouse_curve_spin)
+        
+        curve_lbl = QLabel("Кривизна:")
+        curve_lbl.setToolTip("Насколько сильно бот будет двигать мышь по кривой.")
+        mouse_layout.addRow(curve_lbl, self.mouse_curve_spin)
+
+        # Jitter
+        self.mouse_jitter_spin = QSpinBox()
+        self.mouse_jitter_spin.setRange(0, 50)
+        self.mouse_jitter_spin.setSuffix(" px")
+        self.mouse_jitter_spin.valueChanged.connect(self._on_mouse_jitter_changed)
+        
+        jitter_lbl = QLabel("Разброс:")
+        jitter_lbl.setToolTip("Радиус вокруг указанной координаты, куда бот будет случайно кликать.")
+        mouse_layout.addRow(jitter_lbl, self.mouse_jitter_spin)
 
         layout.addWidget(mouse_group)
+
+        # === Черный рынок ===
+        bm_group = QGroupBox("🖤 Черный рынок")
+        bm_layout = QVBoxLayout(bm_group)
+        bm_layout.setSpacing(10)
+        
+        self.char_switch_check = QCheckBox("Использовать смену персонажа (после 48 пред.)")
+        self.char_switch_check.setToolTip("Если включено, бот попытается переключиться на второго персонажа при достижении лимита ЧР.")
+        self.char_switch_check.stateChanged.connect(self._on_char_switch_changed)
+        bm_layout.addWidget(self.char_switch_check)
+        
+        layout.addWidget(bm_group)
         # === Фильтры сканирования ===
         filters_group = QGroupBox("🔍 Фильтры предметов")
+        filters_group.setToolTip("Выбор предметов для сканирования и закупки.")
         filters_layout = QVBoxLayout(filters_group)
         filters_layout.setSpacing(15)
         
@@ -219,6 +258,10 @@ class SettingsPanel(QScrollArea):
         self.mouse_speed_spin.setValue(int(mouse_cfg.get("speed_pps", 1800.0)))
         self.mouse_mindur_spin.setValue(mouse_cfg.get("min_duration", 0.08))
         self.mouse_curve_spin.setValue(mouse_cfg.get("curvature", 0.1))
+        self.mouse_jitter_spin.setValue(int(mouse_cfg.get("jitter", 5)))
+
+        # Character Switch
+        self.char_switch_check.setChecked(config.get_setting("use_character_switch", True))
             
         self.blockSignals(False)
         
@@ -283,3 +326,9 @@ class SettingsPanel(QScrollArea):
 
     def _on_mouse_curve_changed(self, value):
         get_config().set_mouse_setting("curvature", value)
+
+    def _on_mouse_jitter_changed(self, value):
+        get_config().set_mouse_setting("jitter", int(value))
+
+    def _on_char_switch_changed(self, state):
+        get_config().set_setting("use_character_switch", state == Qt.CheckState.Checked.value)

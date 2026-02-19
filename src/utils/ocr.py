@@ -62,9 +62,9 @@ def init_ocr():
             TESSERACT_CMD = _find_tesseract()
             if TESSERACT_CMD:
                 pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
-                logger.info(f"Tesseract найден по пути: {TESSERACT_CMD}")
+                logger.debug(f"Tesseract найден по пути: {TESSERACT_CMD}")
             else:
-                logger.warning("Tesseract не найден! OCR функции будут недоступны.")
+                logger.debug("Tesseract не найден! OCR функции будут недоступны.")
         except Exception as e:
             logger.error(f"Ошибка при инициализации OCR: {e}")
             TESSERACT_CMD = None

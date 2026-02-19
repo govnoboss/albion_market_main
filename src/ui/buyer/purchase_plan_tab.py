@@ -151,7 +151,11 @@ class PurchasePlanTab(QWidget):
             # 2. Находим что добавить
             to_add = target_items - existing_items
             
-            for item_name in sorted(to_add):
+            # Сохраняем порядок из конфига для новых предметов
+            order = self.config.get_known_items()
+            to_add_ordered = [x for x in order if x in to_add]
+            
+            for item_name in to_add_ordered:
                 # Root Item Node
                 item_node = QTreeWidgetItem(self.tree)
                 item_node.setText(0, item_name)
@@ -169,8 +173,8 @@ class PurchasePlanTab(QWidget):
             
             # 3. Если дерево было пустое (первая загрузка)
             if not self._items_cache and target_items:
-                # В этом случае cache пустой, проходим по всем
-                for item_name in sorted(target_items):
+                # В этом случае cache пустой, проходим по всем в порядке конфига
+                for item_name in order:
                     item_node = QTreeWidgetItem(self.tree)
                     item_node.setText(0, item_name)
                     self._items_cache[item_name] = item_node

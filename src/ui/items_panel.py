@@ -92,6 +92,12 @@ class ItemsPanel(QWidget):
         # === Список базы ===
         self.db_list = QListWidget()
         self.db_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)  # Множественный выбор
+        self.db_list.setDragEnabled(True)
+        self.db_list.setAcceptDrops(True)
+        self.db_list.setDropIndicatorShown(True)
+        self.db_list.setDragDropMode(QListWidget.DragDropMode.InternalMove)
+        self.db_list.model().rowsMoved.connect(self._save_database_order)
+        
         self.db_list.setStyleSheet("""
             QListWidget { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; }
             QListWidget::item { padding: 8px; color: #f0f6fc; }
@@ -151,10 +157,18 @@ class ItemsPanel(QWidget):
         return group
 
     def _load_database_list(self):
+        self.db_list.blockSignals(True)
         self.db_list.clear()
         items = get_config().get_known_items()
-        items.sort()
         self.db_list.addItems(items)
+        self.db_list.blockSignals(False)
+
+    def _save_database_order(self, *args):
+        """Сохранить текущий порядок элементов в конфиг"""
+        # Считываем названия предметов из списка
+        items = [self.db_list.item(i).text() for i in range(self.db_list.count())]
+        get_config().set_known_items(items)
+        # get_logger().debug(f"Порядок базы предметов сохранен: {len(items)} записей")
 
     def _load_exceptions(self):
         """Загрузка исключений (с мержа дефолтных значений)"""

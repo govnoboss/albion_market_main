@@ -84,13 +84,20 @@ class MarketBot(BaseBot):
             
             # --- SPLIT LOGIC (Black Market Switch) ---
             if self._is_black_market and i == 48:
-                 self.logger.info("🌗 Достигнут предел (Item 48). Смена персонажа...")
-                 if self._perform_character_switch(target_char_index=2):
-                     self.logger.info("✅ Смена выполнена. Продолжаем...")
-                     self._detect_current_city()
-                     # Restore Sell Tab after switch
-                     self._click_bm_sell_tab()
+                 use_switch = self.config.get_setting("use_character_switch", True)
+                 if use_switch:
+                     self.logger.info("🌗 Достигнут предел (Item 48). Смена персонажа...")
+                     if self._perform_character_switch(target_char_index=2):
+                         self.logger.info("✅ Смена выполнена. Продолжаем...")
+                         self._detect_current_city()
+                         # Restore Sell Tab after switch
+                         self._click_bm_sell_tab()
+                     else:
+                         self.logger.error("❌ Смена персонажа не удалась.")
+                         self._stop_requested = True
+                         break
                  else:
+                     self.logger.info("🌗 Достигнут предел (Item 48). Смена персонажа отключена. Остановка.")
                      self._stop_requested = True
                      break
                      

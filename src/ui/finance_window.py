@@ -56,14 +56,30 @@ class FinanceWindow(QWidget):
             menu_btn.clicked.connect(self._go_back)
             header_layout.addWidget(menu_btn)
 
-        title_lbl = QLabel("💰 ФИНАНСОВАЯ АНАЛИТИКА")
+        title_lbl = QLabel("💰 ФИНАНСЫ ")
         title_lbl.setStyleSheet("font-size: 20px; font-weight: bold; color: #f0f6fc;")
         header_layout.addWidget(title_lbl)
         
         header_layout.addStretch()
         
         self.btn_refresh = QPushButton("🔄 Обновить")
-        self.btn_refresh.setFixedWidth(100)
+        self.btn_refresh.setFixedWidth(120)
+        self.btn_refresh.setMinimumHeight(30)
+        self.btn_refresh.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_refresh.setStyleSheet("""
+            QPushButton {
+                background-color: #21262d;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                color: #c9d1d9;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #30363d;
+                border-color: #8b949e;
+                color: #ffffff;
+            }
+        """)
         self.btn_refresh.clicked.connect(self.refresh_stats)
         
         self.btn_delete_selected = QPushButton("🗑️ Удалить выбранные")

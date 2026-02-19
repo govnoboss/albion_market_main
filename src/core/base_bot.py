@@ -79,8 +79,9 @@ class BaseBot(QThread):
         # offset уже включен в реализацию human_mouse (хотя там он start/end, но мы можем добавить final offset и тут)
         
         # Добавляем небольшой случайный оффсет к ЦЕЛЕВОЙ точке, чтобы не кликать в один пиксель
-        target_x = x + random.randint(-5, 5)
-        target_y = y + random.randint(-5, 5)
+        jitter = self.config.get_mouse_settings().get("jitter", 5)
+        target_x = x + random.randint(-jitter, jitter)
+        target_y = y + random.randint(-jitter, jitter)
         
         move_mouse_human(target_x, target_y, check_pause_func=self._check_pause)
         

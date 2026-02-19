@@ -46,7 +46,7 @@ def check_for_update() -> dict | None:
         dict с ключами {version, download_url, size, changelog} или None
     """
     try:
-        logger.info("[UPDATE] Проверка обновлений...")
+        logger.debug("[UPDATE] Проверка обновлений...")
         
         headers = {
             "Accept": "application/vnd.github.v3+json",
@@ -67,7 +67,7 @@ def check_for_update() -> dict | None:
         current_version = _parse_version(CURRENT_VERSION)
         
         if latest_version <= current_version:
-            logger.info(f"[UPDATE] Версия актуальна ({CURRENT_VERSION})")
+            logger.debug(f"[UPDATE] Версия актуальна ({CURRENT_VERSION})")
             return None
         
         # Ищем .zip asset
@@ -126,7 +126,7 @@ def download_update(url: str, progress_callback=None) -> Path | None:
         
         zip_path = UPDATE_TEMP_DIR / f"{APP_NAME}.zip"
         
-        logger.info("[UPDATE] Скачивание обновления...")
+        logger.debug("[UPDATE] Скачивание обновления...")
         
         response = requests.get(url, stream=True, timeout=300)
         response.raise_for_status()
@@ -142,7 +142,7 @@ def download_update(url: str, progress_callback=None) -> Path | None:
                     if progress_callback and total_size > 0:
                         progress_callback(downloaded, total_size)
         
-        logger.info(f"[UPDATE] Скачано: {downloaded / 1024 / 1024:.1f} MB")
+        logger.debug(f"[UPDATE] Скачано: {downloaded / 1024 / 1024:.1f} MB")
         return zip_path
         
     except Exception as e:

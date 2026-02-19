@@ -40,8 +40,8 @@ class CoordinatesTab(QWidget):
         layout.addWidget(header)
         
         instruction = QLabel(
-            "Для точечных координат: нажмите 'Задать', наведите курсор и нажмите N.\n"
-            "Для областей (OCR): нажмите 'Задать', затем выделите область с зажатой мышью."
+            "Для точечных координат: нажмите 'Задать', наведите курсор и нажмите N. Клик желательно делать ровно в середину кнопки.\n"
+            "Для областей (OCR): нажмите 'Задать', затем выделите область с зажатой мышью. Для корректной работы бота, стоит выделять области как в подсказке."
         )
         instruction.setStyleSheet("color: #888; margin-bottom: 2px;")
         layout.addWidget(instruction)
@@ -91,14 +91,14 @@ class CoordinatesTab(QWidget):
                 ("buyer_top_lot_qty", "Кол-во в топ лоте (OCR)", "area"),
                 ("buyer_total_price", "Итоговая стоимость (OCR)", "area"),
             ],
-            "Black Market (New)": [
+            "Black Market": [
                 ("bm_sell_tab", "Вкладка 'Продать'", "point"),
-                ("bm_settings_btn", "⚙️ Кнопка Настройки", "point"),
-                ("bm_logout_btn", "🚪 Кнопка Выйти", "point"),
-                ("bm_login_btn", "▶️ Кнопка Войти", "point"),
-                ("bm_open_market_btn", "🏪 Открыть Рынок", "point"),
-                ("bm_char1_area", "👤 Аватарка Персонаж 1 (Area/Ref)", "area"),
-                ("bm_char2_area", "👤 Аватарка Персонаж 2 (Area/Ref)", "area"),
+                ("bm_settings_btn", "Кнопка Настройки", "point"),
+                ("bm_logout_btn", "Кнопка Выйти", "point"),
+                ("bm_login_btn", "▶Кнопка Войти", "point"),
+                ("bm_open_market_btn", "Открыть Рынок", "point"),
+                ("bm_char1_area", "Аватарка Персонаж 1", "area"),
+                ("bm_char2_area", "Аватарка Персонаж 2", "area"),
                 # New Coordinates
                 ("bm_tier_dropdown", "BM: Список Тиров", "point"),
                 ("bm_enchant_dropdown", "BM: Список Чары", "point"),
@@ -119,19 +119,24 @@ class CoordinatesTab(QWidget):
             
             # Кнопка помощи раздела
             help_btn = QPushButton("?")
-            help_btn.setFixedSize(24, 24)
+            help_btn.setFixedSize(32, 32)
             help_btn.setCursor(Qt.CursorShape.WhatsThisCursor)
             help_btn.setToolTip(f"Показать справку для раздела '{category}'")
             help_btn.setStyleSheet("""
                 QPushButton {
-                    background-color: #238636;
-                    color: white;
-                    border: 1px solid #2ea043;
-                    border-radius: 12px;
+                    background-color: transparent;
+                    color: #58a6ff;
+                    border: none;
+                    border-radius: 16px;
+                    font-size: 18px;
                     font-weight: bold;
+                    padding: 0;
+                    margin: 0;
+                    text-align: center;
                 }
                 QPushButton:hover {
-                    background-color: #2ea043;
+                    color: #79c0ff;
+                    background-color: rgba(88, 166, 255, 0.1);
                 }
             """)
             # Передаем category как key для поиска картинки

@@ -19,38 +19,9 @@ from ..utils.logger import get_logger
 from ..utils.config import get_config
 from ..core.bot import MarketBot  # Импорт бота
 from .log_overlay import LogOverlay  # Импорт лог-оверлея
+from .log_viewer import LogViewer, LogPanel # Импорт общего компонента логов
 
 
-class LogViewer(QTextEdit):
-    """Виджет для отображения логов"""
-    
-    def __init__(self):
-        super().__init__()
-        self.setObjectName("logViewer")
-        self.setReadOnly(True)
-        self.setMinimumHeight(120)
-        
-        # Подключаем логгер
-        logger = get_logger()
-        logger.connect_ui(self.add_log)
-    
-    def add_log(self, message: str, level: str):
-        """Добавить сообщение в лог"""
-        color_map = {
-            "debug": COLORS["text_secondary"],
-            "info": COLORS["text_primary"],
-            "warning": COLORS["warning"],
-            "error": COLORS["error"],
-        }
-        color = color_map.get(level, COLORS["text_primary"])
-        
-        # Форматируем с цветом
-        html = f'<span style="color: {color};">{message}</span>'
-        self.append(html)
-        
-        # Прокручиваем вниз
-        scrollbar = self.verticalScrollBar()
-        scrollbar.setValue(scrollbar.maximum())
 
 
 class MainWindow(QMainWindow):
@@ -107,7 +78,7 @@ class MainWindow(QMainWindow):
         logger.connect_ui(log_filter)
         
         # Приветственное сообщение (после подключения UI)
-        logger.info("Albion Market Scanner & Buyer запущен")
+        logger.debug("Albion Market Scanner & Buyer запущен")
     
     def _setup_window(self):
         """Настройка окна"""
@@ -298,6 +269,8 @@ class MainWindow(QMainWindow):
         # --- Вкладка 1: Главная (Управление) ---
         self.control_tab = QWidget()
         control_layout = QVBoxLayout(self.control_tab)
+        control_layout.setContentsMargins(10, 10, 10, 10)
+        control_layout.setSpacing(10)
         
         self.control_panel = ControlPanel()
         self.control_panel.start_clicked.connect(self._on_start_bot)
@@ -307,20 +280,11 @@ class MainWindow(QMainWindow):
         control_layout.addWidget(self.control_panel)
         
         # === Панель логов (только для вкладки Главная) ===
-        log_frame = QFrame()
-        log_frame.setStyleSheet("QFrame { background-color: #161b22; border: 1px solid #30363d; border-radius: 8px; }")
-        log_layout = QVBoxLayout(log_frame)
-        log_layout.setContentsMargins(15, 10, 15, 10)
-        log_layout.setSpacing(5)
+        self.log_panel = LogPanel()
+        self.log_panel.connect_logger()
+        self.log_viewer = self.log_panel.viewer # Для совместимости с другими методами
         
-        log_header = QLabel("📋 Журнал событий")
-        log_header.setStyleSheet("font-size: 13px; font-weight: 600; color: #8b949e;")
-        log_layout.addWidget(log_header)
-        
-        self.log_viewer = LogViewer()
-        log_layout.addWidget(self.log_viewer)
-        
-        control_layout.addWidget(log_frame)
+        control_layout.addWidget(self.log_panel)
         
         self.tabs.addTab(self.control_tab, "🎮 Главная")
     
@@ -366,6 +330,9 @@ class MainWindow(QMainWindow):
             # Показываем лог-оверлей при старте
             self.log_overlay.show()
             self.log_overlay.clear_logs()
+            
+            # Clear UI log viewer
+            self.log_viewer.clear()
             
             # Автоматический переход в мини-режим
             self._switch_to_mini_mode()

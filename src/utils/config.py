@@ -49,6 +49,7 @@ class ConfigManager:
             "settings": {
                 "tesseract_path": "",
                 "price_update_timeout": 5.0,
+                "use_character_switch": True
             },
             "dropdowns": {
                 "row_height": 28,
@@ -62,7 +63,8 @@ class ConfigManager:
             "mouse_settings": {
                 "speed_pps": 1800.0,
                 "min_duration": 0.08,
-                "curvature": 0.1
+                "curvature": 0.1,
+                "jitter": 5
             },
             "items": []  # Список предметов для покупки
         }
