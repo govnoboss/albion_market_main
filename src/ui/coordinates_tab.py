@@ -46,6 +46,23 @@ class CoordinatesTab(QWidget):
         instruction.setStyleSheet("color: #888; margin-bottom: 2px;")
         layout.addWidget(instruction)
 
+        # Wizard Button
+        wizard_btn = QPushButton("🪄 Запустить Мастер настройки")
+        wizard_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #fca326; 
+                color: #0d1117;
+                font-weight: bold;
+                padding: 8px;
+                font-size: 14px;
+            }
+            QPushButton:hover { background-color: #e69d00; }
+        """)
+        wizard_btn.clicked.connect(self._start_wizard)
+        layout.addWidget(wizard_btn)
+
+        self._check_first_run()
+
         self._setup_profiles_ui(layout) # Add profiles UI
         
         # Scroll Area
@@ -96,7 +113,6 @@ class CoordinatesTab(QWidget):
                 ("bm_settings_btn", "Кнопка Настройки", "point"),
                 ("bm_logout_btn", "Кнопка Выйти", "point"),
                 ("bm_login_btn", "▶Кнопка Войти", "point"),
-                ("bm_open_market_btn", "Открыть Рынок", "point"),
                 ("bm_char1_area", "Аватарка Персонаж 1", "area"),
                 ("bm_char2_area", "Аватарка Персонаж 2", "area"),
                 # New Coordinates
@@ -686,5 +702,44 @@ class CoordinatesTab(QWidget):
                 label.setText(text)
                 label.setStyleSheet("color: #0f0;") # Green for set
             else:
-                label.setText("Не задано")
                 label.setStyleSheet("color: #888;")
+
+    def _check_first_run(self):
+        """Проверка на первый запуск (пустой конфиг)"""
+        # Если координат нет - предлагаем запустить мастер
+        if not self.config.get_all_coordinates():
+             QTimer.singleShot(500, self._start_wizard)
+
+    def _start_wizard(self):
+        from .wizard_overlay import WizardOverlay
+        
+        # Если мастер уже запущен - не запускаем копию
+        if hasattr(self, 'wizard') and self.wizard:
+            self.wizard.close()
+            
+        # Скрываем главное окно
+        if self.window():
+            self.window().hide()
+            
+        self.wizard = WizardOverlay(self.categories)
+        self.wizard.wizard_finished.connect(self._on_wizard_finished)
+        self.wizard.showFullScreen()
+        
+    def _on_wizard_finished(self, success=False):
+        self._refresh_values()
+        
+        # Восстанавливаем главное окно
+        main_win = self.window()
+        if main_win:
+            self.logger.info(f"Restoring main window: {main_win}")
+            main_win.show() # Force show
+            main_win.showNormal()
+            main_win.raise_()
+            main_win.activateWindow()
+        else:
+            self.logger.warning("Could not restore main window: self.window() is None")
+            
+        if success:
+            QMessageBox.information(self, "Мастер настройки", "✅ Настройка координат завершена!")
+        
+        self.wizard = None

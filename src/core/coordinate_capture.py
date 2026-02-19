@@ -106,8 +106,8 @@ class CoordinateCapture(QObject):
                     self._internal_cancelled.emit(current_key)
                 return False  # Останавливаем listener
             
-            # Клавиша N — подтвердить координату в текущей позиции курсора
-            if hasattr(key, 'char') and key.char and key.char.lower() == 'n':
+            # Клавиша F1 — подтвердить координату в текущей позиции курсора
+            if key == keyboard.Key.f1:
                 current_key = self._current_key
                 if current_key and self._capture_mode == 'point':
                     # Получаем текущую позицию курсора

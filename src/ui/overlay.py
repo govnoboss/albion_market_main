@@ -20,6 +20,7 @@ class AreaSelectionOverlay(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setWindowState(Qt.WindowState.WindowFullScreen)
         self.setCursor(Qt.CursorShape.CrossCursor)
+        self.grabKeyboard() # Ensure we catch ESC
         
         self.start_pos: QPoint | None = None
         self.current_pos: QPoint | None = None
