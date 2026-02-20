@@ -175,6 +175,20 @@ class ConfigManager:
         self._config["dropdowns"][key] = value
         self.save()
 
+    # === UI Settings ===
+
+    def get_ui_setting(self, key: str, default: Any = None) -> Any:
+        """Получить настройку интерфейса"""
+        return self._config.get("ui", {}).get(key, default)
+
+    def set_ui_setting(self, key: str, value: Any) -> None:
+        """Установить настройку интерфейса"""
+        if "ui" not in self._config:
+            self._config["ui"] = {}
+        
+        self._config["ui"][key] = value
+        self.save()
+
     # === Scan Filters ===
 
     def get_scan_filters(self) -> dict:
