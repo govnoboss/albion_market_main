@@ -66,6 +66,101 @@ class FinanceManager:
         except Exception as e:
             logger.error(f"Ошибка записи транзакции: {e}")
 
+    def get_stats_for_period(self, days=None):
+        """Получение статистики за период (в днях). Если days=None - за всё время."""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            if days is not None:
+                # В расчетах Albion Market Bot мы учитываем последние N суток (24h * N)
+                period_start = datetime.fromtimestamp(time.time() - (days * 86400)).strftime("%Y-%m-%d %H:%M:%S")
+                cursor.execute('''
+                    SELECT SUM(total), SUM(qty), SUM(profit_est) 
+                    FROM transactions 
+                    WHERE timestamp >= ? AND is_simulation = 0
+                ''', (period_start,))
+            else:
+                cursor.execute('''
+                    SELECT SUM(total), SUM(qty), SUM(profit_est) 
+                    FROM transactions 
+                    WHERE is_simulation = 0
+                ''')
+                
+            spent, qty, profit = cursor.fetchone()
+            conn.close()
+            
+            return {
+                "spent": spent or 0,
+                "qty": qty or 0,
+                "profit": profit or 0
+            }
+        except Exception as e:
+            logger.error(f"Ошибка получения статистики за период: {e}")
+            return {"spent": 0, "qty": 0, "profit": 0}
+
+    def get_history_for_period(self, days=None, limit=100):
+        """Получение списка транзакций за период"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            if days is not None:
+                period_start = datetime.fromtimestamp(time.time() - (days * 86400)).strftime("%Y-%m-%d %H:%M:%S")
+                cursor.execute('''
+                    SELECT * FROM transactions 
+                    WHERE timestamp >= ? AND is_simulation = 0
+                    ORDER BY timestamp DESC
+                    LIMIT ?
+                ''', (period_start, limit))
+            else:
+                cursor.execute('''
+                    SELECT * FROM transactions 
+                    WHERE is_simulation = 0
+                    ORDER BY timestamp DESC
+                    LIMIT ?
+                ''', (limit,))
+                
+            rows = cursor.fetchall()
+            conn.close()
+            return [dict(row) for row in rows]
+        except Exception as e:
+            logger.error(f"Ошибка получения истории за период: {e}")
+            return []
+
+    def get_hot_items_for_period(self, days=None, limit=5):
+        """Получение топа предметов по количеству за период"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            where_clause = "WHERE is_simulation = 0"
+            params = [limit]
+            
+            if days is not None:
+                period_start = datetime.fromtimestamp(time.time() - (days * 86400)).strftime("%Y-%m-%d %H:%M:%S")
+                where_clause += " AND timestamp >= ?"
+                params = [period_start, limit]
+            
+            query = f'''
+                SELECT item_name, tier, enchant, SUM(qty) as total_qty, SUM(profit_est) as total_profit
+                FROM transactions 
+                {where_clause}
+                GROUP BY item_name, tier, enchant
+                ORDER BY total_qty DESC
+                LIMIT ?
+            '''
+            
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            conn.close()
+            return [dict(row) for row in rows]
+        except Exception as e:
+            logger.error(f"Ошибка получения горячих предметов: {e}")
+            return []
+
     def get_stats_summary(self):
         """Получение сводной статистики (Сегодня / Всего)"""
         try:

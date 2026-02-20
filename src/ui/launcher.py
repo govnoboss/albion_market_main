@@ -326,8 +326,8 @@ class LauncherWindow(QMainWindow):
         
         # Список изменений в подсказку текста
         changelog = info.get('changelog', 'Нет описания изменений')
-        # Делаем текст подсказки чисто белым
-        tooltip_text = f"<div style='color: #ffffff;'><b>Что нового в v{info['version']}:</b><br><br>{changelog.replace('\n', '<br>')}</div>"
+        changelog_html = changelog.replace('\n', '<br>')
+        tooltip_text = f"<div style='color: #ffffff;'><b>Что нового в v{info['version']}:</b><br><br>{changelog_html}</div>"
         
         self.update_lbl.setToolTip(tooltip_text)
         self.update_lbl.setCursor(Qt.CursorShape.PointingHandCursor)

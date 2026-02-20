@@ -6,7 +6,8 @@
 import os
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-    QPushButton, QStackedWidget, QLabel, QFrame, QSpacerItem, QSizePolicy
+    QPushButton, QStackedWidget, QLabel, QFrame, QSpacerItem, QSizePolicy, QComboBox,
+    QTableWidget, QTableWidgetItem, QHeaderView
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QSize, QTimer
 from PyQt6.QtGui import QIcon
@@ -249,10 +250,14 @@ class MainDashboard(QMainWindow):
         # --- KPI ROW ---
         kpi_row = QHBoxLayout()
         kpi_row.setSpacing(20)
-        kpi_row.addWidget(KPICard("Portfolio Value", "---", "Calculating...", "💎"))
-        kpi_row.addWidget(KPICard("Active Orders", "---", "Updating...", "📦"))
-        kpi_row.addWidget(KPICard("Total Profit", "---", "Today's net", "💰"))
-        kpi_row.addWidget(KPICard("Success Rate", "---", "OCR Check", "🎯"))
+        
+        self.kpi_revenue = KPICard("Всего потрачено", "0", "За период", "💰")
+        self.kpi_profit = KPICard("Всего прибыли", "0", "Ожидаемый профит", "📈")
+        self.kpi_items = KPICard("Куплено предметов", "0", "Шт.", "📦")
+        
+        kpi_row.addWidget(self.kpi_revenue)
+        kpi_row.addWidget(self.kpi_profit)
+        kpi_row.addWidget(self.kpi_items)
         main_v_layout.addLayout(kpi_row)
         
         # --- BOTTOM SECTION (Recaps & Tools) ---
@@ -263,13 +268,49 @@ class MainDashboard(QMainWindow):
         perf_container = QFrame()
         perf_container.setObjectName("kpiCard")
         perf_layout = QVBoxLayout(perf_container)
-        perf_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        perf_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        
+        # Filter Row
+        filter_layout = QHBoxLayout()
         perf_label = QLabel("Performance Insights")
         perf_label.setStyleSheet("font-size: 18px; font-weight: 700; color: #94a3b8;")
-        perf_layout.addWidget(perf_label)
-        perf_desc = QLabel("Detailed charts and transaction logs will be integrated here.")
-        perf_desc.setStyleSheet(f"color: {COLORS['text_dark']}; font-size: 13px;")
-        perf_layout.addWidget(perf_desc)
+        filter_layout.addWidget(perf_label)
+        
+        filter_layout.addStretch()
+        
+        period_lbl = QLabel("За период:")
+        period_lbl.setStyleSheet("color: #94a3b8; font-size: 13px;")
+        filter_layout.addWidget(period_lbl)
+        
+        self.period_combo = QComboBox()
+        self.period_combo.addItems(["1 день", "1 неделя", "1 месяц", "Всё время"])
+        self.period_combo.setFixedWidth(120)
+        self.period_combo.currentIndexChanged.connect(self._on_period_changed)
+        filter_layout.addWidget(self.period_combo)
+        
+        perf_layout.addLayout(filter_layout)
+        perf_layout.addSpacing(10)
+
+        # Performance Table
+        self.history_table = QTableWidget()
+        self.history_table.setColumnCount(6)
+        self.history_table.setHorizontalHeaderLabels([
+            "Дата", "Город", "Кол-во", "Потрачено", "Получено", "Профит"
+        ])
+        
+        # Настройка заголовков
+        header = self.history_table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive) # Дату можно крутить вручную
+        self.history_table.setColumnWidth(0, 150) # Начальная ширина для даты
+        
+        self.history_table.verticalHeader().setVisible(False)
+        self.history_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.history_table.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
+        self.history_table.setAlternatingRowColors(True)
+        self.history_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        
+        perf_layout.addWidget(self.history_table)
         
         bottom_layout.addWidget(perf_container, stretch=2)
         
@@ -277,20 +318,88 @@ class MainDashboard(QMainWindow):
         recap_layout = QVBoxLayout()
         recap_layout.setSpacing(20)
         
-        recap_layout.addWidget(SummaryBox("🔥 HOT ITEMS", 
+        self.hot_items_box = SummaryBox("🔥 HOT ITEMS", 
             ["• Data sync pending..."], 
-            color="#f59e0b"))
-            
-        recap_layout.addWidget(SummaryBox("📍 BEST CITIES", 
-            ["• Analyzing market flows..."], 
-            color="#10b981"))
+            color="#f59e0b")
+        recap_layout.addWidget(self.hot_items_box)
             
         recap_layout.addStretch()
         bottom_layout.addLayout(recap_layout, stretch=1)
         
         main_v_layout.addLayout(bottom_layout, stretch=1)
         
+        # Начальное обновление
+        QTimer.singleShot(500, self._update_home_stats)
+        
         return page
+
+    def _on_period_changed(self):
+        """Обработка смены периода в выпадающем списке"""
+        self._update_home_stats()
+
+    def _update_home_stats(self):
+        """Обновление KPI на главной странице"""
+        from ..core.finance import finance_manager
+        
+        period_txt = self.period_combo.currentText()
+        days_map = {
+            "1 день": 1,
+            "1 неделя": 7,
+            "1 месяц": 30,
+            "Всё время": None
+        }
+        days = days_map.get(period_txt)
+        
+        stats = finance_manager.get_stats_for_period(days)
+        if stats:
+            self.kpi_revenue.update_value(f"{stats['spent']:,}".replace(',', ' '), "Альбион Серебро")
+            self.kpi_profit.update_value(f"{stats['profit']:,}".replace(',', ' '), "Ожидаемый профит")
+            self.kpi_items.update_value(f"{stats['qty']:,}".replace(',', ' '), "Количество")
+
+        # Обновление таблицы
+        history = finance_manager.get_history_for_period(days, limit=50)
+        self.history_table.setRowCount(len(history))
+        
+        for i, tx in enumerate(history):
+            # Дата (укорачиваем)
+            dt = tx['timestamp'].split('.')[0] # 2026-02-20 22:38:31
+            self.history_table.setItem(i, 0, QTableWidgetItem(dt))
+            self.history_table.setItem(i, 1, QTableWidgetItem(tx['city']))
+            self.history_table.setItem(i, 2, QTableWidgetItem(str(tx['qty'])))
+            
+            spent_str = f"{tx['total']:,}".replace(',', ' ')
+            self.history_table.setItem(i, 3, QTableWidgetItem(spent_str))
+            
+            # Доход (ожидаемая продажа в BM - налоги)
+            # Profit = Inc * 0.935 - Spent => Inc * 0.935 = Profit + Spent
+            # Но в БД у нас нет Inc напрямую, у нас есть profit_est и total
+            income_est = tx['profit_est'] + tx['total']
+            income_str = f"{income_est:,}".replace(',', ' ')
+            self.history_table.setItem(i, 4, QTableWidgetItem(income_str))
+            
+            profit_str = f"{tx['profit_est']:,}".replace(',', ' ')
+            prof_item = QTableWidgetItem(profit_str)
+            if tx['profit_est'] > 0:
+                prof_item.setForeground(Qt.GlobalColor.green)
+            elif tx['profit_est'] < 0:
+                prof_item.setForeground(Qt.GlobalColor.red)
+            self.history_table.setItem(i, 5, prof_item)
+
+        # Обновление Hot Items
+        hot_items = finance_manager.get_hot_items_for_period(days, limit=5)
+        hot_list = []
+        for item in hot_items:
+            # Формат: Название предмета Тир.Энчант Кол-во, Сколько профита
+            profit_str = f"{item['total_profit']:,}".replace(',', ' ')
+            hot_list.append(
+                f"• {item['item_name']} T{item['tier']}.{item['enchant']} "
+                f"{item['total_qty']} шт, {profit_str} с."
+            )
+        
+        if not hot_list:
+            hot_list = ["• Нет данных за период"]
+            
+        self.hot_items_box.update_items(hot_list)
 
     def _on_nav_changed(self, index):
         self.content_stack.setCurrentIndex(index)

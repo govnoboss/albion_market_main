@@ -16,8 +16,23 @@ class SummaryBox(QFrame):
         title_lbl.setObjectName("summaryTitle")
         layout.addWidget(title_lbl)
         
+        self.layout_content = QVBoxLayout()
+        self.layout_content.setSpacing(5)
+        layout.addLayout(self.layout_content)
+        
+        self.update_items(items)
+            
+    def update_items(self, items):
+        """Динамическое обновление списка элементов"""
+        # Очистка
+        while self.layout_content.count():
+            child = self.layout_content.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+        
+        # Наполнение
         for text in items:
             item_lbl = QLabel(text)
             item_lbl.setStyleSheet("font-size: 11px; color: #94a3b8;")
             item_lbl.setWordWrap(True)
-            layout.addWidget(item_lbl)
+            self.layout_content.addWidget(item_lbl)
