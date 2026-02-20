@@ -7,13 +7,15 @@ import os
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QPushButton, QStackedWidget, QLabel, QFrame, QSpacerItem, QSizePolicy, QComboBox,
-    QTableWidget, QTableWidgetItem, QHeaderView
+    QTableWidget, QTableWidgetItem, QHeaderView, QProgressBar
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QSize, QTimer
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QCursor
 
 from .styles import MAIN_STYLE, COLORS
 from ..utils.logger import get_logger
+from ..core.version import CURRENT_VERSION
+from ..core.updater import UpdateCheckWorker, UpdateDownloadWorker, install_update
 import keyboard
 
 class SidebarItem(QPushButton):
@@ -57,13 +59,66 @@ class Sidebar(QFrame):
         
         self.layout.addStretch()
         
-        # Футер (Версия)
+        # Футер (Версия и Обновление)
         self.footer = QFrame()
         self.footer.setObjectName("sidebarFooter")
-        footer_layout = QVBoxLayout(self.footer)
-        self.version_label = QLabel("v2.0.0")
+        self.footer_layout = QVBoxLayout(self.footer)
+        self.footer_layout.setContentsMargins(10, 10, 10, 10)
+        self.footer_layout.setSpacing(5)
+        
+        # Область обновления (скрыта по умолчанию)
+        self.update_frame = QFrame()
+        self.update_frame.setObjectName("updateFrame")
+        self.update_frame.setStyleSheet("""
+            #updateFrame {
+                background-color: #1c2128;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                padding: 5px;
+            }
+        """)
+        self.update_frame.hide()
+        update_v_layout = QVBoxLayout(self.update_frame)
+        update_v_layout.setContentsMargins(5, 5, 5, 5)
+        update_v_layout.setSpacing(5)
+        
+        self.update_lbl = QLabel("Update Available")
+        self.update_lbl.setStyleSheet("color: #adbac7; font-size: 11px; font-weight: bold;")
+        update_v_layout.addWidget(self.update_lbl)
+        
+        self.update_progress = QProgressBar()
+        self.update_progress.setFixedHeight(4)
+        self.update_progress.setTextVisible(False)
+        self.update_progress.setStyleSheet("""
+            QProgressBar { background-color: #22272e; border: none; border-radius: 2px; }
+            QProgressBar::chunk { background-color: #2da44e; border-radius: 2px; }
+        """)
+        self.update_progress.hide()
+        update_v_layout.addWidget(self.update_progress)
+        
+        self.btn_update = QPushButton("Update Now")
+        self.btn_update.setObjectName("btnUpdate")
+        self.btn_update.setFixedHeight(24)
+        self.btn_update.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_update.setStyleSheet(f"""
+            #btnUpdate {{
+                background-color: #238636;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: 600;
+            }}
+            #btnUpdate:hover {{ background-color: #2ea043; }}
+            #btnUpdate:disabled {{ background-color: #161b22; color: #484f58; }}
+        """)
+        update_v_layout.addWidget(self.btn_update)
+        
+        self.footer_layout.addWidget(self.update_frame)
+
+        self.version_label = QLabel(f"v{CURRENT_VERSION}")
         self.version_label.setStyleSheet("color: #484f58; font-size: 11px;")
-        footer_layout.addWidget(self.version_label)
+        self.footer_layout.addWidget(self.version_label)
         self.layout.addWidget(self.footer)
 
     def _add_nav_item(self, text, index):
@@ -136,6 +191,57 @@ class MainDashboard(QMainWindow):
         
         # Вывести на передний план
         self._force_foreground()
+        
+        # 4. Проверка обновлений
+        self._check_for_updates()
+
+    def _check_for_updates(self):
+        """Запускает фоновую проверку обновлений"""
+        self._update_info = None
+        self._update_worker = UpdateCheckWorker()
+        self._update_worker.update_available.connect(self._on_update_found)
+        self._update_worker.start()
+
+    def _on_update_found(self, info):
+        """Когда обновление найдено, показываем плашку в сайдбаре"""
+        self._update_info = info
+        sidebar = self.sidebar
+        sidebar.update_lbl.setText(f"New Version: {info['version']}")
+        sidebar.btn_update.clicked.connect(self._start_update_download)
+        sidebar.update_frame.show()
+
+    def _start_update_download(self):
+        """Начинает скачивание обновления"""
+        if not self._update_info: return
+        
+        sidebar = self.sidebar
+        sidebar.btn_update.setEnabled(False)
+        sidebar.btn_update.setText("Downloading...")
+        sidebar.update_progress.setValue(0)
+        sidebar.update_progress.show()
+        
+        self._download_worker = UpdateDownloadWorker(self._update_info["download_url"])
+        self._download_worker.progress.connect(self._on_download_progress)
+        self._download_worker.download_complete.connect(self._on_download_complete)
+        self._download_worker.download_error.connect(self._on_download_error)
+        self._download_worker.start()
+
+    def _on_download_progress(self, downloaded, total):
+        if total > 0:
+            percent = int(downloaded * 100 / total)
+            self.sidebar.update_progress.setValue(percent)
+
+    def _on_download_complete(self, zip_path):
+        self.sidebar.update_lbl.setText("Installing...")
+        QTimer.singleShot(500, lambda: install_update(zip_path))
+
+    def _on_download_error(self, error):
+        sidebar = self.sidebar
+        sidebar.btn_update.setEnabled(True)
+        sidebar.btn_update.setText("Retry")
+        sidebar.update_lbl.setText("Error updating")
+        sidebar.update_lbl.setStyleSheet("color: #f85149; font-size: 11px;")
+        get_logger().error(f"Update error: {error}")
 
     def _force_foreground(self):
         flags = self.windowFlags()
