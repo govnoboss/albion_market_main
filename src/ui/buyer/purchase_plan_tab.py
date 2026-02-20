@@ -41,15 +41,15 @@ class PurchasePlanTab(QWidget):
         toolbar.addWidget(collapse_btn)
         
         self.refresh_btn = QPushButton("🔄 Обновить список")
-        self.refresh_btn.setStyleSheet("""
-            QPushButton { 
-                background-color: #21262d; 
-                color: #c9d1d9; 
-                border: 1px solid #30363d; 
+        self.refresh_btn.setStyleSheet(f"""
+            QPushButton {{ 
+                background-color: {COLORS['bg_card']}; 
+                color: {COLORS['text']}; 
+                border: 1px solid {COLORS['border']}; 
                 border-radius: 6px;
                 padding: 5px 15px;
-            }
-            QPushButton:hover { background-color: #30363d; }
+            }}
+            QPushButton:hover {{ background-color: {COLORS['item_bg']}; }}
         """)
         self.refresh_btn.clicked.connect(self.refresh_data)
         toolbar.addWidget(self.refresh_btn)
@@ -65,22 +65,22 @@ class PurchasePlanTab(QWidget):
         self.tree.setColumnWidth(2, 100)
         self.tree.setAlternatingRowColors(True)
         self.tree.setAnimated(False) # Отключаем анимацию для скорости
-        self.tree.setStyleSheet("""
-            QTreeWidget {
-                background-color: #0d1117;
-                color: #c9d1d9;
-                border: 1px solid #30363d;
+        self.tree.setStyleSheet(f"""
+            QTreeWidget {{
+                background-color: {COLORS['bg_card']};
+                color: {COLORS['text']};
+                border: 1px solid {COLORS['border']};
                 border-radius: 6px;
-            }
-            QHeaderView::section {
-                background-color: #161b22;
-                color: #8b949e;
+            }}
+            QHeaderView::section {{
+                background-color: {COLORS['item_bg']};
+                color: {COLORS['text_dark']};
                 padding: 4px;
                 border: none;
-            }
-            QTreeWidget::item {
+            }}
+            QTreeWidget::item {{
                 padding: 4px;
-            }
+            }}
         """)
         
         layout.addWidget(self.tree)
@@ -203,7 +203,7 @@ class PurchasePlanTab(QWidget):
         spin_limit.setValue(limit)
         spin_limit.setSingleStep(10)
         spin_limit.setFixedWidth(80)
-        spin_limit.setStyleSheet("background: #0d1117; color: #f0f6fc; border: 1px solid #30363d;")
+        spin_limit.setStyleSheet(f"background: {COLORS['bg']}; color: {COLORS['text']}; border: 1px solid {COLORS['border']};")
         spin_limit.valueChanged.connect(lambda val, i=item_name, t=tier, e=enchant: 
                                   self._on_limit_changed(i, t, e, val))
         
@@ -215,7 +215,7 @@ class PurchasePlanTab(QWidget):
         spin_profit.setValue(min_profit)
         spin_profit.setSuffix("%")
         spin_profit.setFixedWidth(80)
-        spin_profit.setStyleSheet("background: #0d1117; color: #f0f6fc; border: 1px solid #30363d;")
+        spin_profit.setStyleSheet(f"background: {COLORS['bg']}; color: {COLORS['text']}; border: 1px solid {COLORS['border']};")
         spin_profit.valueChanged.connect(lambda val, i=item_name, t=tier, e=enchant: 
                                   self._on_min_profit_changed(i, t, e, val))
         

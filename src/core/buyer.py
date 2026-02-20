@@ -414,13 +414,19 @@ class BuyerBot(BaseBot):
                     break
 
             # Target Price Validations
-            bm_price = price_storage.get_item_price(self.sell_city, item_name, tier, enchant, 1)
+            # Получаем актуальный лимит и города из конфига
+            limit_val, enabled, min_profit_percent = self.config.get_wholesale_limit(item_name, tier, enchant)
+            
+            # Находим города (с поддержкой индивидуальных настроек)
+            targets = self.config.get_wholesale_targets()
+            variant_data = targets.get(item_name, {}).get(f"T{tier}.{enchant}", {})
+            s_city = variant_data.get("sell_city", self.sell_city)
+            
+            bm_price = price_storage.get_item_price(s_city, item_name, tier, enchant, 1)
             if not bm_price:
-                self.logger.warning(f"⏩ Пропуск: Нет цены в {self.sell_city}")
+                self.logger.warning(f"⏩ Пропуск: Нет цены в {s_city}")
                 break
                 
-            _, _, min_profit_percent = self.config.get_wholesale_limit(item_name, tier, enchant)
-            
             sell_tax_factor = 0.935
             margin_factor = 1 + (min_profit_percent / 100.0)
             target_price = int((bm_price * sell_tax_factor) / margin_factor)
@@ -491,6 +497,15 @@ class BuyerBot(BaseBot):
             if confirm_btn:
                  self._human_move_to(*confirm_btn)
                  self._human_click()
+                 
+                 # --- NEW: Check for "Cannot wear" dialog (from TODO) ---
+                 bypass_btn = self.config.get_coordinate("cannot_wear_yes")
+                 if bypass_btn:
+                     time.sleep(0.4)
+                     self._human_move_to(*bypass_btn)
+                     self._human_click()
+                 # -----------------------------------------------------
+                 
                  self.logger.info(f"💰 Куплено {actual_qty} шт.!")
                  
                  # Логируем транзакцию в БД финансов
@@ -541,10 +556,32 @@ class BuyerBot(BaseBot):
                             continue
                             
                         # Проверка цены (Если нет цены в городе продажи - не добавляем)
-                        bm_price = price_storage.get_item_price(self.sell_city, item_name, t, e, 1)
+                        s_city = data.get("sell_city", self.sell_city)
+                        b_city = data.get("buy_city", self.buy_city)
+                        
+                        bm_price = price_storage.get_item_price(s_city, item_name, t, e, 1)
                         if not bm_price or bm_price <= 0:
-                            # self.logger.debug(f"⏩ Пропуск {item_name} T{t}.{e}: Нет цены в {self.sell_city}")
+                            # self.logger.debug(f"⏩ Пропуск {item_name} T{t}.{e}: Нет цены в {s_city}")
                             continue
+
+                        # --- NEW: Profit Filter ---
+                        # Получаем текущую цену в городе закупки для расчета профита
+                        buy_price = price_storage.get_item_price(b_city, item_name, t, e, 1)
+                        min_profit_pct = data.get("min_profit", 15)
+                        
+                        if buy_price and buy_price > 0:
+                            net_sell = bm_price * 0.935 # Tax 6.5%
+                            est_profit_pct = ((net_sell - buy_price) / buy_price) * 100
+                            
+                            if est_profit_pct < min_profit_pct:
+                                # self.logger.debug(f"📉 Пропуск {item_name} T{t}.{e}: Профит {est_profit_pct:.1f}% < {min_profit_pct}%")
+                                skipped_count += 1
+                                continue
+                        else:
+                            # self.logger.debug(f"⏩ Пропуск {item_name} T{t}.{e}: Нет цены закупки в {b_city}")
+                            skipped_count += 1
+                            continue
+                        # --------------------------
                         
                         self._items_to_buy.append((item_name, t, e, limit))
                 except:

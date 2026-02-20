@@ -643,32 +643,33 @@ class CoordinatesTab(QWidget):
 
     def _get_dialog_style(self):
         """Темная тема для диалогов"""
-        return """
-            QInputDialog, QMessageBox {
-                background-color: #0d1117;
-                color: #f0f6fc;
-            }
-            QLabel {
-                color: #f0f6fc;
-            }
-            QLineEdit, QSpinBox {
-                background-color: #161b22;
-                color: #f0f6fc;
-                border: 1px solid #30363d;
+        from .styles import COLORS
+        return f"""
+            QInputDialog, QMessageBox {{
+                background-color: {COLORS['bg']};
+                color: {COLORS['text']};
+            }}
+            QLabel {{
+                color: {COLORS['text']};
+            }}
+            QLineEdit, QSpinBox {{
+                background-color: {COLORS['bg_card']};
+                color: {COLORS['text']};
+                border: 1px solid {COLORS['border']};
                 border-radius: 4px;
                 padding: 5px;
-            }
-            QPushButton {
-                background-color: #21262d;
-                color: #f0f6fc;
-                border: 1px solid #30363d;
+            }}
+            QPushButton {{
+                background-color: {COLORS['bg_card']};
+                color: {COLORS['text']};
+                border: 1px solid {COLORS['border']};
                 border-radius: 6px;
                 padding: 5px 15px;
                 min-width: 60px;
-            }
-            QPushButton:hover {
-                background-color: #30363d;
-            }
+            }}
+            QPushButton:hover {{
+                background-color: {COLORS['item_bg']};
+            }}
         """
 
     def _show_message(self, title, text, is_warning=False):

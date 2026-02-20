@@ -52,7 +52,7 @@ def run_app():
     # ---------------------------
 
     try:
-        _ = LauncherWindow()
+        launcher = LauncherWindow()
     except Exception as e:
         sys.stderr.write(f"CRASH: LauncherWindow init failed: {e}\n")
         sys.stderr.flush()

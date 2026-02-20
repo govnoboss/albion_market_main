@@ -90,7 +90,6 @@ class ControlPanel(QWidget):
         self.start_btn = QPushButton("▶ Старт")
         self.start_btn.setObjectName("primary")
         self.start_btn.setMinimumHeight(45)
-        self.start_btn.setStyleSheet("font-size: 14px; font-weight: bold; background-color: #238636;")
         self.start_btn.clicked.connect(self.start_clicked.emit)
         controls_layout.addWidget(self.start_btn)
         
@@ -119,14 +118,13 @@ class ControlPanel(QWidget):
     def refresh_resume_button(self):
         """Обновить кнопку 'Продолжить' на основе сохраненного прогресса"""
         try:
+            from .styles import COLORS
             last_index = get_config().get_setting("last_scan_index", 0)
             if last_index > 0:
-                # last_index - это последний ОБРАБОТАННЫЙ индекс (0-based)
-                # Продолжаем с ТОГО ЖЕ предмета: last_index + 1 для UI (1-based)
                 resume_item = last_index + 1
                 self.resume_btn.setText(f"Продолжить ({resume_item})")
                 self.resume_btn.setVisible(True)
-                self.resume_btn.setStyleSheet("background-color: #1f6feb; color: white;")
+                self.resume_btn.setStyleSheet(f"background-color: {COLORS['accent']}; color: white; font-weight: bold; border-radius: 6px; padding: 5px;")
             else:
                 self.resume_btn.setVisible(False)
         except:

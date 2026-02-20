@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
     QPushButton, QFrame
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QSize
+from PyQt6.QtCore import Qt, pyqtSignal, QSize, QPoint
 from PyQt6.QtGui import QColor, QPalette
 from .styles import MINI_OVERLAY_STYLE
 
@@ -24,8 +24,14 @@ class MiniOverlay(QWidget):
     
     def __init__(self):
         super().__init__()
+        self._is_dragging = False
+        self._drag_pos = QPoint()
+        
         self._setup_window()
         self._setup_ui()
+        
+        if not self.load_settings():
+            self._initial_positioning()
         
     def _setup_window(self):
         """Настройка окна"""
@@ -37,6 +43,48 @@ class MiniOverlay(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setFixedSize(320, 95) # Compact height (removed logs)
         
+    def _initial_positioning(self):
+        """Установка начальной позиции (вверху по центру)"""
+        try:
+            from PyQt6.QtWidgets import QApplication
+            screen = QApplication.primaryScreen().geometry()
+            x = (screen.width() - self.width()) // 2
+            y = 10 # Отступ от верхнего края
+            self.move(x, y)
+        except:
+            pass
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._is_dragging = True
+            self._drag_pos = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            event.accept()
+
+    def mouseMoveEvent(self, event):
+        if self._is_dragging:
+            self.move(event.globalPosition().toPoint() - self._drag_pos)
+            event.accept()
+
+    def mouseReleaseEvent(self, event):
+        self._is_dragging = False
+        self.save_settings()
+
+    def save_settings(self):
+        """Сохранить позицию окна"""
+        from PyQt6.QtCore import QSettings
+        settings = QSettings("GBot", "MiniOverlay")
+        settings.setValue("pos", self.pos())
+
+    def load_settings(self) -> bool:
+        """Загрузить позицию окна"""
+        from PyQt6.QtCore import QSettings
+        settings = QSettings("GBot", "MiniOverlay")
+        pos = settings.value("pos")
+        if pos:
+            self.move(pos)
+            return True
+        return False
+
     def _setup_ui(self):
         """Создание интерфейса"""
         # Основной контейнер с фоном и рамкой

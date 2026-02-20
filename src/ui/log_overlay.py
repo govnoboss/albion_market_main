@@ -213,6 +213,7 @@ class LogOverlay(QWidget):
     def mouseReleaseEvent(self, event):
         self._is_dragging = False
         self._resize_edge = _EDGE_NONE
+        self.save_settings()
 
     # --- Persistence ---
     def save_settings(self):

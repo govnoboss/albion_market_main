@@ -53,8 +53,11 @@ class LauncherWindow(QMainWindow):
         self._init_launcher_ui()
         self._setup_daily_license_check()
         self.splash.close()
-        self.show()
-        self._force_foreground()
+        
+        # Only show launcher if we didn't already transition to Dashboard
+        if not hasattr(self, 'dashboard') or not self.dashboard.isVisible():
+            self.show()
+            self._force_foreground()
 
     def _force_foreground(self):
         """Принудительно вывести окно на передний план (Windows workaround)"""
@@ -130,269 +133,30 @@ class LauncherWindow(QMainWindow):
             )
 
     def _show_launcher(self):
-        """Called when login is successful"""
-        # Show splash screen during preloading
-        if not self.splash.isVisible():
-            self.splash.show()
+        """Вызывается после успешного входа или валидации"""
+        if hasattr(self, 'splash') and self.splash.isVisible():
+            self.splash.set_status("Запуск Dashboard...")
+            self.splash.set_progress(90)
+            QApplication.processEvents()
+            self.splash.close()
+            
+        from .dashboard import MainDashboard
+        self.dashboard = MainDashboard()
+        self.dashboard.show()
         
-        self.splash.set_progress(10)
-        self.splash.set_status("Активация лицензии...")
-        QApplication.processEvents()
-
-        # Force re-check to get fresh expiry data
-        self._check_license_silent()
-        
-        self.splash.set_progress(20)
-        self.splash.set_status("Загрузка интерфейса...")
-        QApplication.processEvents()
-
-        self._init_launcher_ui()
-        
-        # SplashScreen is closed at the end of _preload_windows (called inside _init_launcher_ui)
-        self.show()
-        self._force_foreground()
+        self.close() 
 
     def _init_launcher_ui(self):
-        self.setWindowTitle("GBot Launcher")
-        self.resize(600, 530)
-        self.setStyleSheet(MAIN_STYLE)
-        
-        # Центрирование окна (если возможно)
-        # self.setGeometry(100, 100, 600, 400)
-        
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        
-        layout = QVBoxLayout(central_widget)
-        layout.setSpacing(20)
-        layout.setContentsMargins(40, 30, 40, 30)
-        
-        # Заголовок
-        title_lbl = QLabel("GBOT Albion")
-        title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_lbl.setStyleSheet("font-size: 28px; font-weight: bold; color: #f0f6fc;")
-        layout.addWidget(title_lbl)
-        
-        subtitle_lbl = QLabel("Выберите режим работы")
-        subtitle_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        subtitle_lbl.setStyleSheet("font-size: 14px; color: #8b949e;")
-        layout.addWidget(subtitle_lbl)
-        
-        # Кнопки
-        btn_layout = QHBoxLayout()
-        btn_layout.setSpacing(20)
-        
-        # SCANNNER
-        self.btn_scanner = self._create_mode_button(
-            "🔍 СКАНЕР", 
-            "Сбор цен и анализ рынка", 
-            "#1f6feb"
-        )
-        self.btn_scanner.clicked.connect(self._launch_scanner)
-        btn_layout.addWidget(self.btn_scanner)
-        
-        # BUYER
-        self.btn_buyer = self._create_mode_button(
-            "🛒 ЗАКУПЩИК", 
-            "Автоматическая покупка\nпо выгодным ценам", 
-            "#238636"
-        )
-        self.btn_buyer.clicked.connect(self._launch_buyer)
-        btn_layout.addWidget(self.btn_buyer)
-        
-        layout.addLayout(btn_layout)
+        """Переход к Dashboard"""
+        self._show_launcher()
 
-        # Кнопки Настройки и Финансы
-        secondary_btns_layout = QHBoxLayout()
-        secondary_btns_layout.setSpacing(15)
+    def _preload_windows(self):
+        """Устарело, окна теперь встроенные виджеты"""
+        pass
 
-        # Кнопка ФИНАНСЫ
-        self.btn_finance = QPushButton()
-        self.btn_finance.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_finance.setStyleSheet(f"""
-            QPushButton {{
-                background-color: #161b22;
-                border: 2px solid {COLORS['border']};
-                border-radius: 10px;
-                padding: 12px 15px;
-            }}
-            QPushButton:hover {{
-                border-color: {COLORS['success']};
-                background-color: #21262d;
-            }}
-        """)
-        fin_btn_layout = QHBoxLayout(self.btn_finance)
-        fin_lbl = QLabel("💰 ФИНАНСЫ")
-        fin_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        fin_lbl.setStyleSheet("font-size: 14px; font-weight: bold; color: #f0f6fc; border: none; background: transparent;")
-        fin_btn_layout.addWidget(fin_lbl)
-        self.btn_finance.clicked.connect(self._launch_finance)
-        secondary_btns_layout.addWidget(self.btn_finance)
-
-        # Кнопка Настройки
-        self.btn_settings = QPushButton()
-        self.btn_settings.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_settings.setStyleSheet(f"""
-            QPushButton {{
-                background-color: #161b22;
-                border: 2px solid {COLORS['border']};
-                border-radius: 10px;
-                padding: 12px 15px;
-            }}
-            QPushButton:hover {{
-                border-color: #8b949e;
-                background-color: #21262d;
-            }}
-        """)
-        settings_btn_layout = QHBoxLayout(self.btn_settings)
-        settings_icon = QLabel("⚙️ НАСТРОЙКИ")
-        settings_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        settings_icon.setStyleSheet("font-size: 14px; font-weight: bold; color: #8b949e; border: none; background: transparent;")
-        settings_btn_layout.addWidget(settings_icon)
-        self.btn_settings.clicked.connect(self._launch_settings)
-        secondary_btns_layout.addWidget(self.btn_settings)
-
-        layout.addLayout(secondary_btns_layout)
-
-        layout.addStretch()
-
-        # --- Update Banner (скрыт по умолчанию) ---
-        self.update_frame = QFrame()
-        self.update_frame.setStyleSheet("""
-            QFrame {
-                background-color: #161b22;
-                border: 1px solid #1f6feb;
-                border-radius: 8px;
-                padding: 10px;
-            }
-        """)
-        update_inner = QVBoxLayout(self.update_frame)
-        update_inner.setSpacing(8)
-        update_inner.setContentsMargins(12, 8, 12, 8)
-
-        # Первая строка: текст + кнопка
-        update_top = QHBoxLayout()
-        self.update_lbl = QLabel("")
-        self.update_lbl.setStyleSheet("color: #58a6ff; font-size: 13px; border: none;")
-        update_top.addWidget(self.update_lbl)
-        update_top.addStretch()
-
-        self.btn_update = QPushButton("🔄 Обновить")
-        self.btn_update.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_update.setStyleSheet("""
-            QPushButton {
-                background-color: #1f6feb;
-                border: none;
-                border-radius: 6px;
-                padding: 6px 16px;
-                color: #ffffff;
-                font-weight: 600;
-                font-size: 12px;
-            }
-            QPushButton:hover {
-                background-color: #388bfd;
-            }
-            QPushButton:disabled {
-                background-color: #21262d;
-                color: #484f58;
-            }
-        """)
-        self.btn_update.clicked.connect(self._start_update_download)
-        update_top.addWidget(self.btn_update)
-        update_inner.addLayout(update_top)
-
-        # Прогресс-бар (скрыт до скачивания)
-        self.update_progress = QProgressBar()
-        self.update_progress.setRange(0, 100)
-        self.update_progress.setValue(0)
-        self.update_progress.setFixedHeight(6)
-        self.update_progress.setTextVisible(False)
-        self.update_progress.setStyleSheet("""
-            QProgressBar {
-                background-color: #21262d;
-                border: none;
-                border-radius: 3px;
-            }
-            QProgressBar::chunk {
-                background-color: #1f6feb;
-                border-radius: 3px;
-            }
-        """)
-        self.update_progress.hide()
-        update_inner.addWidget(self.update_progress)
-
-        self.update_frame.hide()  # Скрыт до обнаружения обновления
-        layout.addWidget(self.update_frame)
-
-        # --- License Info Footer ---
-        footer_layout = QVBoxLayout()
-        footer_layout.setSpacing(5)
-
-        self.license_lbl = QLabel()
-        self.license_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._update_license_display()
-        footer_layout.addWidget(self.license_lbl)
-
-        version_lbl = QLabel(f"v{CURRENT_VERSION}")
-        version_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        version_lbl.setStyleSheet("color: #30363d; font-size: 11px;")
-        footer_layout.addWidget(version_lbl)
-
-        layout.addLayout(footer_layout)
-
-        # --- Contacts (Footer) ---
-        contacts_layout = QHBoxLayout()
-        contacts_layout.setSpacing(15)
-        contacts_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
-        # Telegram
-        btn_tg = QPushButton("Telegram")
-        btn_tg.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_tg.setStyleSheet("""
-            QPushButton {
-                background-color: transparent;
-                color: #24A1DE;
-                border: 1px solid #24A1DE;
-                border-radius: 15px;
-                padding: 5px 15px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #24A1DE;
-                color: white;
-            }
-        """)
-        btn_tg.clicked.connect(lambda: webbrowser.open(LINK_TELEGRAM))
-        contacts_layout.addWidget(btn_tg)
-
-        # Discord
-        btn_ds = QPushButton("Discord")
-        btn_ds.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_ds.setStyleSheet("""
-            QPushButton {
-                background-color: transparent;
-                color: #5865F2;
-                border: 1px solid #5865F2;
-                border-radius: 15px;
-                padding: 5px 15px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #5865F2;
-                color: white;
-            }
-        """)
-        btn_ds.clicked.connect(lambda: webbrowser.open(LINK_DISCORD))
-        contacts_layout.addWidget(btn_ds)
-
-        layout.addLayout(contacts_layout)
-
-
-        # Предзагрузка окон для быстрого переключения
-        self._preload_windows()
-
-        # Фоновая проверка обновлений
-        self._check_for_updates()
+    def _check_for_updates(self):
+        """Фоновая проверка обновлений (теперь в Dashboard или тут)"""
+        pass
 
     def _update_license_display(self):
         """Updates the license label text and color"""
