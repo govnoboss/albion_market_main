@@ -159,6 +159,18 @@ class SettingsPanel(QScrollArea):
         bm_layout.addWidget(self.char_switch_check)
         
         layout.addWidget(bm_group)
+
+        # === Отладка OCR ===
+        debug_group = QGroupBox("🔬 Отладка OCR")
+        debug_layout = QVBoxLayout(debug_group)
+        debug_layout.setSpacing(10)
+        
+        self.ocr_debug_check = QCheckBox("Сохранять скриншоты OCR при сканировании цен")
+        self.ocr_debug_check.setToolTip("При включении все изображения, которые видит OCR (цены, количество), сохраняются в папку data/debug_ocr/")
+        self.ocr_debug_check.stateChanged.connect(self._on_ocr_debug_changed)
+        debug_layout.addWidget(self.ocr_debug_check)
+        
+        layout.addWidget(debug_group)
         # === Фильтры сканирования ===
         filters_group = QGroupBox("🔍 Фильтры предметов")
         filters_group.setToolTip("Выбор предметов для сканирования и закупки.")
@@ -262,6 +274,11 @@ class SettingsPanel(QScrollArea):
 
         # Character Switch
         self.char_switch_check.setChecked(config.get_setting("use_character_switch", True))
+
+        # OCR Debug (block signals to avoid save during load)
+        self.ocr_debug_check.blockSignals(True)
+        self.ocr_debug_check.setChecked(config.get_setting("ocr_debug_mode", False))
+        self.ocr_debug_check.blockSignals(False)
             
         self.blockSignals(False)
         
@@ -332,3 +349,6 @@ class SettingsPanel(QScrollArea):
 
     def _on_char_switch_changed(self, state):
         get_config().set_setting("use_character_switch", state == Qt.CheckState.Checked.value)
+
+    def _on_ocr_debug_changed(self, state):
+        get_config().set_setting("ocr_debug_mode", state == Qt.CheckState.Checked.value)

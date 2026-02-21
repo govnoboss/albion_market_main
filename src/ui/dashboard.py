@@ -462,32 +462,33 @@ class MainDashboard(QMainWindow):
             self.kpi_profit.update_value(f"{stats['profit']:,}".replace(',', ' '), "Ожидаемый профит")
             self.kpi_items.update_value(f"{stats['qty']:,}".replace(',', ' '), "Количество")
 
-        # Обновление таблицы
-        history = finance_manager.get_history_for_period(days, limit=50)
-        self.history_table.setRowCount(len(history))
+        # Обновление таблицы (сессии закупки — одна строка = одна сессия)
+        sessions = finance_manager.get_sessions_for_period(days, limit=50)
+        self.history_table.setRowCount(len(sessions))
         
-        for i, tx in enumerate(history):
-            # Дата (укорачиваем)
-            dt = tx['timestamp'].split('.')[0] # 2026-02-20 22:38:31
+        for i, sess in enumerate(sessions):
+            # Дата начала сессии
+            ts = sess.get('session_start', '')
+            dt = str(ts).split('.')[0] if ts else ''
             self.history_table.setItem(i, 0, QTableWidgetItem(dt))
-            self.history_table.setItem(i, 1, QTableWidgetItem(tx['city']))
-            self.history_table.setItem(i, 2, QTableWidgetItem(str(tx['qty'])))
+            self.history_table.setItem(i, 1, QTableWidgetItem(sess.get('city', '')))
+            self.history_table.setItem(i, 2, QTableWidgetItem(str(sess.get('total_qty', 0))))
             
-            spent_str = f"{tx['total']:,}".replace(',', ' ')
+            total_spent = sess.get('total_spent', 0) or 0
+            spent_str = f"{total_spent:,}".replace(',', ' ')
             self.history_table.setItem(i, 3, QTableWidgetItem(spent_str))
             
-            # Доход (ожидаемая продажа в BM - налоги)
-            # Profit = Inc * 0.935 - Spent => Inc * 0.935 = Profit + Spent
-            # Но в БД у нас нет Inc напрямую, у нас есть profit_est и total
-            income_est = tx['profit_est'] + tx['total']
+            # Ожидаемый доход (профит + потрачено)
+            total_profit = sess.get('total_profit', 0) or 0
+            income_est = total_profit + total_spent
             income_str = f"{income_est:,}".replace(',', ' ')
             self.history_table.setItem(i, 4, QTableWidgetItem(income_str))
             
-            profit_str = f"{tx['profit_est']:,}".replace(',', ' ')
+            profit_str = f"{total_profit:,}".replace(',', ' ')
             prof_item = QTableWidgetItem(profit_str)
-            if tx['profit_est'] > 0:
+            if total_profit > 0:
                 prof_item.setForeground(Qt.GlobalColor.green)
-            elif tx['profit_est'] < 0:
+            elif total_profit < 0:
                 prof_item.setForeground(Qt.GlobalColor.red)
             self.history_table.setItem(i, 5, prof_item)
 

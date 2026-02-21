@@ -37,3 +37,9 @@ def get_logs_dir() -> Path:
     logs_dir = get_app_root() / "logs"
     logs_dir.mkdir(exist_ok=True)
     return logs_dir
+
+def get_debug_ocr_dir() -> Path:
+    """Папка для сохранения скриншотов OCR при режиме отладки."""
+    debug_dir = get_data_dir() / "debug_ocr"
+    debug_dir.mkdir(exist_ok=True)
+    return debug_dir

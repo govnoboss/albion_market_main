@@ -169,6 +169,7 @@ class BuyerWidget(QWidget):
         self.start_btn.setVisible(False)
         self.stop_btn.setVisible(True)
         self.overlay.show()
+        self.log_overlay.show()
         self.overlay.update_status(True, False)
         self._switch_to_mini()
 
@@ -205,6 +206,7 @@ class BuyerWidget(QWidget):
         self.start_btn.setVisible(True)
         self.stop_btn.setVisible(False)
         self.overlay.hide()
+        self.log_overlay.hide()
         self._restore_from_mini()
 
     def _switch_to_mini(self):

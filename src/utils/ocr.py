@@ -11,7 +11,7 @@ from ..utils.logger import get_logger
 
 logger = get_logger()
 
-from .paths import get_app_root, get_logs_dir
+from .paths import get_app_root, get_logs_dir, get_debug_ocr_dir
 
 # Попытка найти путь к Tesseract
 def _find_tesseract():
@@ -74,6 +74,33 @@ def is_ocr_available() -> bool:
     """Проверка доступности OCR"""
     return init_ocr()
 
+
+def _is_ocr_debug_enabled() -> bool:
+    """Проверка включён ли режим отладки OCR (сохранение скриншотов)"""
+    try:
+        from ..utils.config import get_config
+        return bool(get_config().get_setting("ocr_debug_mode", False))
+    except Exception:
+        return False
+
+
+def _save_debug_ocr_image(img, prefix: str, suffix: str = "") -> None:
+    """Сохраняет изображение в папку debug_ocr при включённом режиме отладки"""
+    if not _is_ocr_debug_enabled():
+        return
+    try:
+        from datetime import datetime
+        debug_dir = get_debug_ocr_dir()
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        ms = int(time.time() * 1000) % 1000
+        name = f"{prefix}_{ts}_{ms:03d}{suffix}.png"
+        path = debug_dir / name
+        img.save(str(path))
+        logger.debug(f"OCR debug saved: {path.name}")
+    except Exception as e:
+        logger.warning(f"Failed to save OCR debug image: {e}")
+
+
 def read_screen_text(x: int, y: int, w: int, h: int, lang: str = 'rus', whitelist: str = None) -> str:
     """
     Считывает текст с указанной области экрана.
@@ -111,6 +138,7 @@ def read_screen_text(x: int, y: int, w: int, h: int, lang: str = 'rus', whitelis
         
         # Convert back to PIL
         binarized = Image.fromarray(thresh_np)
+        _save_debug_ocr_image(binarized, "price", f"_x{x}_y{y}_w{w}_h{h}")
         
         # 3. Распознавание
         # --psm 6: Assume a single uniform block of text.
@@ -321,13 +349,7 @@ def read_qty_text(area: dict) -> int:
         
         # Convert back to PIL for Tesseract
         final_img = Image.fromarray(img_np)
-        
-        # --- DEBUG: Сохранение изображения для откладки (в корень проекта) ---
-        try:
-            debug_path = get_app_root() / "debug_qty_ocr.png"
-            final_img.save(debug_path)
-        except Exception as e:
-            logger.warning(f"Failed to save debug OCR image: {e}")
+        _save_debug_ocr_image(final_img, "qty", f"_x{area['x']}_y{area['y']}")
 
         # 6. OCR (PSM 7 - Single text line, Numeric Whitelist)
         whitelist = "0123456789"

@@ -5,6 +5,7 @@
 
 import time
 import random
+from datetime import datetime
 import pyautogui
 from .base_bot import BaseBot
 from .interaction import DropdownSelector
@@ -46,6 +47,7 @@ class BuyerBot(BaseBot):
         self._is_running = True
         self._stop_requested = False
         self._is_paused = False
+        self.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         self.logger.info(f"💰 ЗАПУСК РЕЖИМА: ОПТ (Orders) 💰")
         self.logger.info(f"📍 Маршрут: {self.buy_city} -> {self.sell_city}")
@@ -517,7 +519,8 @@ class BuyerBot(BaseBot):
                      qty=actual_qty,
                      city=self.buy_city,
                      profit_est=int((bm_price * 0.935 - current_price) * actual_qty),
-                     is_simulation=self.simulation_mode
+                     is_simulation=self.simulation_mode,
+                     session_id=getattr(self, "session_id", None)
                  )
                  
                  self.spent_amount += (current_price * actual_qty)

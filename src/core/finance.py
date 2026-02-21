@@ -44,10 +44,25 @@ class FinanceManager:
             
             conn.commit()
             conn.close()
+            self._migrate_add_session_id()
         except Exception as e:
             logger.error(f"Ошибка инициализации БД финансов: {e}")
 
-    def log_transaction(self, item_name, tier, enchant, price, qty, city, profit_est=0, is_simulation=False):
+    def _migrate_add_session_id(self):
+        """Добавить колонку session_id для группировки сессий закупки"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA table_info(transactions)")
+            columns = [row[1] for row in cursor.fetchall()]
+            if "session_id" not in columns:
+                cursor.execute("ALTER TABLE transactions ADD COLUMN session_id TEXT")
+                conn.commit()
+            conn.close()
+        except Exception as e:
+            logger.debug(f"Migration session_id: {e}")
+
+    def log_transaction(self, item_name, tier, enchant, price, qty, city, profit_est=0, is_simulation=False, session_id=None):
         """Запись новой транзакции"""
         try:
             total = price * qty
@@ -56,9 +71,9 @@ class FinanceManager:
             
             cursor.execute('''
                 INSERT INTO transactions 
-                (item_name, tier, enchant, price, qty, total, city, profit_est, is_simulation)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (item_name, tier, enchant, price, qty, total, city, profit_est, is_simulation))
+                (item_name, tier, enchant, price, qty, total, city, profit_est, is_simulation, session_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (item_name, tier, enchant, price, qty, total, city, profit_est, is_simulation, session_id))
             
             conn.commit()
             conn.close()
@@ -98,6 +113,44 @@ class FinanceManager:
         except Exception as e:
             logger.error(f"Ошибка получения статистики за период: {e}")
             return {"spent": 0, "qty": 0, "profit": 0}
+
+    def get_sessions_for_period(self, days=None, limit=50):
+        """
+        Получение сессий закупки за период (агрегация по session_id).
+        Одна строка = одна сессия закупки (от запуска до остановки).
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            where = "WHERE is_simulation = 0"
+            params = [limit]
+            if days is not None:
+                period_start = datetime.fromtimestamp(time.time() - (days * 86400)).strftime("%Y-%m-%d %H:%M:%S")
+                where += " AND timestamp >= ?"
+                params = [period_start, limit]
+            
+            query = f'''
+                SELECT 
+                    MIN(timestamp) as session_start,
+                    MAX(city) as city,
+                    SUM(qty) as total_qty,
+                    SUM(total) as total_spent,
+                    SUM(profit_est) as total_profit
+                FROM transactions 
+                {where}
+                GROUP BY COALESCE(session_id, 'legacy_' || id)
+                ORDER BY session_start DESC
+                LIMIT ?
+            '''
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+            conn.close()
+            return [dict(row) for row in rows]
+        except Exception as e:
+            logger.error(f"Ошибка получения сессий за период: {e}")
+            return []
 
     def get_history_for_period(self, days=None, limit=100):
         """Получение списка транзакций за период"""

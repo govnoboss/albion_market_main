@@ -49,7 +49,8 @@ class ConfigManager:
             "settings": {
                 "tesseract_path": "",
                 "price_update_timeout": 5.0,
-                "use_character_switch": True
+                "use_character_switch": True,
+                "ocr_debug_mode": False
             },
             "dropdowns": {
                 "row_height": 28,
