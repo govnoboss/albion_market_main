@@ -380,9 +380,9 @@ class MainDashboard(QMainWindow):
         kpi_row = QHBoxLayout()
         kpi_row.setSpacing(25)
         
-        self.kpi_revenue = KPICard("Всего потрачено", "0", "Альбион Серебро", "💰")
-        self.kpi_profit = KPICard("Всего прибыли", "0", "Ожидаемый профит", "📈")
-        self.kpi_items = KPICard("Куплено предметов", "0", "Количество шт.", "📦")
+        self.kpi_revenue = KPICard("Всего потрачено", "0", "", "💰")
+        self.kpi_profit = KPICard("Всего прибыли", "0", "", "📈")
+        self.kpi_items = KPICard("Куплено предметов", "0", "", "📦")
         
         kpi_row.addWidget(self.kpi_revenue)
         kpi_row.addWidget(self.kpi_profit)
@@ -430,9 +430,9 @@ class MainDashboard(QMainWindow):
         
         # Настройка заголовков
         header = self.history_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive) 
-        self.history_table.setColumnWidth(0, 180) 
+        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        header.setStretchLastSection(True)
+        self.history_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         
         self.history_table.verticalHeader().setVisible(False)
         self.history_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -491,9 +491,9 @@ class MainDashboard(QMainWindow):
         
         stats = finance_manager.get_stats_for_period(days)
         if stats:
-            self.kpi_revenue.update_value(f"{stats['spent']:,}".replace(',', ' '), "Альбион Серебро")
-            self.kpi_profit.update_value(f"{stats['profit']:,}".replace(',', ' '), "Ожидаемый профит")
-            self.kpi_items.update_value(f"{stats['qty']:,}".replace(',', ' '), "Количество")
+            self.kpi_revenue.update_value(f"{stats['spent']:,}".replace(',', ' '), "")
+            self.kpi_profit.update_value(f"{stats['profit']:,}".replace(',', ' '), "")
+            self.kpi_items.update_value(f"{stats['qty']:,}".replace(',', ' '), "")
 
         # Обновление таблицы (сессии закупки — одна строка = одна сессия)
         sessions = finance_manager.get_sessions_for_period(days, limit=50)
