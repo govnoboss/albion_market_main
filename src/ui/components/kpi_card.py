@@ -8,8 +8,8 @@ class KPICard(QFrame):
         self.setObjectName("kpiCard")
         
         main_layout = QHBoxLayout(self)
-        main_layout.setContentsMargins(15, 15, 15, 15)
-        main_layout.setSpacing(15)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(18)
         
         # Icon Section
         icon_container = QFrame()
@@ -25,7 +25,7 @@ class KPICard(QFrame):
         
         # Text Section
         text_layout = QVBoxLayout()
-        text_layout.setSpacing(2)
+        text_layout.setSpacing(4)
         
         self.lbl_title = QLabel(title)
         self.lbl_title.setObjectName("kpiTitle")

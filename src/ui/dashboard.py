@@ -145,8 +145,9 @@ class MainDashboard(QMainWindow):
     # Сигнал для потокобезопасной обработки хоткеев
     hotkey_signal = pyqtSignal(str) # "f5", "f6", "f7"
     
-    def __init__(self):
+    def __init__(self, splash=None):
         super().__init__()
+        self.splash = splash
         self.setWindowTitle("Albion Market Bot - Dashboard")
         self.setMinimumSize(1200, 800)
         self.setStyleSheet(MAIN_STYLE)
@@ -194,6 +195,12 @@ class MainDashboard(QMainWindow):
         
         # 4. Проверка обновлений
         self._check_for_updates()
+
+        # Final Splash Status
+        if self.splash:
+            self.splash.set_progress(100)
+            self.splash.set_status("Готово!")
+            QTimer.singleShot(500, self.splash.close)
 
     def _check_for_updates(self):
         """Запускает фоновую проверку обновлений"""
@@ -291,12 +298,26 @@ class MainDashboard(QMainWindow):
 
     def _init_tabs(self):
         """Создание и добавление реальных виджетов во вкладки"""
+        def update_splash(status, progress):
+            if self.splash:
+                self.splash.set_status(status)
+                self.splash.set_progress(progress)
+                from PyQt6.QtWidgets import QApplication
+                QApplication.processEvents()
+
+        update_splash("Загрузка Сканера...", 30)
         from .scanner_widget import ScannerWidget
+        update_splash("Загрузка Закупщика...", 40)
         from .buyer_widget import BuyerWidget
+        update_splash("Загрузка Профитов...", 50)
         from .profits_tab import ProfitsTab
+        update_splash("Загрузка Цен...", 60)
         from .prices_tab import PricesTab
+        update_splash("Загрузка Координат...", 70)
         from .coordinates_tab import CoordinatesTab
+        update_splash("Загрузка Настроек...", 80)
         from .settings_panel import SettingsPanel
+        update_splash("Загрузка FAQ...", 90)
         from .faq_tab import FAQTab
         
         # 0: Home / Statistics
@@ -338,28 +359,30 @@ class MainDashboard(QMainWindow):
         page = QWidget()
         page.setObjectName("homePage")
         main_v_layout = QVBoxLayout(page)
-        main_v_layout.setContentsMargins(40, 40, 40, 40)
-        main_v_layout.setSpacing(30)
+        main_v_layout.setContentsMargins(50, 50, 50, 50)
+        main_v_layout.setSpacing(40)
         
         # --- HEADER ---
         header = QVBoxLayout()
+        header.setSpacing(8)
+        
         welcome_label = QLabel("Welcome back, Trader")
-        welcome_label.setStyleSheet(f"font-size: 14px; color: {COLORS['accent']}; font-weight: 600;")
+        welcome_label.setObjectName("subtitle")
         header.addWidget(welcome_label)
         
         title = QLabel("Market Dashboard")
         title.setObjectName("title")
-        title.setStyleSheet("font-size: 32px; padding: 0;")
         header.addWidget(title)
+        
         main_v_layout.addLayout(header)
         
         # --- KPI ROW ---
         kpi_row = QHBoxLayout()
-        kpi_row.setSpacing(20)
+        kpi_row.setSpacing(25)
         
-        self.kpi_revenue = KPICard("Всего потрачено", "0", "За период", "💰")
+        self.kpi_revenue = KPICard("Всего потрачено", "0", "Альбион Серебро", "💰")
         self.kpi_profit = KPICard("Всего прибыли", "0", "Ожидаемый профит", "📈")
-        self.kpi_items = KPICard("Куплено предметов", "0", "Шт.", "📦")
+        self.kpi_items = KPICard("Куплено предметов", "0", "Количество шт.", "📦")
         
         kpi_row.addWidget(self.kpi_revenue)
         kpi_row.addWidget(self.kpi_profit)
@@ -368,34 +391,35 @@ class MainDashboard(QMainWindow):
         
         # --- BOTTOM SECTION (Recaps & Tools) ---
         bottom_layout = QHBoxLayout()
-        bottom_layout.setSpacing(30)
+        bottom_layout.setSpacing(35)
         
-        # Performance Box (Placeholder for Chart/Main Table)
+        # Performance Box (Table)
         perf_container = QFrame()
-        perf_container.setObjectName("kpiCard")
+        perf_container.setObjectName("summaryBox") # Reusing summaryBox for consistent card style
         perf_layout = QVBoxLayout(perf_container)
-        perf_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        perf_layout.setContentsMargins(20, 20, 20, 20)
+        perf_layout.setSpacing(15)
         
         # Filter Row
         filter_layout = QHBoxLayout()
         perf_label = QLabel("Performance Insights")
-        perf_label.setStyleSheet("font-size: 18px; font-weight: 700; color: #94a3b8;")
+        perf_label.setObjectName("summaryTitle")
         filter_layout.addWidget(perf_label)
         
         filter_layout.addStretch()
         
         period_lbl = QLabel("За период:")
-        period_lbl.setStyleSheet("color: #94a3b8; font-size: 13px;")
+        period_lbl.setStyleSheet("color: #94a3b8; font-size: 13px; font-weight: 500;")
         filter_layout.addWidget(period_lbl)
         
         self.period_combo = QComboBox()
         self.period_combo.addItems(["1 день", "1 неделя", "1 месяц", "Всё время"])
-        self.period_combo.setFixedWidth(120)
+        self.period_combo.setFixedWidth(140)
+        self.period_combo.setCursor(Qt.CursorShape.PointingHandCursor)
         self.period_combo.currentIndexChanged.connect(self._on_period_changed)
         filter_layout.addWidget(self.period_combo)
         
         perf_layout.addLayout(filter_layout)
-        perf_layout.addSpacing(10)
 
         # Performance Table
         self.history_table = QTableWidget()
@@ -406,27 +430,36 @@ class MainDashboard(QMainWindow):
         
         # Настройка заголовков
         header = self.history_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive) # Дату можно крутить вручную
-        self.history_table.setColumnWidth(0, 150) # Начальная ширина для даты
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive) 
+        self.history_table.setColumnWidth(0, 180) 
         
         self.history_table.verticalHeader().setVisible(False)
         self.history_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.history_table.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
         self.history_table.setAlternatingRowColors(True)
-        self.history_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.history_table.setShowGrid(False)
         
         perf_layout.addWidget(self.history_table)
         
         bottom_layout.addWidget(perf_container, stretch=2)
         
-        # Right: Quick Recap
+        # Right: Quick Recap (Hot Items)
         recap_layout = QVBoxLayout()
-        recap_layout.setSpacing(20)
+        recap_layout.setContentsMargins(0, 0, 0, 0)
         
         self.hot_items_box = SummaryBox("🔥 HOT ITEMS", 
             ["• Data sync pending..."], 
             color="#f59e0b")
+        recap_layout.addWidget(self.hot_items_box)
+            
+        recap_layout.addStretch()
+        bottom_layout.addLayout(recap_layout, stretch=1)
+        
+        main_v_layout.addLayout(bottom_layout, stretch=1)
+        
+        # Начальное обновление
+        QTimer.singleShot(500, self._update_home_stats)
         recap_layout.addWidget(self.hot_items_box)
             
         recap_layout.addStretch()

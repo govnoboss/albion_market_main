@@ -52,7 +52,7 @@ class LauncherWindow(QMainWindow):
 
         self._init_launcher_ui()
         self._setup_daily_license_check()
-        self.splash.close()
+        # self.splash.close() # Не закрываем здесь
         
         # Only show launcher if we didn't already transition to Dashboard
         if not hasattr(self, 'dashboard') or not self.dashboard.isVisible():
@@ -136,12 +136,12 @@ class LauncherWindow(QMainWindow):
         """Вызывается после успешного входа или валидации"""
         if hasattr(self, 'splash') and self.splash.isVisible():
             self.splash.set_status("Запуск Dashboard...")
-            self.splash.set_progress(90)
+            self.splash.set_progress(20)
             QApplication.processEvents()
-            self.splash.close()
+            # self.splash.close() # Не закрываем здесь, закрываем в Dashboard
             
         from .dashboard import MainDashboard
-        self.dashboard = MainDashboard()
+        self.dashboard = MainDashboard(splash=getattr(self, 'splash', None))
         self.dashboard.show()
         
         self.close() 

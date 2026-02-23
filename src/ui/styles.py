@@ -11,9 +11,11 @@ COLORS = {
     "accent": "#10b981",      # Emerald Green
     "accent_hover": "#34d399", 
     "accent_soft": "rgba(16, 185, 129, 0.1)",
+    "accent_glow": "rgba(16, 185, 129, 0.25)",
     "text": "#f0fdf4",        # Minty White
     "text_dark": "#94a3b8",   # Slate Grey
     "border": "#1e2923",      # Dark border
+    "border_bright": "#2d3c35",
     "danger": "#ef4444",      # Red
     "success": "#10b981",     # Success Green
     "warning": "#f59e0b",     # Gold/Amber
@@ -33,81 +35,96 @@ QMainWindow, QWidget {{
 
 /* KPI Cards */
 QFrame#kpiCard {{
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1a2521, stop:1 #151e1b);
+    border: 1px solid {COLORS['border']};
+    border-radius: 20px;
+    padding: 5px; /* Internal content padding handled by layouts */
+}}
+
+QFrame#kpiCard:hover {{
+    border: 1px solid {COLORS['accent']};
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1e2923, stop:1 #1a2521);
+}}
+
+QFrame#iconContainer {{
+    background-color: {COLORS['accent_soft']};
+    border-radius: 14px;
+    min-width: 48px;
+    max-width: 48px;
+    min-height: 48px;
+    max-height: 48px;
+}}
+
+QLabel#kpiIcon {{
+    font-size: 22px;
+    background: transparent;
+}}
+
+QLabel#kpiTitle {{
+    color: {COLORS['text_dark']};
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}}
+
+QLabel#kpiValue {{
+    color: {COLORS['text']};
+    font-size: 28px;
+    font-weight: 800;
+}}
+
+QLabel#kpiSubtext {{
+    color: {COLORS['accent']};
+    font-size: 11px;
+    font-weight: 500;
+}}
+
+/* Summary Boxes & Hot Items */
+QFrame#summaryBox {{
     background-color: {COLORS['bg_card']};
     border: 1px solid {COLORS['border']};
     border-radius: 16px;
     padding: 20px;
 }}
 
-QFrame#kpiCard:hover {{
-    border: 1px solid {COLORS['accent']};
-    background-color: #1a2521;
-}}
-
-QFrame#iconContainer {{
-    background-color: {COLORS['accent_soft']};
-    border-radius: 12px;
-    min-width: 44px;
-    max-width: 44px;
-    min-height: 44px;
-    max-height: 44px;
-}}
-
-QLabel#kpiIcon {{
-    font-size: 20px;
-    background: transparent;
-}}
-
-QLabel#kpiTitle {{
-    color: {COLORS['text_dark']};
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}}
-
-QLabel#kpiValue {{
-    color: {COLORS['text']};
-    font-size: 24px;
-    font-weight: 700;
-}}
-
-QLabel#kpiSubtext {{
-    color: {COLORS['text_dark']};
-    font-size: 11px;
-}}
-
-/* Activity Pulse Feed */
-QFrame#activityItem {{
-    background-color: transparent;
-    border-bottom: 1px solid {COLORS['border']};
-    padding: 8px 0;
-}}
-
-QLabel#activityTime {{
-    color: {COLORS['text_dark']};
-    font-size: 10px;
-}}
-
-QLabel#activityText {{
-    color: {COLORS['text']};
-    font-size: 12px;
-}}
-
-/* Summary Boxes */
-QFrame#summaryBox {{
-    background-color: {COLORS['bg_card']};
-    border: 1px solid {COLORS['border']};
-    border-radius: 12px;
-    padding: 15px;
-}}
-
 QLabel#summaryTitle {{
+    font-size: 14px;
+    font-weight: 800;
+    color: {COLORS['text']};
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding-bottom: 5px;
+}}
+
+QFrame#hotItemRow {{
+    background-color: #1a2521;
+    border: 1px solid {COLORS['border']};
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 8px;
+}}
+
+QFrame#hotItemRow:hover {{
+    border-color: {COLORS['border_bright']};
+    background-color: #1e2923;
+}}
+
+QLabel#hotItemName {{
+    font-size: 13px;
+    font-weight: 600;
+    color: {COLORS['text']};
+}}
+
+QLabel#hotItemStats {{
+    font-size: 11px;
+    color: {COLORS['text_dark']};
+}}
+
+QLabel#hotItemProfit {{
     font-size: 12px;
     font-weight: 700;
     color: {COLORS['accent']};
-    text-transform: uppercase;
-    letter-spacing: 1px;
 }}
 
 /* Dashboard Shell */
@@ -118,21 +135,21 @@ QWidget#dashboardContent {{
 QFrame#sidebar {{
     background-color: {COLORS['sidebar']};
     border-right: 1px solid {COLORS['border']};
-    min-width: 200px;
-    max-width: 200px;
+    min-width: 220px;
+    max-width: 220px;
 }}
 
 /* Sidebar Item */
 QPushButton#sidebarItem {{
     background-color: transparent;
     border: none;
-    border-radius: 6px;
-    padding: 8px 12px;
+    border-radius: 10px;
+    padding: 10px 16px;
     text-align: left;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
     color: {COLORS['text_dark']};
-    margin: 2px 8px;
+    margin: 4px 12px;
 }}
 
 QPushButton#sidebarItem:hover {{
@@ -143,44 +160,50 @@ QPushButton#sidebarItem:hover {{
 QPushButton#sidebarItem[active="true"] {{
     background-color: {COLORS['accent']};
     color: #ffffff;
+    font-weight: 600;
 }}
 
 /* Sidebar Title */
 QLabel#sidebarTitle {{
-    font-size: 18px;
-    font-weight: bold;
+    font-size: 20px;
+    font-weight: 900;
     color: {COLORS['accent']};
-    padding: 24px 16px;
+    padding: 32px 20px;
+    letter-spacing: 1px;
 }}
 
 /* Tables */
 QTableWidget {{
     background-color: {COLORS['bg_card']};
     border: 1px solid {COLORS['border']};
-    border-radius: 8px;
-    gridline-color: transparent;
+    border-radius: 12px;
+    gridline-color: rgba(255, 255, 255, 0.03);
+    padding: 5px;
 }}
 
 QHeaderView::section {{
-    background-color: #1a2521;
+    background-color: transparent;
     border: none;
-    padding: 8px;
-    font-weight: bold;
+    padding: 12px;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
     color: {COLORS['text_dark']};
+    letter-spacing: 1px;
 }}
 
 /* Заголовки */
 QLabel#title {{
-    font-size: 24px;
-    font-weight: bold;
+    font-size: 36px;
+    font-weight: 800;
     color: {COLORS['text']};
-    padding: 10px 0;
+    padding: 0;
 }}
 
 QLabel#subtitle {{
-    font-size: 13px;
+    font-size: 15px;
     color: {COLORS['text_dark']};
-    padding: 2px 0;
+    padding: 0;
 }}
 
 /* Кнопки */
