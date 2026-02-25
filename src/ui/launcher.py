@@ -14,6 +14,7 @@ LINK_DISCORD = "https://discordapp.com/users/dendidima228"
 
 from .styles import MAIN_STYLE, COLORS
 from ..utils.logger import get_logger
+from ..utils.startup_profiler import get_startup_profiler
 
 logger = get_logger()
 from .splash_screen import SplashScreen
@@ -30,25 +31,32 @@ class LauncherWindow(QMainWindow):
     
     def __init__(self):
         super().__init__()
+        _profiler = get_startup_profiler()
+        
         # --- Splash Screen ---
+        _profiler.start("splash_init")
         self.splash = SplashScreen()
         self.splash.show()
         self.splash.set_progress(10)
         self.splash.set_status("Проверка лицензии...")
         QApplication.processEvents()
+        _profiler.end("splash_init")
         
         # --- License Check ---
         self.login_window = None
         self.shutdown_timer = None
         self.shutdown_seconds = 60
 
+        _profiler.start("license_check")
         if not self._check_license_silent():
+            _profiler.end("license_check")
             # Show Login Window instead of Launcher
             self.splash.close()
             from .login_window import LoginWindow
             self.login_window = LoginWindow(on_success_callback=self._show_launcher)
             self.login_window.show()
             return
+        _profiler.end("license_check")
 
         self._init_launcher_ui()
         self._setup_daily_license_check()
@@ -134,14 +142,21 @@ class LauncherWindow(QMainWindow):
 
     def _show_launcher(self):
         """Вызывается после успешного входа или валидации"""
+        _profiler = get_startup_profiler()
+        
         if hasattr(self, 'splash') and self.splash.isVisible():
             self.splash.set_status("Запуск Dashboard...")
             self.splash.set_progress(20)
             QApplication.processEvents()
             # self.splash.close() # Не закрываем здесь, закрываем в Dashboard
-            
+        
+        _profiler.start("import_dashboard")
         from .dashboard import MainDashboard
+        _profiler.end("import_dashboard")
+        
+        _profiler.start("dashboard_init")
         self.dashboard = MainDashboard(splash=getattr(self, 'splash', None))
+        _profiler.end("dashboard_init")
         self.dashboard.show()
         
         self.close() 

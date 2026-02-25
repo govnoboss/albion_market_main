@@ -3,6 +3,9 @@
 Точка входа приложения
 """
 
+import time
+_t0 = time.perf_counter()  # Самый ранний момент
+
 import sys
 import os
 import ctypes
@@ -20,11 +23,35 @@ except ImportError:
 # Добавляем корневую папку проекта в путь
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# --- Startup Profiler ---
+from src.utils.startup_profiler import get_startup_profiler
+profiler = get_startup_profiler()
+profiler._t0 = _t0  # Устанавливаем самый ранний момент
+profiler.start("total")
+profiler.mark("python_ready")
+
+# --- PyQt6 Imports ---
+profiler.start("pyqt_imports")
 try:
     from PyQt6.QtWidgets import QApplication
     from PyQt6.QtGui import QFont
-    from src.ui.launcher import LauncherWindow
+    profiler.end("pyqt_imports")
 except Exception as e:
+    profiler.end("pyqt_imports")
+    import traceback
+    sys.stderr.write(f"CRASH during imports: {e}\n")
+    sys.stderr.write(traceback.format_exc())
+    sys.stderr.flush()
+    input("Press Enter to exit (Import Error)...")
+    sys.exit(1)
+
+# --- Launcher Import ---
+profiler.start("import_launcher")
+try:
+    from src.ui.launcher import LauncherWindow
+    profiler.end("import_launcher")
+except Exception as e:
+    profiler.end("import_launcher")
     import traceback
     sys.stderr.write(f"CRASH during imports: {e}\n")
     sys.stderr.write(traceback.format_exc())
@@ -34,12 +61,15 @@ except Exception as e:
 
 def run_app():
     """Запуск приложения"""
+    profiler.start("qapp_init")
     try:
         app = QApplication(sys.argv)
     except Exception as e:
+        profiler.end("qapp_init")
         sys.stderr.write(f"CRASH: QApplication init failed: {e}\n")
         sys.stderr.flush()
         raise e
+    profiler.end("qapp_init")
     
     font = QFont("Segoe UI", 10)
     app.setFont(font)
@@ -51,12 +81,19 @@ def run_app():
         app.setWindowIcon(QIcon(icon_path))
     # ---------------------------
 
+    profiler.start("launcher_init")
     try:
         launcher = LauncherWindow()
     except Exception as e:
+        profiler.end("launcher_init")
         sys.stderr.write(f"CRASH: LauncherWindow init failed: {e}\n")
         sys.stderr.flush()
         raise e
+    profiler.end("launcher_init")
+    
+    # --- Финальный отчёт ---
+    profiler.end("total")
+    profiler.report()
     
     sys.exit(app.exec())
 
