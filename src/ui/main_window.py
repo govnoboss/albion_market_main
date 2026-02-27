@@ -32,7 +32,6 @@ class MainWindow(QMainWindow):
     pause_hotkey_signal = pyqtSignal()
     
     def __init__(self, launcher=None):
-        with open("debug_startup.log", "a", encoding="utf-8") as f: f.write("DEBUG: MainWindow.__init__ started\n")
         super().__init__()
         self.launcher = launcher
         

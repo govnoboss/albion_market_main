@@ -17,6 +17,7 @@ from ..utils.logger import get_logger
 from ..core.version import CURRENT_VERSION
 from ..core.updater import UpdateCheckWorker, UpdateDownloadWorker, install_update
 from ..core.license import license_manager
+from ..utils.startup_profiler import get_startup_profiler
 import keyboard
 
 class SidebarItem(QPushButton):
@@ -221,6 +222,7 @@ class MainDashboard(QMainWindow):
     
     def __init__(self, splash=None):
         super().__init__()
+        _p = get_startup_profiler()
         self.splash = splash
         self.setWindowTitle("Albion Market Bot - Dashboard")
         self.setMinimumSize(1200, 800)
@@ -239,9 +241,11 @@ class MainDashboard(QMainWindow):
         self.main_layout.setSpacing(0)
         
         # 1. Сайдбар
+        _p.start("sidebar_init")
         self.sidebar = Sidebar()
         self.sidebar.nav_changed.connect(self._on_nav_changed)
         self.main_layout.addWidget(self.sidebar)
+        _p.end("sidebar_init")
         
         # 2. Область контента
         self.content_stack = QStackedWidget()
@@ -255,14 +259,20 @@ class MainDashboard(QMainWindow):
         self.log_overlay = LogOverlay()
         
         # Инициализация вкладок
+        _p.start("init_tabs")
         self._init_tabs()
+        _p.end("init_tabs")
         
         # Централизованное логирование
+        _p.start("setup_logging")
         self._setup_logging()
+        _p.end("setup_logging")
         
         # Глобальные хоткеи
+        _p.start("setup_hotkeys")
         self._setup_hotkeys()
         self.hotkey_signal.connect(self._handle_hotkey_safe)
+        _p.end("setup_hotkeys")
         
         # Вывести на передний план
         self._force_foreground()
@@ -421,6 +431,8 @@ class MainDashboard(QMainWindow):
 
     def _init_tabs(self):
         """Создание и добавление реальных виджетов во вкладки"""
+        _p = get_startup_profiler()
+        
         def update_splash(status, progress):
             if self.splash:
                 self.splash.set_status(status)
@@ -429,51 +441,87 @@ class MainDashboard(QMainWindow):
                 QApplication.processEvents()
 
         update_splash("Загрузка Сканера...", 30)
+        _p.start("import_scanner")
         from .scanner_widget import ScannerWidget
+        _p.end("import_scanner")
+        
         update_splash("Загрузка Закупщика...", 40)
+        _p.start("import_buyer")
         from .buyer_widget import BuyerWidget
+        _p.end("import_buyer")
+        
         update_splash("Загрузка Профитов...", 50)
+        _p.start("import_profits")
         from .profits_tab import ProfitsTab
+        _p.end("import_profits")
+        
         update_splash("Загрузка Цен...", 60)
+        _p.start("import_prices")
         from .prices_tab import PricesTab
+        _p.end("import_prices")
+        
         update_splash("Загрузка Координат...", 70)
+        _p.start("import_coordinates")
         from .coordinates_tab import CoordinatesTab
+        _p.end("import_coordinates")
+        
         update_splash("Загрузка Настроек...", 80)
+        _p.start("import_settings")
         from .settings_panel import SettingsPanel
+        _p.end("import_settings")
+        
         update_splash("Загрузка FAQ...", 90)
+        _p.start("import_faq")
         from .faq_tab import FAQTab
+        _p.end("import_faq")
         
         # 0: Home / Statistics
+        _p.start("init_home_page")
         self.home_module = self._create_home_page()
         self.content_stack.addWidget(self.home_module)
+        _p.end("init_home_page")
         
         # 1: Scanner
+        _p.start("init_scanner")
         self.scanner_module = ScannerWidget(dashboard=self, mini_overlay=self.mini_overlay, log_overlay=self.log_overlay)
         self.content_stack.addWidget(self.scanner_module)
+        _p.end("init_scanner")
         
         # 2: Buyer
+        _p.start("init_buyer")
         self.buyer_module = BuyerWidget(dashboard=self, mini_overlay=self.mini_overlay, log_overlay=self.log_overlay)
         self.content_stack.addWidget(self.buyer_module)
+        _p.end("init_buyer")
         
         # 3: Profits
+        _p.start("init_profits")
         self.profits_module = ProfitsTab()
         self.content_stack.addWidget(self.profits_module)
+        _p.end("init_profits")
         
         # 4: Prices
+        _p.start("init_prices")
         self.prices_module = PricesTab()
         self.content_stack.addWidget(self.prices_module)
+        _p.end("init_prices")
         
         # 5: Coordinates
+        _p.start("init_coordinates")
         self.coords_module = CoordinatesTab()
         self.content_stack.addWidget(self.coords_module)
+        _p.end("init_coordinates")
         
         # 6: Settings
+        _p.start("init_settings")
         self.settings_module = SettingsPanel()
         self.content_stack.addWidget(self.settings_module)
+        _p.end("init_settings")
         
         # 7: FAQ
+        _p.start("init_faq")
         self.faq_module = FAQTab()
         self.content_stack.addWidget(self.faq_module)
+        _p.end("init_faq")
 
     def _create_home_page(self):
         from .components.kpi_card import KPICard
