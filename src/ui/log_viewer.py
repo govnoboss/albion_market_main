@@ -2,6 +2,7 @@ from PyQt6.QtWidgets import QTextEdit
 from PyQt6.QtGui import QFont
 from .styles import COLORS
 from ..utils.logger import get_logger
+from ..utils.localization import get_text
 
 class LogViewer(QTextEdit):
     """Виджет для отображения логов с поддержкой цветов"""
@@ -50,7 +51,9 @@ from PyQt6.QtWidgets import QFrame, QVBoxLayout, QLabel
 class LogPanel(QFrame):
     """Общая панель логов с заголовком и рамкой"""
     
-    def __init__(self, parent=None, title="📋 ЛОГ СОБЫТИЙ", placeholder="Ожидание логов..."):
+    def __init__(self, parent=None, title=None, placeholder=None):
+        if title is None: title = get_text("ui_logs_panel_title", "📋 ЛОГ СОБЫТИЙ")
+        if placeholder is None: placeholder = get_text("ui_logs_waiting", "Ожидание логов...")
         super().__init__(parent)
         
         # Стиль рамки

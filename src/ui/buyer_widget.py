@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import (
 from .styles import MAIN_STYLE, COLORS
 from .log_viewer import LogPanel
 from ..utils.logger import get_logger
+from ..utils.localization import get_text
 from ..core.buyer import BuyerBot
 from .buyer.purchase_plan_tab import PurchasePlanTab
 
@@ -48,13 +49,13 @@ class BuyerWidget(QWidget):
         
         # Header
         header = QHBoxLayout()
-        title = QLabel("🛒 Market Buyer")
+        title = QLabel(get_text("buyer_title", "🛒 Market Buyer"))
         title.setObjectName("title")
         header.addWidget(title)
         
         header.addStretch()
         
-        self.mini_btn = QPushButton("↘ Mini Mode")
+        self.mini_btn = QPushButton(get_text("ui_mini_mode", "↘ Mini Mode"))
         self.mini_btn.setObjectName("sidebarItem")
         self.mini_btn.setFixedWidth(120)
         self.mini_btn.clicked.connect(self._switch_to_mini)
@@ -70,33 +71,33 @@ class BuyerWidget(QWidget):
         mgmt_layout = QVBoxLayout(mgmt_tab)
         
         # Controls Group
-        ctrl_group = QGroupBox("Параметры закупки")
+        ctrl_group = QGroupBox(get_text("buyer_params_group", "Параметры закупки"))
         ctrl_layout = QVBoxLayout(ctrl_group)
         ctrl_layout.setSpacing(15)
         
         # Grid for city selection
         grid = QGridLayout()
-        grid.addWidget(QLabel("Бюджет:"), 0, 0)
+        grid.addWidget(QLabel(get_text("buyer_budget_lbl", "Бюджет:")), 0, 0)
         self.budget_spin = BudgetSpinBox()
         self.budget_spin.setRange(0, 999_999_999)
-        self.budget_spin.lineEdit().setPlaceholderText("Безлимит")
+        self.budget_spin.lineEdit().setPlaceholderText(get_text("buyer_budget_unlimited", "Безлимит"))
         grid.addWidget(self.budget_spin, 0, 1)
         
-        grid.addWidget(QLabel("Купить в:"), 1, 0)
+        grid.addWidget(QLabel(get_text("buyer_buy_in_lbl", "Купить в:")), 1, 0)
         self.buy_city_combo = QComboBox()
         grid.addWidget(self.buy_city_combo, 1, 1)
         
-        grid.addWidget(QLabel("Продать в:"), 2, 0)
+        grid.addWidget(QLabel(get_text("buyer_sell_in_lbl", "Продать в:")), 2, 0)
         self.sell_city_combo = QComboBox()
         grid.addWidget(self.sell_city_combo, 2, 1)
         ctrl_layout.addLayout(grid)
         
         # Smart Mode Section
         smart_layout = QVBoxLayout()
-        self.smart_mode_check = QCheckBox(" Сортировать по чистому профиту серебра")
+        self.smart_mode_check = QCheckBox(get_text("buyer_sort_profit", " Сортировать по чистому профиту серебра"))
         smart_layout.addWidget(self.smart_mode_check)
         
-        self.sort_by_percent_check = QCheckBox(" Сортировать по % профита")
+        self.sort_by_percent_check = QCheckBox(get_text("buyer_sort_percent", " Сортировать по % профита"))
         self.sort_by_percent_check.setStyleSheet(f"color: {COLORS['text_dark']}; margin-left: 20px;")
         self.sort_by_percent_check.setVisible(False)
         self.smart_mode_check.toggled.connect(self.sort_by_percent_check.setVisible)
@@ -104,14 +105,14 @@ class BuyerWidget(QWidget):
         ctrl_layout.addLayout(smart_layout)
         
         # Action Buttons
-        self.start_btn = QPushButton("▶ ЗАПУСТИТЬ")
+        self.start_btn = QPushButton(get_text("ctrl_start_btn", "▶ ЗАПУСТИТЬ"))
         self.start_btn.setObjectName("primary")
         self.start_btn.setMinimumHeight(45)
         self.start_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.start_btn.clicked.connect(self._on_start_clicked)
         ctrl_layout.addWidget(self.start_btn)
         
-        self.stop_btn = QPushButton("🛑 ОСТАНОВИТЬ")
+        self.stop_btn = QPushButton(get_text("ctrl_stop_btn", "🛑 ОСТАНОВИТЬ"))
         self.stop_btn.setObjectName("danger")
         self.stop_btn.setMinimumHeight(45)
         self.stop_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -125,11 +126,11 @@ class BuyerWidget(QWidget):
         self.log_panel.connect_logger()
         mgmt_layout.addWidget(self.log_panel, stretch=1)
         
-        self.tabs.addTab(mgmt_tab, "🎮 Управление")
+        self.tabs.addTab(mgmt_tab, get_text("ui_mgmt_tab", "🎮 Управление"))
         
         # Tab 2: Purchase Plan
         self.plan_tab = PurchasePlanTab()
-        self.tabs.addTab(self.plan_tab, "📅 План закупки (Wholesale)")
+        self.tabs.addTab(self.plan_tab, get_text("buyer_wholesale_tab", "📅 План закупки (Wholesale)"))
         
         layout.addWidget(self.tabs)
         
@@ -160,7 +161,7 @@ class BuyerWidget(QWidget):
         sell_city = self.sell_city_combo.currentText()
         
         if not buy_city or not sell_city:
-            QMessageBox.warning(self, "Ошибка", "Выберите города!")
+            QMessageBox.warning(self, get_text("coord_msg_error", "Ошибка"), get_text("buyer_err_select_city", "Выберите города!"))
             return
 
         self.bot.buy_city = buy_city

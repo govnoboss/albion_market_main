@@ -10,6 +10,7 @@ from PyQt6.QtCore import Qt, pyqtSlot, QTimer
 
 from ..utils.config import get_config
 from ..utils.logger import get_logger
+from ..utils.localization import get_text
 from ..core.coordinate_capture import get_capture_manager
 from ..utils.paths import get_app_root
 
@@ -35,19 +36,17 @@ class CoordinatesTab(QWidget):
         layout = QVBoxLayout(self)
         
         # Header
-        header = QLabel("Управление координатами")
+        header = QLabel(get_text("coord_header", "Управление координатами"))
         header.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 2px;")
         layout.addWidget(header)
         
-        instruction = QLabel(
-            "Для точечных координат: нажмите 'Задать', наведите курсор и нажмите F1. Клик желательно делать ровно в середину кнопки.\n"
-            "Для областей (OCR): нажмите 'Задать', затем выделите область с зажатой мышью. Для корректной работы бота, стоит выделять области как в подсказке."
-        )
+        instruction = QLabel(get_text("coord_instruction", "Для точечных координат: нажмите 'Задать', наведите курсор и нажмите F1..."))
         instruction.setStyleSheet("color: #888; margin-bottom: 2px;")
+        instruction.setWordWrap(True)
         layout.addWidget(instruction)
-
+ 
         # Wizard Button
-        wizard_btn = QPushButton("🪄 Запустить Мастер настройки")
+        wizard_btn = QPushButton(get_text("coord_wizard_btn", "🪄 Запустить Мастер настройки"))
         wizard_btn.setStyleSheet("""
             QPushButton {
                 background-color: #fca326; 
@@ -78,47 +77,47 @@ class CoordinatesTab(QWidget):
         
         # Define categories
         self.categories = {
-            "Основное меню рынка": [
-                ("search_input", "Поле поиска", "point"),
-                ("search_clear", "Очистка поиска", "point"),
-                ("buy_button", "Купить предмет", "point"),
-                ("item_sort", "Сортировка предмета", "point"),
+            get_text("coord_cat_main", "Основное меню рынка"): [
+                ("search_input", get_text("coord_item_search_input", "Поле поиска"), "point"),
+                ("search_clear", get_text("coord_item_search_clear", "Очистка поиска"), "point"),
+                ("buy_button", get_text("coord_item_buy_btn", "Купить предмет"), "point"),
+                ("item_sort", get_text("coord_item_sort", "Сортировка предмета"), "point"),
                 # OCR
-                ("market_name_area", "Название Рынка (OCR)", "area"),
+                ("market_name_area", get_text("coord_market_name_ocr", "Название Рынка (OCR)"), "area"),
                 
                 # Выпадающие списки
-                ("tier_dropdown", "Выпадающий список Тиров", "point"),
-                ("enchant_dropdown", "Выпадающий список Чары", "point"),
-                ("quality_dropdown", "Выпадающий список Качества", "point"),
+                ("tier_dropdown", get_text("coord_tier_dropdown", "Выпадающий список Тиров"), "point"),
+                ("enchant_dropdown", get_text("coord_enchant_dropdown", "Выпадающий список Чары"), "point"),
+                ("quality_dropdown", get_text("coord_quality_dropdown", "Выпадающий список Качества"), "point"),
                 
-                ("item_name_area", "Название предмета (OCR)", "area"),
+                ("item_name_area", get_text("coord_item_name_ocr", "Название предмета (OCR)"), "area"),
                 
-                ("best_price_area", "Цена за 1шт предмета (OCR)", "area"), 
+                ("best_price_area", get_text("coord_best_price_ocr", "Цена за 1шт предмета (OCR)"), "area"), 
             ],
-            "Окно меню предмета": [
+            get_text("coord_cat_item_menu", "Окно меню предмета"): [
                 # Основные кнопки
-                ("item_expand", "Раскрыть цену предмета", "point"),
+                ("item_expand", get_text("coord_item_expand", "Раскрыть цену предмета"), "point"),
                 # Элементы ордера
-                ("buyer_amount_input", "Кнопка Количество (Ввод)", "point"),
-                ("buyer_create_order_confirm", "Кнопка Заказать (confirm)", "point"),
-                ("menu_close", "Крестик закрытия меню предмета", "point"),
-
+                ("buyer_amount_input", get_text("coord_amount_input", "Кнопка Количество (Ввод)"), "point"),
+                ("buyer_create_order_confirm", get_text("coord_create_order_confirm", "Кнопка Заказать (confirm)"), "point"),
+                ("menu_close", get_text("coord_menu_close", "Крестик закрытия меню предмета"), "point"),
+ 
                 # OCR зоны
-                ("item_menu_check", "Надпись 'Заказы на продажу' (Check)", "area"),
-                ("buyer_top_lot_qty", "Кол-во в топ лоте (OCR)", "area"),
-                ("buyer_total_price", "Итоговая стоимость (OCR)", "area"),
+                ("item_menu_check", get_text("coord_item_menu_check", "Надпись 'Заказы на продажу' (Check)"), "area"),
+                ("buyer_top_lot_qty", get_text("coord_top_lot_qty", "Кол-во в топ лоте (OCR)"), "area"),
+                ("buyer_total_price", get_text("coord_total_price", "Итоговая стоимость (OCR)"), "area"),
             ],
-            "Black Market": [
-                ("bm_sell_tab", "Вкладка 'Продать'", "point"),
-                ("bm_settings_btn", "Кнопка Настройки", "point"),
-                ("bm_logout_btn", "Кнопка Выйти", "point"),
-                ("bm_login_btn", "▶Кнопка Войти", "point"),
-                ("bm_char1_area", "Аватарка Персонаж 1", "area"),
-                ("bm_char2_area", "Аватарка Персонаж 2", "area"),
+            get_text("coord_cat_bm", "Black Market"): [
+                ("bm_sell_tab", get_text("coord_bm_sell_tab", "Вкладка 'Продать'"), "point"),
+                ("bm_settings_btn", get_text("coord_bm_settings", "Кнопка Настройки"), "point"),
+                ("bm_logout_btn", get_text("coord_bm_logout", "Кнопка Выйти"), "point"),
+                ("bm_login_btn", get_text("coord_bm_login", "▶Кнопка Войти"), "point"),
+                ("bm_char1_area", get_text("coord_bm_char1", "Аватарка Персонаж 1"), "area"),
+                ("bm_char2_area", get_text("coord_bm_char2", "Аватарка Персонаж 2"), "area"),
                 # New Coordinates
-                ("bm_tier_dropdown", "BM: Список Тиров", "point"),
-                ("bm_enchant_dropdown", "BM: Список Чары", "point"),
-                ("bm_price_area", "BM: Цена топ лота (OCR)", "area"),
+                ("bm_tier_dropdown", get_text("coord_bm_tier", "BM: Список Тиров"), "point"),
+                ("bm_enchant_dropdown", get_text("coord_bm_enchant", "BM: Список Чары"), "point"),
+                ("bm_price_area", get_text("coord_bm_price_ocr", "BM: Цена топ лота (OCR)"), "area"),
             ],
         }
         
@@ -191,11 +190,11 @@ class CoordinatesTab(QWidget):
         name_lbl = QLabel(numbered_name)
         name_lbl.setMinimumWidth(150)
         
-        val_lbl = QLabel("Не задано")
+        val_lbl = QLabel(get_text("coord_not_set", "Не задано"))
         val_lbl.setStyleSheet("color: #666;")
         self.coord_widgets[key] = val_lbl
         
-        set_btn = QPushButton("Задать")
+        set_btn = QPushButton(get_text("coord_btn_set", "Задать"))
         set_btn.setFixedWidth(80)
         set_btn.clicked.connect(lambda checked, k=key, n=name, m=mode: self._start_capture(k, n, m))
         
@@ -221,7 +220,7 @@ class CoordinatesTab(QWidget):
             test_btn.clicked.connect(lambda checked, k=key: self._test_area(k))
             layout.addWidget(test_btn)
         
-        clear_btn = QPushButton("Сброс")
+        clear_btn = QPushButton(get_text("coord_btn_reset", "Сброс"))
         clear_btn.setFixedWidth(70)
         # Style for clear button
         clear_btn.setStyleSheet("""
@@ -252,8 +251,8 @@ class CoordinatesTab(QWidget):
         # Если картинки нет — предлагаем создать
         if not os.path.exists(image_path):
             reply = QMessageBox.question(
-                self, "Картинка не найдена",
-                f"Картинка-подсказка для '{name}' отсутствует.\n\nХотите сделать скриншот области сейчас?",
+                self, get_text("coord_help_img_not_found", "Картинка не найдена"),
+                get_text("coord_help_img_missing", "Картинка-подсказка для '{name}' отсутствует...").format(name=name),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
             
@@ -331,7 +330,7 @@ class CoordinatesTab(QWidget):
             QTimer.singleShot(100, lambda: self._show_help_image(key, name))
             
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить скриншот:\n{e}")
+            QMessageBox.critical(self, get_text("coord_msg_error", "Ошибка"), f"{get_text('coord_profile_save_err', 'Не удалось сохранить скриншот')}:\n{e}")
         
         finally:
             if self._help_overlay:
@@ -385,7 +384,7 @@ class CoordinatesTab(QWidget):
         """Тест OCR или Валидатора для заданной области"""
         area = self.config.get_coordinate_area(key)
         if not area:
-            QMessageBox.warning(self, "Ошибка", f"Область '{key}' не задана!")
+            QMessageBox.warning(self, get_text("coord_msg_error", "Ошибка"), f"{get_text('coord_msg_error', 'Область')} '{key}' {get_text('coord_not_set', 'не задана')}!")
             return
             
         # 1. Спец. проверка для Меню Рынка (Валидатор)
@@ -394,10 +393,10 @@ class CoordinatesTab(QWidget):
             is_open, msg = ScreenValidator.check_market_open(area)
             
             if is_open:
-                QMessageBox.information(self, "✅ Проверка успешна", 
+                QMessageBox.information(self, get_text("coord_ocr_test_success", "✅ Проверка успешна"), 
                     f"Результат: OPEN\n\nПодробности: {msg}")
             else:
-                QMessageBox.warning(self, "❌ Проверка провалена", 
+                QMessageBox.warning(self, get_text("coord_ocr_test_fail", "❌ Проверка провалена"), 
                     f"Результат: CLOSED\n\nПодробности: {msg}")
             return
             
@@ -407,11 +406,11 @@ class CoordinatesTab(QWidget):
             
             price = read_price_at(area)
             if price is not None:
-                QMessageBox.information(self, "✅ Цена распознана", 
+                QMessageBox.information(self, get_text("coord_ocr_test_success", "✅ Цена распознана"), 
                     f"Результат: {price}\n(Тип: {type(price)})")
             else:
-                QMessageBox.warning(self, "⚠️ Не удалось распознать", 
-                    "Результат: None\n\nПроверьте, что в зоне только цифры.")
+                QMessageBox.warning(self, get_text("coord_ocr_test_fail", "⚠️ Не удалось распознать"), 
+                    get_text("coord_msg_error", "Проверьте, что в зоне только цифры."))
             return
 
         # 2.4 TEMPLATE MATCH TEST (BM Char)
@@ -421,17 +420,17 @@ class CoordinatesTab(QWidget):
             
             ref_path = get_app_root() / "resources" / f"ref_{key}.png"
             if not os.path.exists(ref_path):
-                 QMessageBox.warning(self, "Ошибка", f"Нет эталона: {ref_path}\nСначала задайте область!")
+                 QMessageBox.warning(self, get_text("coord_msg_error", "Ошибка"), f"{get_text('coord_help_img_not_found', 'Нет эталона')}: {ref_path}\n{get_text('coord_instruction', 'Сначала задайте область')}!")
                  return
                  
             # Search
             found = find_image_on_screen(ref_path, confidence=0.85)
             
             if found:
-                 QMessageBox.information(self, "✅ Template Match", 
+                 QMessageBox.information(self, get_text("coord_ocr_test_success", "✅ Template Match"), 
                      f"Изображение НАЙДЕНО!\n\nКоординаты центра: {found}\n(Поиск по всему экрану)")
             else:
-                 QMessageBox.warning(self, "❌ Template Match", 
+                 QMessageBox.warning(self, get_text("coord_ocr_test_fail", "❌ Template Match"), 
                      "Изображение НЕ НАЙДЕНО на экране.\n\nПроверьте, что оно видимо и не перекрыто.")
             return
 
@@ -443,7 +442,7 @@ class CoordinatesTab(QWidget):
             
             ref_path = get_app_root() / "resources" / f"ref_{key}.png"
             if not os.path.exists(ref_path):
-                QMessageBox.warning(self, "Ошибка", f"Нет эталона: {ref_path}\nСначала задайте область!")
+                QMessageBox.warning(self, get_text("coord_msg_error", "Ошибка"), f"{get_text('coord_help_img_not_found', 'Нет эталона')}: {ref_path}\n{get_text('coord_instruction', 'Сначала задайте область')}!")
                 return
                 
             # Захват текущего
@@ -497,11 +496,11 @@ class CoordinatesTab(QWidget):
         if key == "travel_mode_text":
             from ..utils.ocr import read_screen_text
             text = read_screen_text(area['x'], area['y'], area['w'], area['h'], lang='rus')
-            QMessageBox.information(self, "OCR Result (RUS)", 
+            QMessageBox.information(self, f"{get_text('coord_ocr_result', 'OCR Result')} (RUS)", 
                 f"Результат: '{text}'\n\n(Russian OCR)")
             return
 
-            QMessageBox.information(self, "OCR Result (ENG)", 
+            QMessageBox.information(self, f"{get_text('coord_ocr_result', 'OCR Result')} (ENG)", 
                 f"Результат: '{text}'\n\n(English OCR)")
             return
 
@@ -509,14 +508,14 @@ class CoordinatesTab(QWidget):
             from ..utils.ocr import read_screen_text
             # Используем rus+eng, так как Рюкзак=Rus, Bank=Eng (возможно)
             text = read_screen_text(area['x'], area['y'], area['w'], area['h'], lang='rus+eng')
-            QMessageBox.information(self, f"OCR Result ({key})", 
+            QMessageBox.information(self, f"{get_text('coord_ocr_result', 'OCR Result')} ({key})", 
                 f"Результат: '{text}'")
             return
 
         # 3. Обычный OCR тест (для остальных)
             from ..utils.ocr import read_screen_text
             text = read_screen_text(area['x'], area['y'], area['w'], area['h'], lang='eng')
-            QMessageBox.information(self, "OCR Result (ENG)", 
+            QMessageBox.information(self, f"{get_text('coord_ocr_result', 'OCR Result')} (ENG)", 
                 f"Результат: '{text}'\n\n(English OCR)")
             return
 
@@ -527,22 +526,22 @@ class CoordinatesTab(QWidget):
             text = read_screen_text(area['x'], area['y'], area['w'], area['h'])
             QMessageBox.information(
                 self, 
-                "Результат OCR", 
+                get_text("coord_ocr_result", "Результат OCR"), 
                 f"Распознанный текст:\n\n'{text}'\n\n(Длина: {len(text)})"
             )
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка OCR", str(e))
+            QMessageBox.critical(self, f"{get_text('coord_msg_error', 'Ошибка')} OCR", str(e))
 
     def _setup_profiles_ui(self, parent_layout):
         """Создание секции управления профилями"""
-        group = QGroupBox("📁 Профили координат")
+        group = QGroupBox(get_text("coord_profiles_group", "📁 Профили координат"))
         group_layout = QVBoxLayout(group)
         
         # Row with controls
         controls_layout = QHBoxLayout()
         
         self.profiles_combo = QComboBox()
-        self.profiles_combo.setPlaceholderText("Выберите профиль...")
+        self.profiles_combo.setPlaceholderText(get_text("coord_profile_placeholder", "Выберите профиль..."))
         self.profiles_combo.setMinimumWidth(150)
         self.profiles_combo.setStyleSheet("""
             QComboBox {
@@ -567,13 +566,13 @@ class CoordinatesTab(QWidget):
             }
         """)
         
-        load_btn = QPushButton("Загрузить")
+        load_btn = QPushButton(get_text("coord_btn_load", "Загрузить"))
         load_btn.clicked.connect(self._on_load_profile)
         
-        save_btn = QPushButton("Сохранить...")
+        save_btn = QPushButton(get_text("coord_btn_save", "Сохранить..."))
         save_btn.clicked.connect(self._on_save_profile)
         
-        del_btn = QPushButton("Удалить")
+        del_btn = QPushButton(get_text("coord_btn_delete", "Удалить"))
         del_btn.setStyleSheet("""
             QPushButton { background-color: #4a3b3b; }
             QPushButton:hover { background-color: #bd3b3b; }
@@ -603,43 +602,43 @@ class CoordinatesTab(QWidget):
 
     def _on_save_profile(self):
         dialog = QInputDialog(self)
-        dialog.setWindowTitle("Сохранить профиль")
-        dialog.setLabelText("Введите название профиля:")
+        dialog.setWindowTitle(get_text("coord_btn_save", "Сохранить профиль"))
+        dialog.setLabelText(get_text("coord_profiles_group", "Введите название профиля:"))
         dialog.setStyleSheet(self._get_dialog_style())
         
         if dialog.exec():
             name = dialog.textValue()
             if name:
                 if self.config.save_profile(name):
-                    self._show_message("Успех", f"Профиль '{name}' сохранен!")
+                    self._show_message(get_text("coord_msg_success", "Успех"), get_text("coord_profile_saved", "Профиль '{name}' сохранен!").format(name=name))
                     self._refresh_profiles()
                     self.profiles_combo.setCurrentText(name)
                 else:
-                    self._show_message("Ошибка", "Не удалось сохранить профиль.\nПроверьте имя и права доступа.", is_warning=True)
+                    self._show_message(get_text("coord_msg_error", "Ошибка"), get_text("coord_profile_save_err", "Не удалось сохранить профиль.\nПроверьте имя и права доступа."), is_warning=True)
 
     def _on_load_profile(self):
         name = self.profiles_combo.currentText()
         if not name:
             return
             
-        if self._show_question("Подтверждение", f"Загрузить профиль '{name}'?\nТекущие координаты будут перезаписаны!"):
+        if self._show_question(get_text("coord_msg_confirm", "Подтверждение"), get_text("coord_profile_load_confirm", "Загрузить профиль '{name}'?\nТекущие координаты будут перезаписаны!").format(name=name)):
             if self.config.load_profile(name):
-                self._show_message("Успех", f"Профиль '{name}' загружен!")
+                self._show_message(get_text("coord_msg_success", "Успех"), get_text("coord_profile_loaded", "Профиль '{name}' загружен!").format(name=name))
                 self._refresh_values()
             else:
-                self._show_message("Ошибка", f"Не удалось загрузить профиль '{name}'.", is_warning=True)
+                self._show_message(get_text("coord_msg_error", "Ошибка"), get_text("coord_profile_load_err", "Не удалось загрузить профиль '{name}'.").format(name=name), is_warning=True)
 
     def _on_delete_profile(self):
         name = self.profiles_combo.currentText()
         if not name:
             return
             
-        if self._show_question("Подтверждение", f"Удалить профиль '{name}' навсегда?"):
+        if self._show_question(get_text("coord_msg_confirm", "Подтверждение"), get_text("coord_profile_delete_confirm", "Удалить профиль '{name}' навсегда?").format(name=name)):
             if self.config.delete_profile(name):
-                self._show_message("Успех", f"Профиль '{name}' удален.")
+                self._show_message(get_text("coord_msg_success", "Успех"), get_text("coord_profile_deleted", "Профиль '{name}' удален.").format(name=name))
                 self._refresh_profiles()
             else:
-                self._show_message("Ошибка", f"Не удалось удалить профиль '{name}'.", is_warning=True)
+                self._show_message(get_text("coord_msg_error", "Ошибка"), get_text("coord_profile_delete_err", "Не удалось удалить профиль '{name}'.").format(name=name), is_warning=True)
 
     def _get_dialog_style(self):
         """Темная тема для диалогов"""

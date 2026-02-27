@@ -73,6 +73,13 @@ def run_app():
     
     font = QFont("Segoe UI", 10)
     app.setFont(font)
+
+    # --- Initialize Localization ---
+    from src.utils.config import get_config
+    from src.utils.localization import set_language
+    lang = get_config().get_setting("language", "en")
+    set_language(lang)
+    # ------------------------------
     
     # --- Set Application Icon ---
     from PyQt6.QtGui import QIcon

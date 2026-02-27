@@ -9,6 +9,7 @@ from .control_panel import ControlPanel
 from .log_viewer import LogPanel
 from ..utils.logger import get_logger
 from ..core.bot import MarketBot
+from ..utils.localization import get_text
 from .items_panel import ItemsPanel
 
 class ScannerWidget(QWidget):
@@ -42,14 +43,14 @@ class ScannerWidget(QWidget):
         
         # Header
         header = QHBoxLayout()
-        title = QLabel("📡 Market Scanner")
+        title = QLabel(get_text("scanner_title", "📡 Market Scanner"))
         title.setObjectName("title")
         header.addWidget(title)
         
         header.addStretch()
         
         # Mini Mode
-        self.mini_btn = QPushButton("↘ Mini Mode")
+        self.mini_btn = QPushButton(get_text("ui_mini_mode", "↘ Mini Mode"))
         self.mini_btn.setObjectName("sidebarItem")
         self.mini_btn.setFixedWidth(120)
         self.mini_btn.clicked.connect(self._switch_to_mini)
@@ -74,11 +75,11 @@ class ScannerWidget(QWidget):
         self.log_panel.connect_logger()
         mgmt_layout.addWidget(self.log_panel, stretch=1)
         
-        self.tabs.addTab(mgmt_tab, "🎮 Управление")
+        self.tabs.addTab(mgmt_tab, get_text("ui_mgmt_tab", "🎮 Управление"))
         
         # Tab 2: Items & Exclusions
         self.items_tab = ItemsPanel()
-        self.tabs.addTab(self.items_tab, "📚 База и Исключения")
+        self.tabs.addTab(self.items_tab, get_text("ui_items_tab", "📚 База и Исключения"))
         
         layout.addWidget(self.tabs)
         

@@ -18,6 +18,7 @@ from ..core.version import CURRENT_VERSION
 from ..core.updater import UpdateCheckWorker, UpdateDownloadWorker, install_update
 from ..core.license import license_manager
 from ..utils.startup_profiler import get_startup_profiler
+from ..utils.localization import get_text
 import keyboard
 
 class SidebarItem(QPushButton):
@@ -55,14 +56,14 @@ class Sidebar(QFrame):
         
         # Группа кнопок
         self.buttons = []
-        self._add_nav_item("📊 Home", 0)
-        self._add_nav_item("📡 Scanner", 1)
-        self._add_nav_item("💰 Buyer", 2)
-        self._add_nav_item("📈 Finance", 3)
-        self._add_nav_item("🏷️ Prices", 4)
-        self._add_nav_item("🎯 Coordinates", 5)
-        self._add_nav_item("⚙️ Settings", 6)
-        self._add_nav_item("❓ Guide & FAQ", 7)
+        self._add_nav_item(get_text("sidebar_home", "📊 Home"), 0)
+        self._add_nav_item(get_text("sidebar_scanner", "📡 Scanner"), 1)
+        self._add_nav_item(get_text("sidebar_buyer", "💰 Buyer"), 2)
+        self._add_nav_item(get_text("sidebar_finance", "📈 Finance"), 3)
+        self._add_nav_item(get_text("sidebar_prices", "🏷️ Prices"), 4)
+        self._add_nav_item(get_text("sidebar_coordinates", "🎯 Coordinates"), 5)
+        self._add_nav_item(get_text("sidebar_settings", "⚙️ Settings"), 6)
+        self._add_nav_item(get_text("sidebar_faq", "❓ Guide & FAQ"), 7)
         
         self.layout.addStretch()
         
@@ -81,7 +82,7 @@ class Sidebar(QFrame):
         bottom_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # Заголовок соцсетей (центрированный)
-        social_title = QLabel("СВЯЗЬ С НАМИ")
+        social_title = QLabel(get_text("sidebar_social_title", "СВЯЗЬ С НАМИ"))
         social_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         social_title.setStyleSheet(f"""
             color: {COLORS['text_muted']};
@@ -119,7 +120,7 @@ class Sidebar(QFrame):
         update_v_layout.setContentsMargins(5, 5, 5, 5)
         update_v_layout.setSpacing(5)
         
-        self.update_lbl = QLabel("Update Available")
+        self.update_lbl = QLabel(get_text("sidebar_update_available", "Update Available"))
         self.update_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.update_lbl.setStyleSheet("color: #adbac7; font-size: 10px; font-weight: bold;")
         update_v_layout.addWidget(self.update_lbl)
@@ -134,7 +135,7 @@ class Sidebar(QFrame):
         self.update_progress.hide()
         update_v_layout.addWidget(self.update_progress)
         
-        self.btn_update = QPushButton("Update")
+        self.btn_update = QPushButton(get_text("sidebar_btn_update", "Update"))
         self.btn_update.setObjectName("btnUpdate")
         self.btn_update.setFixedHeight(22)
         self.btn_update.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -537,11 +538,11 @@ class MainDashboard(QMainWindow):
         header = QVBoxLayout()
         header.setSpacing(5)
         
-        welcome_label = QLabel("Welcome back, Trader")
+        welcome_label = QLabel(get_text("home_welcome", "Welcome back, Trader"))
         welcome_label.setObjectName("subtitle")
         header.addWidget(welcome_label)
         
-        title = QLabel("Market Dashboard")
+        title = QLabel(get_text("home_title", "Market Dashboard"))
         title.setObjectName("title")
         header.addWidget(title)
         
@@ -551,9 +552,9 @@ class MainDashboard(QMainWindow):
         kpi_row = QHBoxLayout()
         kpi_row.setSpacing(20)
         
-        self.kpi_revenue = KPICard("Всего потрачено", "0", "Invested Silver", "💰")
-        self.kpi_profit = KPICard("Всего прибыли", "0", "Net Earnings", "📈")
-        self.kpi_items = KPICard("Куплено предметов", "0", "Total Acquisitions", "📦")
+        self.kpi_revenue = KPICard(get_text("home_kpi_spent", "Всего потрачено"), "0", get_text("home_kpi_spent_desc", "Invested Silver"), "💰")
+        self.kpi_profit = KPICard(get_text("home_kpi_profit", "Всего прибыли"), "0", get_text("home_kpi_profit_desc", "Net Earnings"), "📈")
+        self.kpi_items = KPICard(get_text("home_kpi_items", "Куплено предметов"), "0", get_text("home_kpi_items_desc", "Total Acquisitions"), "📦")
         
         kpi_row.addWidget(self.kpi_revenue)
         kpi_row.addWidget(self.kpi_profit)
@@ -577,18 +578,23 @@ class MainDashboard(QMainWindow):
         filter_header_layout = QHBoxLayout(filter_header)
         filter_header_layout.setContentsMargins(20, 15, 20, 15)
         
-        perf_label = QLabel("Performance Insights")
+        perf_label = QLabel(get_text("home_perf_insights", "Performance Insights"))
         perf_label.setObjectName("summaryTitle")
         filter_header_layout.addWidget(perf_label)
         
         filter_header_layout.addStretch()
         
-        period_lbl = QLabel("Period:")
+        period_lbl = QLabel(get_text("home_period", "Period:"))
         period_lbl.setStyleSheet(f"color: {COLORS['text_dark']}; font-size: 12px; font-weight: 600;")
         filter_header_layout.addWidget(period_lbl)
         
         self.period_combo = QComboBox()
-        self.period_combo.addItems(["1 день", "1 неделя", "1 месяц", "Всё время"])
+        self.period_combo.addItems([
+            get_text("home_period_1d", "1 день"),
+            get_text("home_period_1w", "1 неделя"),
+            get_text("home_period_1m", "1 месяц"),
+            get_text("home_period_all", "Всё время")
+        ])
         self.period_combo.setFixedWidth(120)
         self.period_combo.setCursor(Qt.CursorShape.PointingHandCursor)
         self.period_combo.currentIndexChanged.connect(self._on_period_changed)
@@ -628,8 +634,8 @@ class MainDashboard(QMainWindow):
         recap_layout = QVBoxLayout()
         recap_layout.setContentsMargins(0, 0, 0, 0)
         
-        self.hot_items_box = SummaryBox("🔥 HOT ITEMS", 
-            ["• Data sync pending..."], 
+        self.hot_items_box = SummaryBox(get_text("home_hot_items", "🔥 HOT ITEMS"), 
+            [f"• {get_text('home_sync_pending', 'Data sync pending...')}"], 
             color="#f59e0b")
         recap_layout.addWidget(self.hot_items_box)
             

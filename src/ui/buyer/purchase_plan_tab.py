@@ -7,6 +7,7 @@ from PyQt6.QtGui import QColor, QBrush
 
 from ...utils.config import get_config
 from ...utils.logger import get_logger
+from ...utils.localization import get_text
 from ..styles import COLORS
 
 class PurchasePlanTab(QWidget):
@@ -32,15 +33,15 @@ class PurchasePlanTab(QWidget):
         # --- Toolbar ---
         toolbar = QHBoxLayout()
         
-        expand_btn = QPushButton("Развернуть всё")
+        expand_btn = QPushButton(get_text("pp_expand_all", "Развернуть всё"))
         expand_btn.clicked.connect(lambda: self.tree.expandAll())
         toolbar.addWidget(expand_btn)
         
-        collapse_btn = QPushButton("Свернуть всё")
+        collapse_btn = QPushButton(get_text("pp_collapse_all", "Свернуть всё"))
         collapse_btn.clicked.connect(lambda: self.tree.collapseAll())
         toolbar.addWidget(collapse_btn)
         
-        self.refresh_btn = QPushButton("🔄 Обновить список")
+        self.refresh_btn = QPushButton(get_text("pp_refresh_list", "🔄 Обновить список"))
         self.refresh_btn.setStyleSheet(f"""
             QPushButton {{ 
                 background-color: {COLORS['bg_card']}; 
@@ -59,7 +60,11 @@ class PurchasePlanTab(QWidget):
         
         # --- Tree Widget ---
         self.tree = QTreeWidget()
-        self.tree.setHeaderLabels(["Предмет / Вариация", "Лимит (шт.)", "Мин. Профит %"])
+        self.tree.setHeaderLabels([
+            get_text("pp_header_item", "Предмет / Вариация"), 
+            get_text("pp_header_limit", "Лимит (шт.)"), 
+            get_text("pp_header_profit", "Мин. Профит %")
+        ])
         self.tree.setColumnWidth(0, 300)
         self.tree.setColumnWidth(1, 100)
         self.tree.setColumnWidth(2, 100)
@@ -86,7 +91,7 @@ class PurchasePlanTab(QWidget):
         layout.addWidget(self.tree)
         
         # --- Footer Info ---
-        info_lbl = QLabel("ℹ️ Установите лимит > 0 и минимальный % профита для активации.")
+        info_lbl = QLabel(get_text("pp_footer_info", "ℹ️ Установите лимит > 0 и минимальный % профита для активации."))
         info_lbl.setStyleSheet("color: #8b949e; font-size: 11px;")
         layout.addWidget(info_lbl)
         
@@ -99,8 +104,8 @@ class PurchasePlanTab(QWidget):
         if not silent:
             from PyQt6.QtWidgets import QMessageBox
             reply = QMessageBox.question(
-                self, "Применение пресетов",
-                "Это перезапишет текущие лимиты...\nПродолжить?",
+                self, get_text("pp_preset_title", "Применение пресетов"),
+                get_text("pp_preset_confirm", "Это перезапишет текущие лимиты...\nПродолжить?"),
                  QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
             if reply != QMessageBox.StandardButton.Yes:

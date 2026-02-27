@@ -10,6 +10,7 @@ from ..utils.config import get_config
 from ..utils.logger import get_logger
 from ..utils.items_db import DEFAULT_ITEMS
 from ..utils.default_exceptions import DEFAULT_TIER_EXCEPTIONS
+from ..utils.localization import get_text
 
 
 class ItemsPanel(QWidget):
@@ -49,8 +50,8 @@ class ItemsPanel(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         
         self.tabs = QTabWidget()
-        self.tabs.addTab(self._create_database_tab(), "База предметов")
-        self.tabs.addTab(self._create_exceptions_tab(), "Исключения тиров")
+        self.tabs.addTab(self._create_database_tab(), get_text("items_db_tab", "База предметов"))
+        self.tabs.addTab(self._create_exceptions_tab(), get_text("items_exc_tab", "Исключения тиров"))
         
         layout.addWidget(self.tabs)
 
@@ -60,12 +61,12 @@ class ItemsPanel(QWidget):
         layout.setSpacing(15)
         
         # Заголовок
-        header = QLabel("📚 База предметов")
+        header = QLabel(get_text("items_db_title", "📚 База предметов"))
         header.setObjectName("summaryTitle")
         layout.addWidget(header)
         
         # Описание
-        desc = QLabel("Предметы, которые бот умеет распознавать (используются для автодополнения)")
+        desc = QLabel(get_text("items_db_desc", "Предметы, которые бот умеет распознавать (используются для автодополнения)"))
         desc.setStyleSheet("color: #8b949e; margin-bottom: 10px;")
         desc.setWordWrap(True)
         layout.addWidget(desc)
@@ -73,16 +74,16 @@ class ItemsPanel(QWidget):
         # === Добавление в базу ===
         add_db_layout = QHBoxLayout()
         self.db_input = QLineEdit()
-        self.db_input.setPlaceholderText("Новое название предмета...")
+        self.db_input.setPlaceholderText(get_text("items_db_placeholder", "Новое название предмета..."))
         self.db_input.setClearButtonEnabled(True)
         add_db_layout.addWidget(self.db_input)
         
-        add_db_btn = QPushButton("Добавить")
+        add_db_btn = QPushButton(get_text("items_btn_add", "Добавить"))
         add_db_btn.setObjectName("primary")
         add_db_btn.clicked.connect(self._add_to_database)
         add_db_layout.addWidget(add_db_btn)
         
-        del_db_btn = QPushButton("Удалить")
+        del_db_btn = QPushButton(get_text("items_btn_delete", "Удалить"))
         del_db_btn.setStyleSheet("background-color: #da3633; color: white;")
         del_db_btn.clicked.connect(self._remove_from_database)
         add_db_layout.addWidget(del_db_btn)
@@ -106,9 +107,9 @@ class ItemsPanel(QWidget):
         layout.setSpacing(10)
         
         # Колонки
-        layout.addWidget(self._create_tier_group("Tier 1 (T1-T8)", "Tier_1"))
-        layout.addWidget(self._create_tier_group("Tier 2 (T2-T8)", "Tier_2"))
-        layout.addWidget(self._create_tier_group("Tier 3 (T3-T8)", "Tier_3"))
+        layout.addWidget(self._create_tier_group(get_text("items_tier_group", "Tier {n} (T{a}-T8)").format(n=1, a=1), "Tier_1"))
+        layout.addWidget(self._create_tier_group(get_text("items_tier_group", "Tier {n} (T{a}-T8)").format(n=2, a=2), "Tier_2"))
+        layout.addWidget(self._create_tier_group(get_text("items_tier_group", "Tier {n} (T{a}-T8)").format(n=3, a=3), "Tier_3"))
         
         return tab
 
@@ -123,16 +124,16 @@ class ItemsPanel(QWidget):
         
         # Поле ввода
         input_field = QLineEdit()
-        input_field.setPlaceholderText("Предмет...")
+        input_field.setPlaceholderText(get_text("home_no_data", "Предмет...")[2:]) # Reuse similar if needed or create new
         layout.addWidget(input_field)
         self.exception_inputs[key] = input_field
         
         # Кнопки
         btn_layout = QHBoxLayout()
-        add_btn = QPushButton("Добавить")
+        add_btn = QPushButton(get_text("items_btn_add", "Добавить"))
         add_btn.clicked.connect(lambda: self._add_exception(key))
         
-        del_btn = QPushButton("Удалить")
+        del_btn = QPushButton(get_text("items_btn_delete", "Удалить"))
         del_btn.setStyleSheet("background-color: #da3633; color: white;")
         del_btn.clicked.connect(lambda: self._remove_exception(key))
         

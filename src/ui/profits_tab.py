@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from ..utils.price_storage import get_price_storage
 from ..utils.logger import get_logger
+from ..utils.localization import get_text
 from .styles import PROFITS_STYLE, PRICES_STYLE
 
 logger = get_logger()
@@ -113,7 +114,7 @@ class ProfitsTab(QWidget):
         # === Controls ===
         controls_layout = QHBoxLayout()
         
-        lbl_buy = QLabel("🏙️ Купить в:")
+        lbl_buy = QLabel(get_text("finance_header", "🏙️ Купить в:"))
         lbl_buy.setStyleSheet(PROFITS_STYLE["label"])
         controls_layout.addWidget(lbl_buy)
         
@@ -122,8 +123,8 @@ class ProfitsTab(QWidget):
         self._style_combo(self.buy_city_combo)
         self.buy_city_combo.currentIndexChanged.connect(self.refresh_data)
         controls_layout.addWidget(self.buy_city_combo)
-
-        lbl_sell = QLabel(" ➡️ Продать в:")
+ 
+        lbl_sell = QLabel(get_text("finance_arrow", " ➡️ Продать в:"))
         lbl_sell.setStyleSheet(PROFITS_STYLE["label"])
         controls_layout.addWidget(lbl_sell)
         
@@ -133,19 +134,19 @@ class ProfitsTab(QWidget):
         self.sell_city_combo.currentIndexChanged.connect(self.refresh_data)
         controls_layout.addWidget(self.sell_city_combo)
         
-        self.refresh_btn = QPushButton("🔄 Обновить")
+        self.refresh_btn = QPushButton(get_text("finance_refresh", "🔄 Обновить"))
         self.refresh_btn.setStyleSheet(PROFITS_STYLE["refresh_btn"])
         self.refresh_btn.clicked.connect(self.refresh_data)
         controls_layout.addWidget(self.refresh_btn)
         
-        self.clean_btn = QPushButton("🗑️ Очистить старые")
-        self.clean_btn.setToolTip("Удалить записи предыдущих сканирований (оставить только текущие)")
+        self.clean_btn = QPushButton(get_text("finance_clean", "🗑️ Очистить старые"))
+        self.clean_btn.setToolTip(get_text("finance_clean_tip", "Удалить записи предыдущих сканирований (оставить только текущие)"))
         self.clean_btn.setStyleSheet(PROFITS_STYLE["clean_btn"])
         self.clean_btn.clicked.connect(self.request_clean_history)
         controls_layout.addWidget(self.clean_btn)
         
         # Кнопка удаления выбранного
-        self.delete_btn = QPushButton("🗑️ Удалить")
+        self.delete_btn = QPushButton(get_text("finance_delete", "🗑️ Удалить"))
         self.delete_btn.setStyleSheet(PRICES_STYLE["btn_delete"])
         self.delete_btn.setEnabled(False)
         self.delete_btn.clicked.connect(self.delete_selected_record)
@@ -158,9 +159,13 @@ class ProfitsTab(QWidget):
         self.table = QTableWidget()
         self.table.setColumnCount(7)
         self.table.setHorizontalHeaderLabels([
-            "Предмет", "Тир.Чары", 
-            "Цена Продажи", "Цена Покупки", 
-            "Профит", "%", "Обновлено"
+            get_text("finance_col_item", "Предмет"), 
+            get_text("finance_col_variant", "Тир.Чары"), 
+            get_text("finance_col_sell", "Цена Продажи"), 
+            get_text("finance_col_buy", "Цена Покупки"), 
+            get_text("finance_col_profit", "Профит"), 
+            get_text("finance_col_percent", "%"), 
+            get_text("finance_col_updated", "Обновлено")
         ])
         
         # Включаем сортировку
@@ -254,7 +259,7 @@ class ProfitsTab(QWidget):
 
         # UI State: Loading
         self.refresh_btn.setEnabled(False)
-        self.refresh_btn.setText("⏳ Загрузка...")
+        self.refresh_btn.setText(get_text("finance_loading", "⏳ Загрузка..."))
         self.buy_city_combo.setEnabled(False)
         self.sell_city_combo.setEnabled(False)
         
@@ -267,7 +272,7 @@ class ProfitsTab(QWidget):
     def on_loading_finished(self):
         """Cleanup after thread"""
         self.refresh_btn.setEnabled(True)
-        self.refresh_btn.setText("🔄 Обновить")
+        self.refresh_btn.setText(get_text("finance_refresh", "🔄 Обновить"))
         self.buy_city_combo.setEnabled(True)
         self.sell_city_combo.setEnabled(True)
         
@@ -340,8 +345,8 @@ class ProfitsTab(QWidget):
         """Handle history cleanup request"""
         reply = QMessageBox.question(
             self, 
-            'Подтверждение очистки', 
-            "Вы уверены, что хотите удалить записи прошлых сессий?\n\nБудут удалены все цены, кроме полученных в последнем сеансе сканирования.\nЭто действие нельзя отменить.",
+            get_text("finance_clean_confirm_title", "Подтверждение очистки"), 
+            get_text("finance_clean_confirm_msg", "Вы уверены, что хотите удалить записи прошлых сессий?\n\nБудут удалены все цены, кроме полученных в последнем сеансе сканирования.\nЭто действие нельзя отменить."),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
             QMessageBox.StandardButton.No
         )
@@ -349,10 +354,10 @@ class ProfitsTab(QWidget):
         if reply == QMessageBox.StandardButton.Yes:
             count = self.storage.clean_history(gap_minutes=30)
             if count > 0:
-                QMessageBox.information(self, "Очистка завершена", f"Удалено старых записей: {count}")
+                QMessageBox.information(self, get_text("finance_clean_done_title", "Очистка завершена"), get_text("finance_clean_done_msg", "Удалено старых записей: {count}").format(count=count))
                 self.refresh_data()
             else:
-                QMessageBox.information(self, "Очистка", "Нет старых записей для удаления.")
+                QMessageBox.information(self, get_text("finance_clean", "Очистка"), get_text("finance_clean_no_records", "Нет старых записей для удаления."))
 
     def update_delete_button_state(self):
         """Toggle delete button based on selection"""
@@ -370,8 +375,8 @@ class ProfitsTab(QWidget):
         
         confirm = QMessageBox.question(
             self, 
-            "Удаление записи", 
-            f"Вы уверены, что хотите удалить запись:\n\n{item_name} ({variant_key})?\n\nБудут удалены цены для ОБОИХ городов в этой строке.",
+            get_text("finance_delete_confirm_title", "Удаление записи"), 
+            get_text("finance_delete_confirm_msg", "Вы уверены, что хотите удалить запись:\n\n{item} ({variant})?\n\nБудут удалены цены для ОБОИХ городов в этой строке.").format(item=item_name, variant=variant_key),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
         

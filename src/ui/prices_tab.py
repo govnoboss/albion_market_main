@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer
 
 from ..utils.price_storage import get_price_storage
+from ..utils.localization import get_text
 from .styles import PRICES_STYLE
 
 
@@ -24,7 +25,7 @@ class PricesTab(QWidget):
         
         # Заголовок и кнопки
         top_layout = QHBoxLayout()
-        header = QLabel("💰 Цены по городам")
+        header = QLabel(get_text("prices_header", "💰 Цены по городам"))
         header.setStyleSheet(PRICES_STYLE["header"])
         top_layout.addWidget(header)
         
@@ -32,27 +33,27 @@ class PricesTab(QWidget):
         
         # Поиск
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("🔍 Поиск предмета...")
+        self.search_input.setPlaceholderText(get_text("prices_search_placeholder", "🔍 Поиск предмета..."))
         self.search_input.setFixedWidth(200)
         self.search_input.setStyleSheet(PRICES_STYLE["search"])
         self.search_input.textChanged.connect(self.filter_table)
         top_layout.addWidget(self.search_input)
         
         # Кнопка удаления
-        self.delete_btn = QPushButton("🗑️ Удалить запись")
+        self.delete_btn = QPushButton(get_text("prices_btn_delete", "🗑️ Удалить запись"))
         self.delete_btn.setStyleSheet(PRICES_STYLE["btn_delete"])
         self.delete_btn.setEnabled(False)
         self.delete_btn.clicked.connect(self.delete_selected_record)
         top_layout.addWidget(self.delete_btn)
         
         # Кнопка очистки старых
-        clean_old_btn = QPushButton("🧹 Очистить старые")
-        clean_old_btn.setToolTip("Удалить цены, которым больше X часов")
+        clean_old_btn = QPushButton(get_text("prices_btn_clean", "🧹 Очистить старые"))
+        clean_old_btn.setToolTip(get_text("prices_btn_clean_tip", "Удалить цены, которым больше X часов"))
         clean_old_btn.setStyleSheet(PRICES_STYLE["btn_danger"])
         clean_old_btn.clicked.connect(self.clean_old_records)
         top_layout.addWidget(clean_old_btn)
         
-        refresh_btn = QPushButton("Обновить")
+        refresh_btn = QPushButton(get_text("prices_btn_refresh", "Обновить"))
         refresh_btn.setStyleSheet(PRICES_STYLE["btn_normal"])
         refresh_btn.clicked.connect(self.refresh_data)
         top_layout.addWidget(refresh_btn)
@@ -79,7 +80,7 @@ class PricesTab(QWidget):
         self.city_tabs.clear()
         
         if not cities:
-            self.city_tabs.addTab(QLabel("Нет данных. Запустите бота для сканирования."), "Пусто")
+            self.city_tabs.addTab(QLabel(get_text("prices_empty_msg", "Нет данных. Запустите бота для сканирования.")), get_text("prices_empty_tab", "Пусто"))
             self.delete_btn.setEnabled(False)
             return
             
@@ -107,7 +108,12 @@ class PricesTab(QWidget):
         
         table = QTableWidget()
         table.setColumnCount(4)
-        table.setHorizontalHeaderLabels(["Предмет", "Вариант", "Цена", "Обновлено"])
+        table.setHorizontalHeaderLabels([
+            get_text("prices_col_item", "Предмет"), 
+            get_text("prices_col_variant", "Вариант"), 
+            get_text("prices_col_price", "Цена"), 
+            get_text("prices_col_updated", "Обновлено")
+        ])
         table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -212,8 +218,8 @@ class PricesTab(QWidget):
         
         confirm = QMessageBox.question(
             self, 
-            "Удаление записи", 
-            f"Вы уверены, что хотите удалить запись:\n\n{item_name} ({variant}) из {city}?",
+            get_text("finance_delete_confirm_title", "Удаление записи"), 
+            get_text("prices_delete_confirm_msg", "Вы уверены, что хотите удалить запись:\n\n{item} ({variant}) из {city}?").format(item=item_name, variant=variant, city=city),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
         
@@ -224,8 +230,8 @@ class PricesTab(QWidget):
     def clean_old_records(self):
         """Удаление записей старше N часов"""
         dialog = QInputDialog(self)
-        dialog.setWindowTitle("Очистка старых цен")
-        dialog.setLabelText("Удалить цены старше (часов):")
+        dialog.setWindowTitle(get_text("prices_clean_dialog_title", "Очистка старых цен"))
+        dialog.setLabelText(get_text("prices_clean_dialog_label", "Удалить цены старше (часов):"))
         dialog.setIntValue(3)
         dialog.setIntRange(1, 168)
         dialog.setStyleSheet(PRICES_STYLE["dialog"])
@@ -240,11 +246,11 @@ class PricesTab(QWidget):
             msg.setIcon(QMessageBox.Icon.Information)
             
             if count > 0:
-                msg.setWindowTitle("Очистка завершена")
-                msg.setText(f"Удалено устаревших записей: {count}")
+                msg.setWindowTitle(get_text("finance_clean_done_title", "Очистка завершена"))
+                msg.setText(get_text("prices_clean_done_msg", "Удалено устаревших записей: {count}").format(count=count))
                 self.refresh_data()
             else:
-                msg.setWindowTitle("Очистка")
-                msg.setText(f"Нет записей старше {hours} ч.")
+                msg.setWindowTitle(get_text("finance_clean", "Очистка"))
+                msg.setText(get_text("prices_clean_none_msg", "Нет записей старше {hours} ч.").format(hours=hours))
             
             msg.exec()

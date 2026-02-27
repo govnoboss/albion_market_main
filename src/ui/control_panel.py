@@ -14,6 +14,7 @@ import pyautogui
 
 from ..utils.config import get_config
 from ..utils.logger import get_logger
+from ..utils.localization import get_text
 from .styles import COLORS
 
 
@@ -36,15 +37,15 @@ class ControlPanel(QWidget):
         main_layout.setSpacing(15)
         
         # === Статус ===
-        status_group = QGroupBox("📊 Статус")
+        status_group = QGroupBox(get_text("ctrl_status_group", "📊 Статус"))
         status_layout = QVBoxLayout(status_group)
         
         status_row = QHBoxLayout()
-        status_lbl = QLabel("Состояние:")
+        status_lbl = QLabel(get_text("ctrl_state_lbl", "Состояние:"))
         status_lbl.setStyleSheet(f"color: {COLORS['text_dark']}; font-weight: 700; font-size: 11px; text-transform: uppercase;")
         status_row.addWidget(status_lbl)
         
-        self.status_label = QLabel("Ожидание")
+        self.status_label = QLabel(get_text("ctrl_state_ready", "Ожидание"))
         self.status_label.setObjectName("statusReady")
         self.status_label.setStyleSheet(f"color: {COLORS['text_dark']}; font-weight: 700; font-size: 11px; text-transform: uppercase;")
         status_row.addWidget(self.status_label)
@@ -55,14 +56,13 @@ class ControlPanel(QWidget):
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         self.progress_bar.setTextVisible(True)
-        self.progress_bar.setFormat("Ожидание...")
+        self.progress_bar.setFormat(get_text("ctrl_progress_waiting", "Ожидание..."))
         status_layout.addWidget(self.progress_bar)
         
         main_layout.addWidget(status_group)
         
         # === Управление ===
-        controls_group = QGroupBox("🎮 Управление")
-        controls_group = QGroupBox("🎮 Управление")
+        controls_group = QGroupBox(get_text("ctrl_mgmt_group", "🎮 Управление"))
         controls_layout = QVBoxLayout(controls_group)
         
         # Row: Start Index & Resume
@@ -71,14 +71,14 @@ class ControlPanel(QWidget):
         self.start_index_spin = QSpinBox()
         self.start_index_spin.setRange(1, 9999)
         self.start_index_spin.setButtonSymbols(QSpinBox.ButtonSymbols.NoButtons)  # Убираем +/-
-        self.start_index_spin.setToolTip("Номер предмета, с которого начать")
+        self.start_index_spin.setToolTip(get_text("ctrl_start_from_tip", "Номер предмета, с которого начать"))
         self.start_index_spin.setFixedWidth(60)
         self.start_index_spin.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        resume_layout.addWidget(QLabel("Старт с:"))
+        resume_layout.addWidget(QLabel(get_text("ctrl_start_from", "Старт с:")))
         resume_layout.addWidget(self.start_index_spin)
         
-        self.resume_btn = QPushButton("Продолжить")
-        self.resume_btn.setToolTip("Продолжить с последнего сохраненного места")
+        self.resume_btn = QPushButton(get_text("ctrl_resume_btn", "Продолжить"))
+        self.resume_btn.setToolTip(get_text("ctrl_resume_tip", "Продолжить с последнего сохраненного места"))
         self.resume_btn.clicked.connect(self._on_resume_clicked)
         self.resume_btn.setVisible(False) # Скрыта по умолчанию
         resume_layout.addWidget(self.resume_btn)
@@ -90,14 +90,14 @@ class ControlPanel(QWidget):
         self.refresh_resume_button()
         
         
-        self.start_btn = QPushButton("▶ ЗАПУСТИТЬ")
+        self.start_btn = QPushButton(get_text("ctrl_start_btn", "▶ ЗАПУСТИТЬ"))
         self.start_btn.setObjectName("primary")
         self.start_btn.setMinimumHeight(50)
         self.start_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.start_btn.clicked.connect(self.start_clicked.emit)
         controls_layout.addWidget(self.start_btn)
         
-        self.stop_btn = QPushButton("🛑 ОСТАНОВИТЬ (F5)")
+        self.stop_btn = QPushButton(get_text("ctrl_stop_btn", "🛑 ОСТАНОВИТЬ (F5)"))
         self.stop_btn.setObjectName("danger")
         self.stop_btn.setMinimumHeight(50)
         self.stop_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -125,7 +125,7 @@ class ControlPanel(QWidget):
             last_index = get_config().get_setting("last_scan_index", 0)
             if last_index > 0:
                 resume_item = last_index + 1
-                self.resume_btn.setText(f"Продолжить ({resume_item})")
+                self.resume_btn.setText(f"{get_text('ctrl_resume_btn', 'Продолжить')} ({resume_item})")
                 self.resume_btn.setVisible(True)
                 self.resume_btn.setStyleSheet(f"background-color: {COLORS['accent']}; color: white; font-weight: bold; border-radius: 6px; padding: 5px;")
             else:
@@ -140,15 +140,15 @@ class ControlPanel(QWidget):
         self.stop_btn.setVisible(self._is_running)
         
         if not self._is_running:
-            self.status_label.setText("Ожидание")
+            self.status_label.setText(get_text("ctrl_state_ready", "Ожидание"))
             self.status_label.setStyleSheet(f"color: {COLORS['text_dark']}; font-weight: 700; font-size: 11px; text-transform: uppercase;")
             self.progress_bar.setValue(0)
-            self.progress_bar.setFormat("Ожидание...")
+            self.progress_bar.setFormat(get_text("ctrl_progress_waiting", "Ожидание..."))
         elif self._is_paused:
-            self.status_label.setText("На паузе")
+            self.status_label.setText(get_text("ctrl_state_paused", "На паузе"))
             self.status_label.setStyleSheet(f"color: {COLORS['warning']}; font-weight: 700; font-size: 11px; text-transform: uppercase;")
         else:
-            self.status_label.setText("В работе")
+            self.status_label.setText(get_text("ctrl_state_running", "В работе"))
             self.status_label.setStyleSheet(f"color: {COLORS['accent']}; font-weight: 700; font-size: 11px; text-transform: uppercase;")
     
     def update_progress(self, current: int, total: int, item_name: str = ""):
@@ -158,7 +158,7 @@ class ControlPanel(QWidget):
             self.progress_bar.setFormat(f"{item_name} ({current}/{total})")
         else:
             self.progress_bar.setValue(0)
-            self.progress_bar.setFormat(item_name if item_name else "Ожидание...")
+            self.progress_bar.setFormat(item_name if item_name else get_text("ctrl_progress_waiting", "Ожидание..."))
 
 
             self.progress_bar.setFormat(item_name if item_name else "Ожидание...")
