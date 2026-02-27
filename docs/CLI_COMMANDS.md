@@ -56,6 +56,12 @@ python tools/release_manager.py
 ```
 **Зачем это:** Автоматический деплой лицензионного сервера на Fly.io. Проверяет ключи и обновляет приложение в облаке.
 
+### Конвертация иконки (PNG → ICO)
+```powershell
+python tools/convert_icon.py
+```
+**Зачем это:** Конвертирует `assets/icon.png` в `assets/icon.ico` для Windows-сборки. Вызывается автоматически из `build.bat`.
+
 ---
 
 ## 🧪 Тестирование

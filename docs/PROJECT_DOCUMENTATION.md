@@ -33,6 +33,7 @@ src/
 │   ├── bot.py              # Scanner Mode logic (incl. Black Market)
 │   ├── buyer.py            # Buyer Mode logic (Wholesale/Smart, multi-city)
 │   ├── coordinate_capture.py # Захват координат по клику (pynput)
+│   ├── finance.py          # Менеджер финансов (SQLite транзакции, статистика)
 │   ├── interaction.py      # UI Element calculation (Dropdowns)
 │   ├── license.py          # HWID generation, RSA verification, license validation
 │   ├── market_opener.py    # Поиск и открытие NPC Рынка через OCR тултипов
@@ -42,17 +43,30 @@ src/
 │   └── version.py          # Single source of truth: CURRENT_VERSION, APP_NAME, GITHUB_REPO
 ├── ui/                     # PyQt6 Interface
 │   ├── launcher.py         # ★ ENTRY POINT: Launcher window, режим выбора, auto-update banner
+│   ├── dashboard.py        # ★ Главное окно Dashboard (сайдбар, KPI, навигация)
 │   ├── login_window.py     # Окно ввода лицензионного ключа
 │   ├── splash_screen.py    # Splash screen при загрузке
 │   ├── main_window.py      # Scanner Window: Tabs, Hotkeys (F5/F6)
 │   ├── buyer_window.py     # Buyer Window: управление закупкой
+│   ├── scanner_widget.py   # Виджет Scanner для Dashboard
+│   ├── buyer_widget.py     # Виджет Buyer для Dashboard
+│   ├── settings_window.py  # Окно настроек (Settings)
+│   ├── finance_window.py   # Окно финансовой статистики
 │   ├── buyer/              # Компоненты Buyer-окна
 │   │   ├── profit_preview_tab.py   # Превью прибыли
 │   │   └── purchase_plan_tab.py    # План закупок
+│   ├── components/         # Переиспользуемые UI-компоненты
+│   │   ├── kpi_card.py     # KPI карточка для Dashboard
+│   │   └── summary_box.py  # Блок сводки "Hot Items"
 │   ├── mini_overlay.py     # Compact status overlay (Always on Top)
 │   ├── log_overlay.py      # Оверлей логов
-│   ├── overlay.py          # (Legacy) HUD components
+│   ├── log_viewer.py       # Компонент просмотра логов (LogViewer, LogPanel)
+│   ├── overlay.py          # AreaSelectionOverlay — Полупрозрачный оверлей выделения области экрана
+│   ├── wizard_overlay.py   # Мастер настройки координат (Wizard)
+│   ├── dim_overlay.py      # Затемнение экрана при калибровке (Cinema Scope)
+│   ├── resizable_panel.py  # Панель с изменяемым размером
 │   ├── calibration_overlay.py # Оверлей калибровки координат
+│   ├── faq_tab.py          # Вкладка FAQ/Гайд
 │   ├── styles.py           # Стили и цветовая схема (MAIN_STYLE, COLORS)
 │   └── [tabs]              # Вкладки Scanner Window:
 │       ├── control_panel.py       # Start/Stop controls
@@ -72,13 +86,12 @@ src/
 │   ├── items_db.py         # База данных предметов
 │   ├── default_exceptions.py # Исключения по тирам (items без T1-T3)
 │   └── text_utils.py       # Утилиты обработки текста
-├── legacy/                 # Устаревший код
-│   └── debug_overlay.py    # Legacy debug overlay
 server/                     # License Server (FastAPI) — ОБЯЗАТЕЛЕН для работы бота
 tools/                      # Утилиты разработчика
 │   ├── release_manager.py  # GUI для сборки, упаковки и публикации релизов
 │   ├── ocr_tester.py       # GUI для тестирования OCR фильтров с превью и пресетами
 │   ├── generate_keys.py    # Генерация RSA ключей
+│   ├── convert_icon.py     # Конвертация PNG → ICO для Windows-сборки
 │   ├── migrate_db.py       # Миграция БД сервера
 │   ├── migrate_db_ip.py    # Миграция БД (IP поля)
 │   └── deploy_server.ps1   # Деплой сервера на Fly.io
@@ -94,8 +107,15 @@ main.py → LauncherWindow
              ├── [Лицензия ОК] → Splash Screen → LauncherWindow
              │                     ├── Фоновая проверка обновлений (GitHub API)
              │                     │    └── [Есть обновление] → Баннер "🔄 Обновить"
-             │                     ├── Кнопка "СКАНЕР"  → MainWindow (Scanner)
-             │                     └── Кнопка "ЗАКУПЩИК" → BuyerWindow (Buyer)
+             │                     ├── → MainDashboard (сайдбар + KPI + навигация)
+             │                     │    ├── Стр. "Главная"    → KPI, Sessions, Hot Items
+             │                     │    ├── Стр. "Сканер"    → ScannerWidget
+             │                     │    ├── Стр. "Закупщик"  → BuyerWidget
+             │                     │    └── Стр. "FAQ"       → FAQTab
+             │                     ├── Кнопка "СКАНЕР"    → MainWindow (Scanner)
+             │                     ├── Кнопка "ЗАКУПЩИК"  → BuyerWindow (Buyer)
+             │                     ├── Кнопка "НАСТРОЙКИ" → SettingsWindow
+             │                     └── Кнопка "ФИНАНСЫ"   → FinanceWindow
 ```
 
 ---
@@ -162,6 +182,17 @@ main.py → LauncherWindow
 ### LicenseManager (`src/core/license.py`)
 *   **Role:** Security & Access Control.
 *   **Logic:** Generates a stable HWID (Motherboard + CPU + MachineGUID), encrypts/decrypts keys locally, and validates against a remote server. Verifies RSA-signed responses.
+
+### FinanceManager (`src/core/finance.py`)
+*   **Role:** Финансовый менеджер — запись и анализ транзакций покупок.
+*   **Storage:** SQLite база данных (`data/finance.db`).
+*   **Features:**
+    *   `log_transaction()` — запись покупки (имя, тир, зачарование, цена, кол-во, город, профит).
+    *   `get_stats_summary()` — сводная статистика (траты/профит за сегодня и за всё время).
+    *   `get_sessions_for_period()` — агрегация по сессиям закупки (`session_id`).
+    *   `get_hot_items_for_period()` — топ предметов по количеству за период.
+*   **Integration:** Используется в `buyer.py` для автоматической записи покупок и в `finance_window.py` / `dashboard.py` для отображения.
+*   **Singleton:** Глобальный экземпляр `finance_manager`.
 
 ---
 

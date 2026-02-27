@@ -116,7 +116,8 @@ class FinanceWindow(QWidget):
             "Время", "Предмет", "Тир", "Цена", "Кол-во", "Итого", "Профит"
         ])
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.table.itemSelectionChanged.connect(self._update_delete_button_state)
         self.table.itemDoubleClicked.connect(self._on_item_double_clicked)
         
         # Настройка колонок
@@ -223,6 +224,12 @@ class FinanceWindow(QWidget):
                     item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                     
                 self.table.setItem(i, col, item)
+        
+        self._update_delete_button_state()
+
+    def _update_delete_button_state(self):
+        """Активация кнопки удаления при выборе строк"""
+        self.btn_delete_selected.setEnabled(len(self.table.selectionModel().selectedRows()) > 0)
 
     def _on_delete_selected(self):
         selection = self.table.selectionModel().selectedRows()

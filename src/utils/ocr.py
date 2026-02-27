@@ -6,7 +6,8 @@ import os
 import shutil
 import cv2
 import numpy as np
-from typing import Optional
+import hashlib
+from typing import Optional, Dict, Tuple
 from ..utils.logger import get_logger
 
 logger = get_logger()
@@ -73,6 +74,33 @@ def init_ocr():
 def is_ocr_available() -> bool:
     """Проверка доступности OCR"""
     return init_ocr()
+
+
+class OCRCache:
+    """Кэш для результатов OCR на основе хеширования пикселей"""
+    def __init__(self):
+        self._cache: Dict[Tuple[int, int, int, int], Tuple[str, str]] = {} # {area: (hash, text)}
+
+    def get(self, area: Tuple[int, int, int, int], current_hash: str) -> Optional[str]:
+        if area in self._cache:
+            saved_hash, text = self._cache[area]
+            if saved_hash == current_hash:
+                return text
+        return None
+
+    def update(self, area: Tuple[int, int, int, int], new_hash: str, text: str):
+        self._cache[area] = (new_hash, text)
+
+    def clear(self):
+        self._cache.clear()
+        logger.debug("OCR Cache cleared.")
+
+# Глобальный экземпляр кэша
+_global_ocr_cache = OCRCache()
+
+def clear_ocr_cache():
+    """Публичный метод для сброса кэша при смене контекста"""
+    _global_ocr_cache.clear()
 
 
 def _is_ocr_debug_enabled() -> bool:
@@ -157,6 +185,65 @@ def read_screen_text(x: int, y: int, w: int, h: int, lang: str = 'rus', whitelis
         
     except Exception as e:
         logger.error(f"Ошибка OCR: {e}")
+        return ""
+
+def read_screen_text_cached(x: int, y: int, w: int, h: int, lang: str = 'rus', whitelist: str = None) -> str:
+    """
+    Версия read_screen_text с кэшированием по пикселям.
+    """
+    if not is_ocr_available():
+        return ""
+
+    try:
+        # 1. Снимаем скриншот для хеширования
+        bbox = (x, y, x + w, y + h)
+        screenshot = ImageGrab.grab(bbox=bbox)
+        
+        # 2. Вычисляем быстрый хеш пикселей (MD5)
+        # Для стабильности переводим в Grayscale (игнорируем мелкие цветовые вариации)
+        gray_screenshot = ImageOps.grayscale(screenshot)
+        img_data = gray_screenshot.tobytes()
+        img_hash = hashlib.md5(img_data).hexdigest()
+        
+        area_key = (x, y, w, h)
+        
+        # 3. Проверка кэша
+        cached_text = _global_ocr_cache.get(area_key, img_hash)
+        if cached_text is not None:
+            logger.debug(f"🚀 OCR Cache HIT [{x},{y}]: '{cached_text}'")
+            return cached_text
+            
+        # 4. Если промах — запускаем предобработку и OCR как в оригинале
+        # Но используем уже снятый screenshot, чтобы не делать ImageGrab дважды
+        scale = 3
+        new_size = (screenshot.width * scale, screenshot.height * scale)
+        processed = screenshot.resize(new_size, Image.Resampling.LANCZOS)
+        
+        img_np = np.array(processed)
+        if len(img_np.shape) == 3:
+            img_np = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+        
+        _, thresh_np = cv2.threshold(img_np, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        binarized = Image.fromarray(thresh_np)
+        
+        config = '--psm 6'
+        if whitelist:
+            config += f' -c tessedit_char_whitelist={whitelist}'
+            
+        text = pytesseract.image_to_string(binarized, lang=lang, config=config)
+        clean_text = text.strip()
+        
+        # 5. Обновляем кэш (только если считали текст)
+        if clean_text:
+            _global_ocr_cache.update(area_key, img_hash, clean_text)
+            logger.debug(f"📥 OCR Cache MISS [{x},{y}]: '{clean_text}' (saved to cache)")
+        else:
+            logger.debug(f"⚠️ OCR MISS [{x},{y}]: Empty result, not caching.")
+        
+        return clean_text
+
+    except Exception as e:
+        logger.error(f"Ошибка в read_screen_text_cached: {e}")
         return ""
 
 def fuzzy_match_quality(detected_text: str, expected_names: list[str]) -> bool:
@@ -304,7 +391,7 @@ def read_price_at(area: dict) -> Optional[int]:
     # whitelist: Цифры + разделители + суффиксы (k, m, b) + пробел
     whitelist="0123456789.,kKmMBb "
     
-    raw_text = read_screen_text(
+    raw_text = read_screen_text_cached(
         area['x'], area['y'], area['w'], area['h'], 
         lang='eng', 
         whitelist=whitelist
@@ -355,10 +442,26 @@ def read_qty_text(area: dict) -> int:
         whitelist = "0123456789"
         config = f'--psm 7 -c tessedit_char_whitelist={whitelist}'
         
+        # --- CACHING FOR QTY ---
+        # Grayscale for stability
+        gray_img = ImageOps.grayscale(final_img)
+        img_data = gray_img.tobytes()
+        img_hash = hashlib.md5(img_data).hexdigest()
+        
+        area_key = (area['x'], area['y'], area['w'], area['h'], "qty") # 'qty' suffix to distinguish from normal text
+        cached_text = _global_ocr_cache.get(area_key, img_hash)
+        if cached_text is not None:
+             logger.debug(f"🚀 OCR Qty Cache HIT [{area['x']},{area['y']}]: '{cached_text}'")
+             return parse_price(cached_text, allow_low_values=True) or 0
+             
         text = pytesseract.image_to_string(final_img, lang='eng', config=config)
         clean_text = text.strip()
         
-        logger.debug(f"OCR Qty Scan [{area['x']},{area['y']}]: '{clean_text}'")
+        if clean_text:
+            _global_ocr_cache.update(area_key, img_hash, clean_text)
+            logger.debug(f"📥 OCR Qty Cache MISS [{area['x']},{area['y']}]: '{clean_text}'")
+        else:
+             logger.debug(f"⚠️ OCR Qty MISS [{area['x']},{area['y']}]: Empty result, not caching.")
         
         # Parse
         val = parse_price(clean_text, allow_low_values=True)

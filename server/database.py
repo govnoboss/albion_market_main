@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, String, Boolean, DateTime, text
+from sqlalchemy import create_engine, Column, String, Boolean, DateTime, Integer, text
 from sqlalchemy.orm import sessionmaker, declarative_base
 import datetime
 import uuid
@@ -29,6 +29,23 @@ class License(Base):
     def generate_key():
         """Generates a random license key XXXX-XXXX-XXXX-XXXX"""
         return str(uuid.uuid4()).upper()
+
+
+class PurchaseSession(Base):
+    """Telemetry: one row per buyer session from any client"""
+    __tablename__ = "purchase_sessions"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(String, unique=True, index=True)  # Dedup key
+    license_key = Column(String, index=True)               # FK → licenses.key
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    city = Column(String, nullable=True)
+    items_bought = Column(Integer, default=0)
+    total_spent = Column(Integer, default=0)
+    total_profit_est = Column(Integer, default=0)
+    duration_seconds = Column(Integer, default=0)
+    client_ip = Column(String, nullable=True)
+
 
 def init_db():
     Base.metadata.create_all(bind=engine)

@@ -48,6 +48,7 @@ class BuyerBot(BaseBot):
         self._stop_requested = False
         self._is_paused = False
         self.session_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self._session_start_time = time.time()
         
         self.logger.info(f"💰 ЗАПУСК РЕЖИМА: ОПТ (Orders) 💰")
         self.logger.info(f"📍 Маршрут: {self.buy_city} -> {self.sell_city}")
@@ -65,8 +66,82 @@ class BuyerBot(BaseBot):
             self._run_wholesale()
             
         self.logger.info("🏁 Закупка завершена.")
+        
+        if not self.simulation_mode:
+            self._report_session_to_server()
+            
         self._is_running = False
         self.finished.emit()
+
+    def _report_session_to_server(self):
+        """Отправка агрегированных данных сессии на сервер (Fire-and-forget)"""
+        try:
+            import threading
+            
+            def send_task():
+                try:
+                    import sqlite3
+                    import requests
+                    from .finance import finance_manager
+                    from .license import license_manager, SERVER_URL
+                    
+                    # 1. Получаем данные сессии из БД напрямую
+                    conn = sqlite3.connect(finance_manager.db_path)
+                    cursor = conn.cursor()
+                    cursor.execute('''
+                        SELECT SUM(qty), SUM(total), SUM(profit_est)
+                        FROM transactions
+                        WHERE session_id = ? AND is_simulation = 0
+                    ''', (self.session_id,))
+                    row = cursor.fetchone()
+                    conn.close()
+                    
+                    if not row or not row[0]:
+                        self.logger.debug("Нет покупок в сессии, отчет не отправлен.")
+                        return
+                    
+                    items_bought = int(row[0] or 0)
+                    total_spent = int(row[1] or 0)
+                    total_profit_est = int(row[2] or 0)
+                    
+                    if items_bought <= 0:
+                        return
+                        
+                    # 2. Длительность сессии
+                    duration_seconds = int(time.time() - getattr(self, "_session_start_time", time.time()))
+                    
+                    # 3. Лицензия
+                    key = license_manager.load_key()
+                    hwid = license_manager.get_hwid()
+                    if not key:
+                        return
+                        
+                    payload = {
+                        "key": key,
+                        "hwid": hwid,
+                        "session_id": self.session_id,
+                        "city": self.buy_city,
+                        "items_bought": items_bought,
+                        "total_spent": total_spent,
+                        "total_profit_est": total_profit_est,
+                        "duration_seconds": duration_seconds
+                    }
+                    
+                    # 4. Отправка (POST /api/v1/report-session)
+                    resp = requests.post(f"{SERVER_URL}/report-session", json=payload, timeout=5)
+                    if resp.status_code == 200:
+                        self.logger.info("📤 Статистика сессии отправлена на сервер.")
+                    else:
+                        self.logger.debug(f"Ответ сервера: {resp.status_code} {resp.text}")
+                        
+                except Exception as e:
+                    self.logger.debug(f"Ошибка отправки телеметрии: {e}")
+            
+            # Запускаем в отдельном потоке чтобы не блокировать UI на 5 секунд
+            threading.Thread(target=send_task, daemon=True).start()
+            
+        except Exception as e:
+            self.logger.error(f"Failed to start telemetry thread: {e}")
 
     def skip_item(self):
         """Пропустить текущий предмет (вызывается из UI по F7)"""
@@ -196,6 +271,8 @@ class BuyerBot(BaseBot):
         self._human_type(name)
         pyautogui.press('enter')
         time.sleep(0.7)
+        from ..utils.ocr import clear_ocr_cache
+        clear_ocr_cache()
         return True
 
     def _run_smart_buyer(self):
@@ -361,7 +438,7 @@ class BuyerBot(BaseBot):
         Стандартная логика покупки (для всех режимов).
         Покупка из списка без создания ордера.
         """
-        from ..utils.ocr import read_price_at, read_qty_text
+        from ..utils.ocr import read_price_at, read_qty_text, read_screen_text_cached, clear_ocr_cache
         
         # 1. Фильтры (Выставляем один раз перед циклом)
         self.logger.info(f" Фильтры: T{tier}.{enchant}")
@@ -603,6 +680,8 @@ class BuyerBot(BaseBot):
              self._human_move_to(*close_btn)
              self._human_click()
              self._human_click()
+             from ..utils.ocr import clear_ocr_cache
+             clear_ocr_cache()
              self._is_menu_open = False
              self._current_tier_value = None
              self._current_enchant = None 
@@ -614,7 +693,6 @@ class BuyerBot(BaseBot):
 
     def _select_tier(self, tier):
         """Выбор тира (с поддержкой исключений и сбросом качества)"""
-        # Убрана оптимизация self._current_tier_value == tier, чтобы гарантировать выбор
              
         coord = self.dropdowns.get_tier_click_point(tier)
         if coord:
@@ -626,7 +704,6 @@ class BuyerBot(BaseBot):
             self._current_quality = None
 
     def _select_enchant(self, enchant):
-        # Убрана оптимизация self._current_enchant == enchant, чтобы гарантировать выбор
         
         coord = self.dropdowns.get_enchant_click_point(enchant)
         if coord:
@@ -652,13 +729,13 @@ class BuyerBot(BaseBot):
         expected_names = quality_map.get(quality, [])
 
         # 1. Проверяем текущее состояние через OCR
-        from ..utils.ocr import read_screen_text, is_ocr_available, fuzzy_match_quality
+        from ..utils.ocr import read_screen_text_cached, is_ocr_available, fuzzy_match_quality
         
         if is_ocr_available():
             area = self.config.get_coordinate_area("quality_text_region")
             if area:
                 try:
-                    passive_text = read_screen_text(area['x'], area['y'], area['w'], area['h'])
+                    passive_text = read_screen_text_cached(area['x'], area['y'], area['w'], area['h'])
                     # self.logger.debug(f"OCR Quality Check: '{passive_text}' vs {expected_names}")
                     
                     if fuzzy_match_quality(passive_text, expected_names):

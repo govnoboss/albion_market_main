@@ -7,7 +7,7 @@ import os
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QPushButton, QStackedWidget, QLabel, QFrame, QSpacerItem, QSizePolicy, QComboBox,
-    QTableWidget, QTableWidgetItem, QHeaderView, QProgressBar
+    QTableWidget, QTableWidgetItem, QHeaderView, QProgressBar, QMessageBox
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QSize, QTimer
 from PyQt6.QtGui import QIcon, QCursor
@@ -16,6 +16,7 @@ from .styles import MAIN_STYLE, COLORS
 from ..utils.logger import get_logger
 from ..core.version import CURRENT_VERSION
 from ..core.updater import UpdateCheckWorker, UpdateDownloadWorker, install_update
+from ..core.license import license_manager
 import keyboard
 
 class SidebarItem(QPushButton):
@@ -36,6 +37,11 @@ class Sidebar(QFrame):
         self.setObjectName("sidebar")
         self.setFixedWidth(200)
         
+        # Get project root for icon paths
+        root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        tg_icon = os.path.join(root_dir, "resources", "telegram.png")
+        ds_icon = os.path.join(root_dir, "resources", "discord.png")
+
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(0)
@@ -59,14 +65,44 @@ class Sidebar(QFrame):
         
         self.layout.addStretch()
         
-        # Футер (Версия и Обновление)
-        self.footer = QFrame()
-        self.footer.setObjectName("sidebarFooter")
-        self.footer_layout = QVBoxLayout(self.footer)
-        self.footer_layout.setContentsMargins(10, 10, 10, 10)
-        self.footer_layout.setSpacing(5)
+        # --- Bottom Container (Socials & Version) ---
+        bottom_container = QFrame()
+        bottom_container.setObjectName("sidebarBottom")
+        bottom_container.setStyleSheet("""
+            #sidebarBottom {
+                border-top: 1px solid #1e2923;
+                background-color: rgba(0,0,0,0.1);
+            }
+        """)
+        bottom_layout = QVBoxLayout(bottom_container)
+        bottom_layout.setContentsMargins(10, 15, 10, 15)
+        bottom_layout.setSpacing(12)
+        bottom_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # Заголовок соцсетей (центрированный)
+        social_title = QLabel("СВЯЗЬ С НАМИ")
+        social_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        social_title.setStyleSheet(f"""
+            color: {COLORS['text_muted']};
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+        """)
+        bottom_layout.addWidget(social_title)
         
-        # Область обновления (скрыта по умолчанию)
+        # Ряд иконок (центрированный)
+        social_h_layout = QHBoxLayout()
+        social_h_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        social_h_layout.setSpacing(15)
+        
+        tg_btn = self._create_social_button("Telegram", tg_icon, "https://t.me/nobrainchel")
+        ds_btn = self._create_social_button("Discord", ds_icon, "https://discordapp.com/users/dendidima228")
+        
+        social_h_layout.addWidget(tg_btn)
+        social_h_layout.addWidget(ds_btn)
+        bottom_layout.addLayout(social_h_layout)
+
+        # Область обновления (укороченная для сайдбара)
         self.update_frame = QFrame()
         self.update_frame.setObjectName("updateFrame")
         self.update_frame.setStyleSheet("""
@@ -83,7 +119,8 @@ class Sidebar(QFrame):
         update_v_layout.setSpacing(5)
         
         self.update_lbl = QLabel("Update Available")
-        self.update_lbl.setStyleSheet("color: #adbac7; font-size: 11px; font-weight: bold;")
+        self.update_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.update_lbl.setStyleSheet("color: #adbac7; font-size: 10px; font-weight: bold;")
         update_v_layout.addWidget(self.update_lbl)
         
         self.update_progress = QProgressBar()
@@ -96,9 +133,9 @@ class Sidebar(QFrame):
         self.update_progress.hide()
         update_v_layout.addWidget(self.update_progress)
         
-        self.btn_update = QPushButton("Update Now")
+        self.btn_update = QPushButton("Update")
         self.btn_update.setObjectName("btnUpdate")
-        self.btn_update.setFixedHeight(24)
+        self.btn_update.setFixedHeight(22)
         self.btn_update.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_update.setStyleSheet(f"""
             #btnUpdate {{
@@ -106,20 +143,56 @@ class Sidebar(QFrame):
                 color: white;
                 border: none;
                 border-radius: 4px;
-                font-size: 11px;
+                font-size: 10px;
                 font-weight: 600;
             }}
             #btnUpdate:hover {{ background-color: #2ea043; }}
-            #btnUpdate:disabled {{ background-color: #161b22; color: #484f58; }}
         """)
         update_v_layout.addWidget(self.btn_update)
-        
-        self.footer_layout.addWidget(self.update_frame)
+        bottom_layout.addWidget(self.update_frame)
 
+        # Версия (центрированная)
         self.version_label = QLabel(f"v{CURRENT_VERSION}")
-        self.version_label.setStyleSheet("color: #484f58; font-size: 11px;")
-        self.footer_layout.addWidget(self.version_label)
-        self.layout.addWidget(self.footer)
+        self.version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.version_label.setStyleSheet("color: #484f58; font-size: 11px; font-weight: 600;")
+        bottom_layout.addWidget(self.version_label)
+        
+        self.layout.addWidget(bottom_container)
+
+
+
+    def _create_social_button(self, name, icon_path, url):
+        """Создает кнопку-ссылку для соцсетей с иконкой"""
+        btn = QPushButton()
+        btn.setFixedSize(32, 32)
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn.setToolTip(name)
+        
+        if os.path.exists(icon_path):
+            btn.setIcon(QIcon(icon_path))
+            btn.setIconSize(QSize(20, 20))
+        else:
+            # Fallback to text if icon missing
+            btn.setText(name[0])
+
+        btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: #121916;
+                border: 1px solid #1e2923;
+                border-radius: 8px;
+                color: #10b981;
+            }}
+            QPushButton:hover {{
+                background-color: #1a2521;
+                border-color: #10b981;
+                background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1e2d27, stop:1 #151e1b);
+            }}
+        """)
+        
+        from PyQt6.QtGui import QDesktopServices
+        from PyQt6.QtCore import QUrl
+        btn.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(url)))
+        return btn
 
     def _add_nav_item(self, text, index):
         btn = SidebarItem(text)
@@ -138,6 +211,7 @@ class Sidebar(QFrame):
             btn.style().unpolish(btn)
             btn.style().polish(btn)
         self.nav_changed.emit(index)
+
 
 class MainDashboard(QMainWindow):
     """Главное окно приложения (Dashboard)"""
@@ -195,6 +269,9 @@ class MainDashboard(QMainWindow):
         
         # 4. Проверка обновлений
         self._check_for_updates()
+
+        # 5. Фоновая проверка лицензии
+        self._setup_daily_license_check()
 
         # Final Splash Status
         if self.splash:
@@ -288,6 +365,52 @@ class MainDashboard(QMainWindow):
         elif key == "f7":
             if hasattr(active, "_on_hotkey_skip"): active._on_hotkey_skip()
 
+    # --- License Checking Logic (Continuous) ---
+    def _setup_daily_license_check(self):
+        """Setup timer for daily license validation"""
+        self.license_check_timer = QTimer(self)
+        self.license_check_timer.timeout.connect(self._daily_license_check)
+        self.license_check_timer.start(10 * 60 * 1000)  # 10 minutes (matching Launcher)
+    
+    def _daily_license_check(self):
+        """Perform daily license check"""
+        if not license_manager.should_check_today():
+            return
+        
+        res = license_manager.validate_key()
+        if res.get('success'):
+            license_manager.mark_checked()
+        else:
+            self._start_graceful_shutdown(res.get('message', 'License expired'))
+    
+    def _start_graceful_shutdown(self, reason: str):
+        """Start 1-minute graceful shutdown with warning"""
+        self.shutdown_seconds = 60
+        
+        self.shutdown_dialog = QMessageBox(self)
+        self.shutdown_dialog.setIcon(QMessageBox.Icon.Warning)
+        self.shutdown_dialog.setWindowTitle("Лицензия недействительна")
+        self.shutdown_dialog.setText(f"Причина: {reason}\n\nПриложение закроется через 60 секунд.")
+        self.shutdown_dialog.setStandardButtons(QMessageBox.StandardButton.Ok)
+        self.shutdown_dialog.button(QMessageBox.StandardButton.Ok).setText("Понятно")
+        self.shutdown_dialog.show()
+        
+        self.shutdown_timer = QTimer(self)
+        self.shutdown_timer.timeout.connect(self._shutdown_tick)
+        self.shutdown_timer.start(1000)
+    
+    def _shutdown_tick(self):
+        """Update shutdown countdown"""
+        self.shutdown_seconds -= 1
+        if self.shutdown_seconds <= 0:
+            from PyQt6.QtWidgets import QApplication
+            QApplication.quit()
+        elif hasattr(self, 'shutdown_dialog') and self.shutdown_dialog.isVisible():
+            self.shutdown_dialog.setText(
+                f"Приложение закроется через {self.shutdown_seconds} секунд.\n"
+                f"Сохраните свою работу."
+            )
+
     def closeEvent(self, event):
         """Очистка при закрытии"""
         try:
@@ -359,12 +482,12 @@ class MainDashboard(QMainWindow):
         page = QWidget()
         page.setObjectName("homePage")
         main_v_layout = QVBoxLayout(page)
-        main_v_layout.setContentsMargins(50, 50, 50, 50)
-        main_v_layout.setSpacing(40)
+        main_v_layout.setContentsMargins(40, 40, 40, 40)
+        main_v_layout.setSpacing(30)
         
         # --- HEADER ---
         header = QVBoxLayout()
-        header.setSpacing(8)
+        header.setSpacing(5)
         
         welcome_label = QLabel("Welcome back, Trader")
         welcome_label.setObjectName("subtitle")
@@ -378,11 +501,11 @@ class MainDashboard(QMainWindow):
         
         # --- KPI ROW ---
         kpi_row = QHBoxLayout()
-        kpi_row.setSpacing(25)
+        kpi_row.setSpacing(20)
         
-        self.kpi_revenue = KPICard("Всего потрачено", "0", "", "💰")
-        self.kpi_profit = KPICard("Всего прибыли", "0", "", "📈")
-        self.kpi_items = KPICard("Куплено предметов", "0", "", "📦")
+        self.kpi_revenue = KPICard("Всего потрачено", "0", "Invested Silver", "💰")
+        self.kpi_profit = KPICard("Всего прибыли", "0", "Net Earnings", "📈")
+        self.kpi_items = KPICard("Куплено предметов", "0", "Total Acquisitions", "📦")
         
         kpi_row.addWidget(self.kpi_revenue)
         kpi_row.addWidget(self.kpi_profit)
@@ -391,56 +514,65 @@ class MainDashboard(QMainWindow):
         
         # --- BOTTOM SECTION (Recaps & Tools) ---
         bottom_layout = QHBoxLayout()
-        bottom_layout.setSpacing(35)
+        bottom_layout.setSpacing(25)
         
         # Performance Box (Table)
         perf_container = QFrame()
-        perf_container.setObjectName("summaryBox") # Reusing summaryBox for consistent card style
+        perf_container.setObjectName("summaryBox")
         perf_layout = QVBoxLayout(perf_container)
-        perf_layout.setContentsMargins(20, 20, 20, 20)
-        perf_layout.setSpacing(15)
+        perf_layout.setContentsMargins(0, 0, 0, 0) # Margins handled by nested items
+        perf_layout.setSpacing(0)
         
-        # Filter Row
-        filter_layout = QHBoxLayout()
+        # Filter Row Header
+        filter_header = QWidget()
+        filter_header.setStyleSheet("background: transparent; border-bottom: 1px solid rgba(255,255,255,0.05);")
+        filter_header_layout = QHBoxLayout(filter_header)
+        filter_header_layout.setContentsMargins(20, 15, 20, 15)
+        
         perf_label = QLabel("Performance Insights")
         perf_label.setObjectName("summaryTitle")
-        filter_layout.addWidget(perf_label)
+        filter_header_layout.addWidget(perf_label)
         
-        filter_layout.addStretch()
+        filter_header_layout.addStretch()
         
-        period_lbl = QLabel("За период:")
-        period_lbl.setStyleSheet("color: #94a3b8; font-size: 13px; font-weight: 500;")
-        filter_layout.addWidget(period_lbl)
+        period_lbl = QLabel("Period:")
+        period_lbl.setStyleSheet(f"color: {COLORS['text_dark']}; font-size: 12px; font-weight: 600;")
+        filter_header_layout.addWidget(period_lbl)
         
         self.period_combo = QComboBox()
         self.period_combo.addItems(["1 день", "1 неделя", "1 месяц", "Всё время"])
-        self.period_combo.setFixedWidth(140)
+        self.period_combo.setFixedWidth(120)
         self.period_combo.setCursor(Qt.CursorShape.PointingHandCursor)
         self.period_combo.currentIndexChanged.connect(self._on_period_changed)
-        filter_layout.addWidget(self.period_combo)
+        filter_header_layout.addWidget(self.period_combo)
         
-        perf_layout.addLayout(filter_layout)
+        perf_layout.addWidget(filter_header)
 
-        # Performance Table
+        # Performance Table Wrapper
+        table_container = QWidget()
+        table_container_layout = QVBoxLayout(table_container)
+        table_container_layout.setContentsMargins(10, 10, 10, 10)
+        
         self.history_table = QTableWidget()
         self.history_table.setColumnCount(6)
         self.history_table.setHorizontalHeaderLabels([
-            "Дата", "Город", "Кол-во", "Потрачено", "Получено", "Профит"
+            "TIME", "LOCATION", "QTY", "INVESTMENT", "REVENUE", "PROFIT"
         ])
         
-        # Настройка заголовков
-        header = self.history_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        header.setStretchLastSection(True)
-        self.history_table.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        # Header setup
+        thead = self.history_table.horizontalHeader()
+        thead.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        thead.setStretchLastSection(True)
+        thead.setDefaultAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         
         self.history_table.verticalHeader().setVisible(False)
         self.history_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.history_table.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
-        self.history_table.setAlternatingRowColors(True)
         self.history_table.setShowGrid(False)
+        self.history_table.setAlternatingRowColors(True)
         
-        perf_layout.addWidget(self.history_table)
+        table_container_layout.addWidget(self.history_table)
+        perf_layout.addWidget(table_container)
         
         bottom_layout.addWidget(perf_container, stretch=2)
         
@@ -500,24 +632,38 @@ class MainDashboard(QMainWindow):
         self.history_table.setRowCount(len(sessions))
         
         for i, sess in enumerate(sessions):
-            # Дата начала сессии
+            # Дата (Time) - Muted color
             ts = sess.get('session_start', '')
             dt = str(ts).split('.')[0] if ts else ''
-            self.history_table.setItem(i, 0, QTableWidgetItem(dt))
-            self.history_table.setItem(i, 1, QTableWidgetItem(sess.get('city', '')))
+            time_item = QTableWidgetItem(dt)
+            time_item.setForeground(Qt.GlobalColor.gray)
+            self.history_table.setItem(i, 0, time_item)
+            
+            # Локация (City) - Accent color
+            city_item = QTableWidgetItem(sess.get('city', ''))
+            city_item.setForeground(Qt.GlobalColor.cyan)
+            self.history_table.setItem(i, 1, city_item)
+            
+            # Кол-во (Qty)
             self.history_table.setItem(i, 2, QTableWidgetItem(str(sess.get('total_qty', 0))))
             
+            # Инвестиции (Spent)
             total_spent = sess.get('total_spent', 0) or 0
-            spent_str = f"{total_spent:,}".replace(',', ' ')
-            self.history_table.setItem(i, 3, QTableWidgetItem(spent_str))
+            spent_str = f"{total_spent:,}".replace(',', ' ') + " Silver"
+            spent_item = QTableWidgetItem(spent_str)
+            spent_item.setForeground(Qt.GlobalColor.white)
+            self.history_table.setItem(i, 3, spent_item)
             
-            # Ожидаемый доход (профит + потрачено)
+            # Ожидаемый доход (Revenue)
             total_profit = sess.get('total_profit', 0) or 0
             income_est = total_profit + total_spent
-            income_str = f"{income_est:,}".replace(',', ' ')
-            self.history_table.setItem(i, 4, QTableWidgetItem(income_str))
+            income_str = f"{income_est:,}".replace(',', ' ') + " Silver"
+            income_item = QTableWidgetItem(income_str)
+            income_item.setForeground(Qt.GlobalColor.white)
+            self.history_table.setItem(i, 4, income_item)
             
-            profit_str = f"{total_profit:,}".replace(',', ' ')
+            # Профит (Profit) - Success/Danger color
+            profit_str = f"{total_profit:,}".replace(',', ' ') + " Silver"
             prof_item = QTableWidgetItem(profit_str)
             if total_profit > 0:
                 prof_item.setForeground(Qt.GlobalColor.green)

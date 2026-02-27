@@ -131,12 +131,6 @@ class BaseBot(QThread):
 
     # === Shared Helpers ===
     
-    def _record_time(self, action_name: str, duration_ms: float):
-        if action_name not in self._action_timings:
-            self._action_timings[action_name] = {"total_ms": 0.0, "count": 0}
-        self._action_timings[action_name]["total_ms"] += duration_ms
-        self._action_timings[action_name]["count"] += 1
-
     def _check_market_is_open(self, handle_kicks: bool = True) -> bool:
         """Проверка, что окно рынка открыто (OCR Name)"""
         start_time = time.time()
@@ -308,10 +302,10 @@ class BaseBot(QThread):
             self._current_city = "Unknown"
             return
         
-        from ..utils.ocr import read_screen_text
+        from ..utils.ocr import read_screen_text_cached
         from difflib import get_close_matches
         
-        city_text = read_screen_text(area['x'], area['y'], area['w'], area['h'], lang='rus+eng')
+        city_text = read_screen_text_cached(area['x'], area['y'], area['w'], area['h'], lang='rus+eng')
         city_text = city_text.strip()
         self._record_time("OCR: Город", (time.time() - start_time) * 1000)
         
@@ -336,7 +330,7 @@ class BaseBot(QThread):
         # NOTE: Implementation copied from MarketBot, essential for Buyer too
         from difflib import SequenceMatcher
         import re
-        from ..utils.ocr import read_screen_text
+        from ..utils.ocr import read_screen_text_cached
         from ..utils.text_utils import normalize_text
         
         item_name_area = self.config.get_coordinate_area("item_name_area")
@@ -354,7 +348,7 @@ class BaseBot(QThread):
             self._check_pause()
             if self._stop_requested: return False
             
-            ocr_name = read_screen_text(
+            ocr_name = read_screen_text_cached(
                 item_name_area['x'], item_name_area['y'],
                 item_name_area['w'], item_name_area['h'],
                 lang='rus'

@@ -21,7 +21,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-from database import SessionLocal, License, init_db
+from database import SessionLocal, License, PurchaseSession, init_db
 
 # Get the directory where this file is located
 BASE_DIR = Path(__file__).resolve().parent
@@ -192,6 +192,16 @@ class HeartbeatRequest(BaseModel):
     key: str
     hwid: str
 
+class SessionReportRequest(BaseModel):
+    key: str
+    hwid: str
+    session_id: str
+    city: str = ""
+    items_bought: int = 0
+    total_spent: int = 0
+    total_profit_est: int = 0
+    duration_seconds: int = 0
+
 # NEW Response Model with Signature
 class SignedResponse(BaseModel):
     data: Dict[str, Any]
@@ -351,6 +361,54 @@ def generate_keys(request: Request, req: AdminGenerateRequest, db: Session = Dep
     
     return {"count": req.count, "keys": generated, "expires_at": str(expires)}
 
+# === TELEMETRY ENDPOINT ===
+
+@app.post("/api/v1/report-session")
+@limiter.limit("10/minute")
+def report_session(request: Request, req: SessionReportRequest, db: Session = Depends(get_db)):
+    """
+    Receives aggregated purchase session data from buyer clients.
+    Validates license key, deduplicates by session_id.
+    """
+    # Validate license key exists and is active
+    license_obj = db.query(License).filter(License.key == req.key).first()
+    if not license_obj:
+        return JSONResponse(status_code=403, content={"status": "error", "message": "Invalid key"})
+    
+    if not license_obj.is_active:
+        return JSONResponse(status_code=403, content={"status": "error", "message": "Key disabled"})
+    
+    if license_obj.hwid and license_obj.hwid != req.hwid:
+        return JSONResponse(status_code=403, content={"status": "error", "message": "HWID mismatch"})
+    
+    # Skip empty sessions
+    if req.items_bought <= 0:
+        return {"status": "skipped", "message": "No items bought"}
+    
+    # Dedup: check if session_id already exists
+    existing = db.query(PurchaseSession).filter(PurchaseSession.session_id == req.session_id).first()
+    if existing:
+        return {"status": "duplicate", "message": "Session already reported"}
+    
+    # Save session
+    client_ip = get_real_ip(request)
+    session = PurchaseSession(
+        session_id=req.session_id,
+        license_key=req.key,
+        city=req.city,
+        items_bought=req.items_bought,
+        total_spent=req.total_spent,
+        total_profit_est=req.total_profit_est,
+        duration_seconds=req.duration_seconds,
+        client_ip=client_ip
+    )
+    db.add(session)
+    db.commit()
+    
+    logger.info(f"{client_ip} | REPORT | {req.city} | {req.items_bought} items | {req.total_spent} silver | profit {req.total_profit_est}")
+    
+    return {"status": "ok", "message": "Session recorded"}
+
 # === ADMIN PANEL ROUTES ===
 
 # --- JWT Authentication (Replaces in-memory sessions) ---
@@ -468,6 +526,85 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
         "expired_keys": expired,
         "unbound_keys": unbound,
         "online_users": online_users
+    })
+
+@app.get("/admin/stats", response_class=HTMLResponse)
+def admin_stats(request: Request, days: int = 30, db: Session = Depends(get_db)):
+    """Purchase statistics page with KPI cards and session table"""
+    if not verify_admin_session(request):
+        return RedirectResponse("/admin/login", status_code=302)
+    
+    now = datetime.utcnow()
+    
+    # --- License Stats ---
+    all_licenses = db.query(License).all()
+    total_users = sum(1 for l in all_licenses if l.is_active and l.hwid and l.expires_at > now)
+    five_min_ago = now - timedelta(minutes=5)
+    online_users = sum(1 for l in all_licenses if l.last_seen and l.last_seen >= five_min_ago)
+    
+    # --- Purchase Stats (period filter) ---
+    period_start = now - timedelta(days=days)
+    
+    # All-time aggregates
+    from sqlalchemy import func
+    all_time = db.query(
+        func.coalesce(func.sum(PurchaseSession.total_spent), 0),
+        func.coalesce(func.sum(PurchaseSession.total_profit_est), 0),
+        func.coalesce(func.sum(PurchaseSession.items_bought), 0),
+        func.count(PurchaseSession.id)
+    ).first()
+    
+    # Period aggregates
+    period = db.query(
+        func.coalesce(func.sum(PurchaseSession.total_spent), 0),
+        func.coalesce(func.sum(PurchaseSession.total_profit_est), 0),
+        func.coalesce(func.sum(PurchaseSession.items_bought), 0),
+        func.count(PurchaseSession.id)
+    ).filter(PurchaseSession.timestamp >= period_start).first()
+    
+    # Today aggregates
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    today = db.query(
+        func.coalesce(func.sum(PurchaseSession.total_spent), 0),
+        func.coalesce(func.sum(PurchaseSession.total_profit_est), 0),
+        func.coalesce(func.sum(PurchaseSession.items_bought), 0)
+    ).filter(PurchaseSession.timestamp >= today_start).first()
+    
+    # Sessions list (period, limited to 100)
+    sessions = db.query(PurchaseSession).filter(
+        PurchaseSession.timestamp >= period_start
+    ).order_by(PurchaseSession.timestamp.desc()).limit(100).all()
+    
+    # Compute derived fields for each session
+    for s in sessions:
+        s.revenue = s.total_spent + s.total_profit_est  # Expected revenue
+        s.margin = round((s.total_profit_est / s.total_spent * 100), 1) if s.total_spent > 0 else 0
+    
+    return templates.TemplateResponse("stats.html", {
+        "request": request,
+        "session_active": True,
+        "days": days,
+        # All-time KPIs
+        "total_spent_all": all_time[0],
+        "total_profit_all": all_time[1],
+        "total_items_all": all_time[2],
+        "total_sessions_all": all_time[3],
+        # Period KPIs
+        "total_spent": period[0],
+        "total_profit": period[1],
+        "total_items": period[2],
+        "total_sessions": period[3],
+        "total_investment": period[0],  # alias
+        "total_revenue": period[0] + period[1],  # spent + profit = expected revenue
+        # Today
+        "today_spent": today[0],
+        "today_profit": today[1],
+        "today_items": today[2],
+        # Users
+        "total_users": total_users,
+        "online_users": online_users,
+        # Sessions table
+        "sessions": sessions,
     })
 
 @app.get("/admin/licenses", response_class=HTMLResponse)

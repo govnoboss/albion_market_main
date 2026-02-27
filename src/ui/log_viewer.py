@@ -16,12 +16,12 @@ class LogViewer(QTextEdit):
         
         # Дефолтные цвета уровней
         self.color_map = {
-            "debug": COLORS.get("text_secondary", "#8b949e"),
-            "info": COLORS.get("text_primary", "#f0f6fc"),
+            "debug": COLORS.get("text_dark", "#6e7681"),
+            "info": COLORS.get("text", "#ffffff"),
             "warning": COLORS.get("warning", "#d29922"),
-            "success": COLORS.get("success", "#3fb950"),
-            "error": COLORS.get("error", "#f85149"),
-            "critical": COLORS.get("error", "#f85149"),
+            "success": COLORS.get("accent", "#00ff9d"),
+            "error": COLORS.get("danger", "#ff4a4a"),
+            "critical": COLORS.get("danger", "#ff4a4a"),
         }
 
     def connect_logger(self):
@@ -53,13 +53,13 @@ class LogPanel(QFrame):
     def __init__(self, parent=None, title="📋 ЛОГ СОБЫТИЙ", placeholder="Ожидание логов..."):
         super().__init__(parent)
         
-        # Стиль рамки (как в MainWindow)
-        self.setStyleSheet("""
-            QFrame { 
-                background-color: #161b22; 
-                border: 1px solid #30363d; 
-                border-radius: 8px; 
-            }
+        # Стиль рамки
+        self.setStyleSheet(f"""
+            QFrame {{ 
+                background-color: {COLORS['bg_card']}; 
+                border: 1px solid {COLORS['border']}; 
+                border-radius: 12px; 
+            }}
         """)
         
         layout = QVBoxLayout(self)
@@ -68,7 +68,7 @@ class LogPanel(QFrame):
         
         # Заголовок
         self.header = QLabel(title)
-        self.header.setStyleSheet("font-size: 13px; font-weight: 600; color: #8b949e; border: none; background: transparent;")
+        self.header.setStyleSheet(f"font-size: 11px; font-weight: 700; color: {COLORS['text_dark']}; text-transform: uppercase; letter-spacing: 1px; border: none; background: transparent; padding-top: 5px;")
         layout.addWidget(self.header)
         
         # Сам лог

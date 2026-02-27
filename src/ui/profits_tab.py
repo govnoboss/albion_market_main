@@ -6,12 +6,12 @@ import re
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
     QTableWidget, QTableWidgetItem, QHeaderView, 
-    QComboBox, QPushButton, QMessageBox
+    QComboBox, QPushButton, QMessageBox, QAbstractItemView
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from ..utils.price_storage import get_price_storage
 from ..utils.logger import get_logger
-from .styles import PROFITS_STYLE
+from .styles import PROFITS_STYLE, PRICES_STYLE
 
 logger = get_logger()
 
@@ -144,6 +144,13 @@ class ProfitsTab(QWidget):
         self.clean_btn.clicked.connect(self.request_clean_history)
         controls_layout.addWidget(self.clean_btn)
         
+        # Кнопка удаления выбранного
+        self.delete_btn = QPushButton("🗑️ Удалить")
+        self.delete_btn.setStyleSheet(PRICES_STYLE["btn_delete"])
+        self.delete_btn.setEnabled(False)
+        self.delete_btn.clicked.connect(self.delete_selected_record)
+        controls_layout.addWidget(self.delete_btn)
+        
         controls_layout.addStretch()
         layout.addLayout(controls_layout)
         
@@ -158,8 +165,13 @@ class ProfitsTab(QWidget):
         
         # Включаем сортировку
         self.table.setSortingEnabled(True)
-        # Подключаем сигнал изменения ячейки
+        # Подключаем сигналы
         self.table.itemChanged.connect(self.on_item_changed)
+        self.table.itemSelectionChanged.connect(self.update_delete_button_state)
+        
+        # Настройка поведения выделения
+        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         
         # Стилизация таблицы и редактора
         self.table.setStyleSheet(PROFITS_STYLE["table"])
@@ -271,12 +283,19 @@ class ProfitsTab(QWidget):
             self.table.setRowCount(len(rows))
             
             for r, row in enumerate(rows):
-                self.table.setItem(r, 0, QTableWidgetItem(row['name']))
-                self.table.setItem(r, 1, QTableWidgetItem(row['variant']))
+                # Columns: 0:Name, 1:Variant, 2:Sell, 3:Buy, 4:Profit, 5:%, 6:Updated
+                
+                # Non-editable items
+                name_item = QTableWidgetItem(row['name'])
+                name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                self.table.setItem(r, 0, name_item)
+                
+                variant_item = QTableWidgetItem(row['variant'])
+                variant_item.setFlags(variant_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                self.table.setItem(r, 1, variant_item)
                 
                 # Format Prices (Editable)
                 sell_item = NumericTableWidgetItem(f"{row['sell_price']:,}")
-                # Разрешаем редактирование
                 sell_item.setFlags(sell_item.flags() | Qt.ItemFlag.ItemIsEditable) 
                 self.table.setItem(r, 2, sell_item)
                 
@@ -284,24 +303,27 @@ class ProfitsTab(QWidget):
                 buy_item.setFlags(buy_item.flags() | Qt.ItemFlag.ItemIsEditable)
                 self.table.setItem(r, 3, buy_item)
                 
-                # Profit Color
+                # Profit Color (Non-editable)
                 profit_item = NumericTableWidgetItem(f"{row['profit']:,}")
-                # Profit не редактируем
+                profit_item.setFlags(profit_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 if row['profit'] > 0:
                     profit_item.setForeground(Qt.GlobalColor.green)
                 else:
                     profit_item.setForeground(Qt.GlobalColor.red)
                 self.table.setItem(r, 4, profit_item)
                 
-                # Percent
+                # Percent (Non-editable)
                 pct_item = NumericTableWidgetItem(f"{row['percent']:.1f}%")
+                pct_item.setFlags(pct_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 if row['percent'] > 0:
                     pct_item.setForeground(Qt.GlobalColor.green)
                 else:
                     pct_item.setForeground(Qt.GlobalColor.red)
                 self.table.setItem(r, 5, pct_item)
                 
-                self.table.setItem(r, 6, QTableWidgetItem(row['updated']))
+                updated_item = QTableWidgetItem(row['updated'])
+                updated_item.setFlags(updated_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                self.table.setItem(r, 6, updated_item)
             
             # 3. Optimize Column Widths (Once!)
             self.table.resizeColumnsToContents()
@@ -331,6 +353,41 @@ class ProfitsTab(QWidget):
                 self.refresh_data()
             else:
                 QMessageBox.information(self, "Очистка", "Нет старых записей для удаления.")
+
+    def update_delete_button_state(self):
+        """Toggle delete button based on selection"""
+        self.delete_btn.setEnabled(len(self.table.selectionModel().selectedRows()) > 0)
+
+    def delete_selected_record(self):
+        """Delete selected row from DB and UI"""
+        selected_rows = self.table.selectionModel().selectedRows()
+        if not selected_rows:
+            return
+            
+        row_idx = selected_rows[0].row()
+        item_name = self.table.item(row_idx, 0).text()
+        variant_key = self.table.item(row_idx, 1).text()
+        
+        confirm = QMessageBox.question(
+            self, 
+            "Удаление записи", 
+            f"Вы уверены, что хотите удалить запись:\n\n{item_name} ({variant_key})?\n\nБудут удалены цены для ОБОИХ городов в этой строке.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        
+        if confirm == QMessageBox.StandardButton.Yes:
+            buy_city = self.buy_city_combo.currentText()
+            sell_city = self.sell_city_combo.currentText()
+            
+            # Удаляем из обоих городов
+            self.storage.delete_price(buy_city, item_name, variant_key)
+            self.storage.delete_price(sell_city, item_name, variant_key)
+            
+            self._is_updating = True
+            try:
+                self.table.removeRow(row_idx)
+            finally:
+                self._is_updating = False
 
     def on_item_changed(self, item):
         """Handle price editing in real-time"""

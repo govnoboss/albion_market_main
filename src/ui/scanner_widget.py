@@ -57,14 +57,8 @@ class ScannerWidget(QWidget):
         
         layout.addLayout(header)
 
-        # Content Tabs
+        # Content Tabs (Custom style removed, uses global)
         self.tabs = QTabWidget()
-        self.tabs.setStyleSheet(f"""
-            QTabWidget::pane {{ border: 1px solid {COLORS['border']}; border-radius: 8px; background: {COLORS['bg_card']}; }}
-            QTabBar::tab {{ background: {COLORS['bg']}; color: {COLORS['text_dark']}; padding: 8px 20px; border: 1px solid {COLORS['border']}; }}
-            QTabBar::tab:selected {{ background: {COLORS['bg_card']}; color: {COLORS['accent']}; font-weight: bold; }}
-            QTabBar::tab:hover {{ background: {COLORS['item_bg']}; }}
-        """)
         
         # Tab 1: Control & Logs
         mgmt_tab = QWidget()
@@ -84,13 +78,6 @@ class ScannerWidget(QWidget):
         
         # Tab 2: Items & Exclusions
         self.items_tab = ItemsPanel()
-        # Override items panel style to match dashboard
-        self.items_tab.setStyleSheet(f"""
-            QWidget {{ background: transparent; color: {COLORS['text']}; }}
-            QListWidget {{ background: {COLORS['bg']}; border: 1px solid {COLORS['border']}; border-radius: 6px; }}
-            QLineEdit {{ background: {COLORS['bg']}; border: 1px solid {COLORS['border']}; color: {COLORS['text']}; padding: 5px; }}
-            QGroupBox {{ font-weight: bold; color: {COLORS['text']}; border: 1px solid {COLORS['border']}; margin-top: 10px; }}
-        """)
         self.tabs.addTab(self.items_tab, "📚 База и Исключения")
         
         layout.addWidget(self.tabs)
@@ -144,6 +131,10 @@ class ScannerWidget(QWidget):
     def _on_bot_finished(self):
         self.control_panel.set_running_state(False)
         self.mini_overlay.update_status(False, False)
+        # Clear logs on session finish
+        self.log_panel.clear()
+        if self.log_overlay:
+            self.log_overlay.clear_logs()
         self.log_overlay.hide()
         self._restore_from_mini()
 

@@ -147,7 +147,7 @@ This system provides **Basic Protection** suitable for preventing casual sharing
 
 2.  **Server Emulation (DNS Spoofing):**
     *   The client trusts the response from `SERVER_URL`. A user could modify their `hosts` file to redirect `gbot-license.fly.dev` to `127.0.0.1` and run a local server that mimics the API and returns `{"status": "valid"}`.
-    *   *Mitigation:* Implement **Response Signing**. The server should sign the JSON response with a private RSA key, and the client should verify it with a hardcoded public key.
+    *   *Mitigation (✅ Реализовано):* **Response Signing** реализована. Сервер подписывает JSON-ответы приватным RSA-ключом, клиент верифицирует подпись встроенным публичным ключом (см. раздел 7 и `src/core/license.py`).
 
 3.  **Time Manipulation:**
     *   The `should_check_today()` logic relies on a local file (`.last_check`) and the system clock. A user could freeze their system time or manipulate the file to prevent re-validation.

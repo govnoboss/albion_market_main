@@ -2,7 +2,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
     QPushButton, QGroupBox, QSpinBox, QComboBox, QCheckBox,
-    QMessageBox, QTabWidget
+    QMessageBox, QTabWidget, QGridLayout
 )
 from .styles import MAIN_STYLE, COLORS
 from .log_viewer import LogPanel
@@ -62,55 +62,59 @@ class BuyerWidget(QWidget):
         
         layout.addLayout(header)
 
-        # Content Tabs
+        # Content Tabs (Custom style removed, uses global)
         self.tabs = QTabWidget()
-        self.tabs.setStyleSheet(f"""
-            QTabWidget::pane {{ border: 1px solid {COLORS['border']}; border-radius: 8px; background: {COLORS['bg_card']}; }}
-            QTabBar::tab {{ background: {COLORS['bg']}; color: {COLORS['text_dark']}; padding: 8px 20px; border: 1px solid {COLORS['border']}; }}
-            QTabBar::tab:selected {{ background: {COLORS['bg_card']}; color: {COLORS['accent']}; font-weight: bold; }}
-            QTabBar::tab:hover {{ background: {COLORS['item_bg']}; }}
-        """)
         
         # Tab 1: Control & Logs
         mgmt_tab = QWidget()
         mgmt_layout = QVBoxLayout(mgmt_tab)
         
         # Controls Group
-        ctrl_group = QGroupBox("Управление")
+        ctrl_group = QGroupBox("Параметры закупки")
         ctrl_layout = QVBoxLayout(ctrl_group)
+        ctrl_layout.setSpacing(15)
         
-        row1 = QHBoxLayout()
-        row1.addWidget(QLabel("Бюджет:"))
+        # Grid for city selection
+        grid = QGridLayout()
+        grid.addWidget(QLabel("Бюджет:"), 0, 0)
         self.budget_spin = BudgetSpinBox()
         self.budget_spin.setRange(0, 999_999_999)
         self.budget_spin.lineEdit().setPlaceholderText("Безлимит")
-        row1.addWidget(self.budget_spin)
+        grid.addWidget(self.budget_spin, 0, 1)
         
-        row1.addWidget(QLabel("Купить в:"))
+        grid.addWidget(QLabel("Купить в:"), 1, 0)
         self.buy_city_combo = QComboBox()
-        row1.addWidget(self.buy_city_combo)
+        grid.addWidget(self.buy_city_combo, 1, 1)
         
-        row1.addWidget(QLabel("Продать в:"))
+        grid.addWidget(QLabel("Продать в:"), 2, 0)
         self.sell_city_combo = QComboBox()
-        row1.addWidget(self.sell_city_combo)
-        ctrl_layout.addLayout(row1)
+        grid.addWidget(self.sell_city_combo, 2, 1)
+        ctrl_layout.addLayout(grid)
         
-        self.smart_mode_check = QCheckBox("🧠 Умный закупщик (Smart Buyer)")
-        ctrl_layout.addWidget(self.smart_mode_check)
+        # Smart Mode Section
+        smart_layout = QVBoxLayout()
+        self.smart_mode_check = QCheckBox(" Сортировать по чистому профиту серебра")
+        smart_layout.addWidget(self.smart_mode_check)
         
-        self.sort_by_percent_check = QCheckBox("   📊 Сортировать по % профита")
+        self.sort_by_percent_check = QCheckBox(" Сортировать по % профита")
         self.sort_by_percent_check.setStyleSheet(f"color: {COLORS['text_dark']}; margin-left: 20px;")
         self.sort_by_percent_check.setVisible(False)
         self.smart_mode_check.toggled.connect(self.sort_by_percent_check.setVisible)
-        ctrl_layout.addWidget(self.sort_by_percent_check)
+        smart_layout.addWidget(self.sort_by_percent_check)
+        ctrl_layout.addLayout(smart_layout)
         
+        # Action Buttons
         self.start_btn = QPushButton("▶ ЗАПУСТИТЬ")
         self.start_btn.setObjectName("primary")
+        self.start_btn.setMinimumHeight(45)
+        self.start_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.start_btn.clicked.connect(self._on_start_clicked)
         ctrl_layout.addWidget(self.start_btn)
         
         self.stop_btn = QPushButton("🛑 ОСТАНОВИТЬ")
         self.stop_btn.setObjectName("danger")
+        self.stop_btn.setMinimumHeight(45)
+        self.stop_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.stop_btn.setVisible(False)
         self.stop_btn.clicked.connect(self._on_stop_clicked)
         ctrl_layout.addWidget(self.stop_btn)
@@ -206,6 +210,10 @@ class BuyerWidget(QWidget):
         self.start_btn.setVisible(True)
         self.stop_btn.setVisible(False)
         self.overlay.hide()
+        # Clear logs on session finish
+        self.log_panel.clear()
+        if self.log_overlay:
+            self.log_overlay.clear_logs()
         self.log_overlay.hide()
         self._restore_from_mini()
 

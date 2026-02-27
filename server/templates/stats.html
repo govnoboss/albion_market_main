@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Статистика - GBot Admin{% endblock %}
+
+{% block content %}
+<div class="stats-page">
+    <!-- Header -->
+    <div class="stats-header">
+        <div>
+            <h1>📊 Live Flippers</h1>
+            <p class="text-muted">Admin Dashboard</p>
+        </div>
+        <div class="stats-header-right">
+            <div class="period-selector">
+                <a href="/admin/stats?days=1" class="period-btn {% if days == 1 %}active{% endif %}">1 День</a>
+                <a href="/admin/stats?days=7" class="period-btn {% if days == 7 %}active{% endif %}">7 Дней</a>
+                <a href="/admin/stats?days=30" class="period-btn {% if days == 30 %}active{% endif %}">1 Месяц</a>
+                <a href="/admin/stats?days=365" class="period-btn {% if days == 365 %}active{% endif %}">Всё время</a>
+            </div>
+            <div class="live-indicator">
+                <span class="live-dot"></span> LIVE
+            </div>
+        </div>
+    </div>
+
+    <!-- Primary KPI Row -->
+    <div class="kpi-grid primary">
+        <div class="kpi-card">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-content">
+                <div class="kpi-label">TOTAL REVENUE</div>
+                <div class="kpi-value accent-green">{{ "{:,.0f}".format(total_revenue) }} Silver</div>
+                <div class="kpi-sub">Last {{ days }} Days</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon">📈</div>
+            <div class="kpi-content">
+                <div class="kpi-label">TOTAL PROFIT</div>
+                <div class="kpi-value accent-cyan">{{ "{:,.0f}".format(total_profit) }} Silver</div>
+                <div class="kpi-sub">Net Earnings</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon">💼</div>
+            <div class="kpi-content">
+                <div class="kpi-label">TOTAL INVESTMENT</div>
+                <div class="kpi-value accent-yellow">{{ "{:,.0f}".format(total_investment) }} Silver</div>
+                <div class="kpi-sub">Capital Deployed</div>
+            </div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon">📦</div>
+            <div class="kpi-content">
+                <div class="kpi-label">ITEMS TRADED</div>
+                <div class="kpi-value accent-purple">{{ "{:,.0f}".format(total_items) }}</div>
+                <div class="kpi-sub">Total Transactions</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Secondary KPI Row -->
+    <div class="kpi-grid secondary">
+        <div class="kpi-card-sm">
+            <div class="kpi-sm-label">Total Users • Active Now</div>
+            <div class="kpi-sm-value">{{ total_users }} • <span class="accent-green">{{ online_users }}</span></div>
+        </div>
+        <div class="kpi-card-sm">
+            <div class="kpi-sm-label">Avg Margin</div>
+            <div class="kpi-sm-value">
+                {% if total_spent > 0 %}
+                {{ "%.1f"|format(total_profit / total_spent * 100) }}%
+                {% else %}
+                0%
+                {% endif %}
+                <span class="accent-green">↑</span>
+            </div>
+        </div>
+        <div class="kpi-card-sm">
+            <div class="kpi-sm-label">Sessions</div>
+            <div class="kpi-sm-value">{{ total_sessions }}</div>
+        </div>
+        <div class="kpi-card-sm">
+            <div class="kpi-sm-label">Today Daily Volume</div>
+            <div class="kpi-sm-value accent-green">{{ "{:,.0f}".format(today_spent) }} Silver</div>
+        </div>
+        <div class="kpi-card-sm">
+            <div class="kpi-sm-label">Today Profit</div>
+            <div class="kpi-sm-value accent-cyan">{{ "{:,.0f}".format(today_profit) }} Silver</div>
+        </div>
+    </div>
+
+    <!-- Sessions Table -->
+    <div class="stats-content">
+        <div class="sessions-section">
+            <h2>Purchase Sessions</h2>
+            <div class="sessions-table-wrap">
+                <table class="sessions-table">
+                    <thead>
+                        <tr>
+                            <th>TIME</th>
+                            <th>LOCATION</th>
+                            <th>ITEMS</th>
+                            <th>INVESTMENT</th>
+                            <th>REVENUE</th>
+                            <th>PROFIT</th>
+                            <th>MARGIN</th>
+                            <th>IP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in sessions %}
+                        <tr>
+                            <td class="td-time">{{ s.timestamp.strftime('%m/%d %H:%M') }}</td>
+                            <td class="td-city"><span class="city-badge">{{ s.city or '—' }}</span></td>
+                            <td class="td-items"><span class="accent-purple">{{ "{:,}".format(s.items_bought) }}</span>
+                            </td>
+                            <td class="td-silver">{{ "{:,}".format(s.total_spent) }} Silver</td>
+                            <td class="td-silver accent-cyan">{{ "{:,}".format(s.revenue) }} Silver</td>
+                            <td class="td-profit accent-green">{{ "{:,}".format(s.total_profit_est) }} Silver</td>
+                            <td class="td-margin">
+                                <span
+                                    class="{% if s.margin >= 25 %}accent-green{% elif s.margin >= 15 %}accent-yellow{% else %}accent-red{% endif %}">
+                                    {{ s.margin }}%
+                                </span>
+                            </td>
+                            <td class="td-ip">{{ s.client_ip or '—' }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% if not sessions %}
+                        <tr>
+                            <td colspan="8" class="empty-state">Нет данных за выбранный период</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

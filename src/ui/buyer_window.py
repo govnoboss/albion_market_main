@@ -250,12 +250,12 @@ class BuyerWindow(QMainWindow):
         ctrl_layout.addLayout(city_group)
 
         # Режимы
-        self.smart_mode_check = QCheckBox("🧠 Умный закупщик (Smart Buyer)")
+        self.smart_mode_check = QCheckBox("Сортировать по чистому профиту серебра")
         self.smart_mode_check.setToolTip("Покупать самые выгодные товары на основе сканирования,\nа не по фиксированному списку.")
         self.smart_mode_check.setStyleSheet("color: #c9d1d9; font-weight: bold; padding: 4px;")
         ctrl_layout.addWidget(self.smart_mode_check)
         
-        self.sort_by_percent_check = QCheckBox("   📊 Сортировать по % профита")
+        self.sort_by_percent_check = QCheckBox("Сортировать по % профита")
         self.sort_by_percent_check.setStyleSheet("color: #8b949e; margin-left: 20px;")
         self.sort_by_percent_check.setVisible(False)
         ctrl_layout.addWidget(self.sort_by_percent_check)

@@ -124,7 +124,6 @@ class MarketBot(BaseBot):
             i += 1
                 
         self.logger.info("Цикл сканирования завершен")
-        self._print_statistics()
         self._is_running = False
         self.finished.emit()
 
@@ -1135,55 +1134,6 @@ class MarketBot(BaseBot):
         # self.logger.warning(f"⏰ Таймаут ожидания цены! (Old: {old_price}). Возвращаем 0.")
         return 0
 
-    def _print_statistics(self):
-        """Вывод статистики времени в логи"""
-        if not self._action_timings:
-            self.logger.info("Нет статистики действий.")
-            return
-            
-        self.logger.info("📊 СТАТИСТИКА ВРЕМЕНИ:")
-        self.logger.info("─" * 60)
-        self.logger.info(f"{'Действие':<25} {'Всего':<12} {'Кол-во':<8} {'Среднее':<10}")
-        self.logger.info("─" * 60)
-        
-        # Сортируем по общему времени (убывание)
-        sorted_actions = sorted(
-            self._action_timings.items(),
-            key=lambda x: x[1]["total_ms"],
-            reverse=True
-        )
-        
-        total_time = 0.0
-        for action, stats in sorted_actions:
-            total_ms = stats["total_ms"]
-            count = stats["count"]
-            avg_ms = total_ms / count if count > 0 else 0
-            total_time += total_ms
-            
-            # Форматирование
-            if total_ms >= 1000:
-                total_str = f"{total_ms/1000:.2f} сек"
-            else:
-                total_str = f"{total_ms:.0f} мс"
-                
-            if avg_ms >= 1000:
-                avg_str = f"{avg_ms/1000:.2f} сек"
-            else:
-                avg_str = f"{avg_ms:.0f} мс"
-                
-            self.logger.info(f"{action:<25} {total_str:<12} {count:<8} {avg_str:<10}")
-        
-        self.logger.info("─" * 60)
-        self.logger.info(f"{'ИТОГО':<25} {total_time/1000:.2f} сек")
-        self.logger.info("─" * 60)
-        
-        if self._suspicious_reports:
-             self.logger.warning("\n⚠️ ОТЧЕТ О ПОДОЗРИТЕЛЬНЫХ ПРЕДМЕТАХ (COLLISIONS):")
-             self.logger.warning("Возможно, цены не обновились корректно для:")
-             for item, variants, price in self._suspicious_reports:
-                 self.logger.warning(f"  • {item}: {variants} (Цена: {price})")
-        
-        self.logger.info("Сканирование завершено.")
 
     def _verify_price_collisions(self, prices_map: dict):
         """

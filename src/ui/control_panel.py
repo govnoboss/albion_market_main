@@ -7,13 +7,14 @@ from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
     QPushButton, QGroupBox, QProgressBar, QMessageBox,
-    QSpinBox, QStyle
+    QSpinBox, QStyle, QGridLayout
 )
 import os
 import pyautogui
 
 from ..utils.config import get_config
 from ..utils.logger import get_logger
+from .styles import COLORS
 
 
 class ControlPanel(QWidget):
@@ -39,10 +40,13 @@ class ControlPanel(QWidget):
         status_layout = QVBoxLayout(status_group)
         
         status_row = QHBoxLayout()
-        status_row.addWidget(QLabel("Состояние:"))
+        status_lbl = QLabel("Состояние:")
+        status_lbl.setStyleSheet(f"color: {COLORS['text_dark']}; font-weight: 700; font-size: 11px; text-transform: uppercase;")
+        status_row.addWidget(status_lbl)
+        
         self.status_label = QLabel("Ожидание")
         self.status_label.setObjectName("statusReady")
-        self.status_label.setStyleSheet("color: #8b949e; font-weight: 600;")
+        self.status_label.setStyleSheet(f"color: {COLORS['text_dark']}; font-weight: 700; font-size: 11px; text-transform: uppercase;")
         status_row.addWidget(self.status_label)
         status_row.addStretch()
         status_layout.addLayout(status_row)
@@ -86,17 +90,17 @@ class ControlPanel(QWidget):
         self.refresh_resume_button()
         
         
-        # Кнопка СТАРТ
-        self.start_btn = QPushButton("▶ Старт")
+        self.start_btn = QPushButton("▶ ЗАПУСТИТЬ")
         self.start_btn.setObjectName("primary")
-        self.start_btn.setMinimumHeight(45)
+        self.start_btn.setMinimumHeight(50)
+        self.start_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.start_btn.clicked.connect(self.start_clicked.emit)
         controls_layout.addWidget(self.start_btn)
         
-        # Кнопка СТОП (Скрыта по умолчанию)
-        self.stop_btn = QPushButton("⏹ ОСТАНОВИТЬ (F5)")
+        self.stop_btn = QPushButton("🛑 ОСТАНОВИТЬ (F5)")
         self.stop_btn.setObjectName("danger")
-        self.stop_btn.setMinimumHeight(45)
+        self.stop_btn.setMinimumHeight(50)
+        self.stop_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.stop_btn.setVisible(False)
         self.stop_btn.clicked.connect(self.stop_clicked.emit)
         controls_layout.addWidget(self.stop_btn)
@@ -118,7 +122,6 @@ class ControlPanel(QWidget):
     def refresh_resume_button(self):
         """Обновить кнопку 'Продолжить' на основе сохраненного прогресса"""
         try:
-            from .styles import COLORS
             last_index = get_config().get_setting("last_scan_index", 0)
             if last_index > 0:
                 resume_item = last_index + 1
@@ -137,16 +140,16 @@ class ControlPanel(QWidget):
         self.stop_btn.setVisible(self._is_running)
         
         if not self._is_running:
-            self.status_label.setText("Остановлен")
-            self.status_label.setStyleSheet("color: #8b949e; font-weight: 600;")
+            self.status_label.setText("Ожидание")
+            self.status_label.setStyleSheet(f"color: {COLORS['text_dark']}; font-weight: 700; font-size: 11px; text-transform: uppercase;")
             self.progress_bar.setValue(0)
             self.progress_bar.setFormat("Ожидание...")
         elif self._is_paused:
             self.status_label.setText("На паузе")
-            self.status_label.setStyleSheet("color: #d29922; font-weight: 600;")
+            self.status_label.setStyleSheet(f"color: {COLORS['warning']}; font-weight: 700; font-size: 11px; text-transform: uppercase;")
         else:
-            self.status_label.setText("Работает")
-            self.status_label.setStyleSheet("color: #3fb950; font-weight: 600;")
+            self.status_label.setText("В работе")
+            self.status_label.setStyleSheet(f"color: {COLORS['accent']}; font-weight: 700; font-size: 11px; text-transform: uppercase;")
     
     def update_progress(self, current: int, total: int, item_name: str = ""):
         if total > 0:

@@ -5,21 +5,23 @@
 
 # Цветовая палитра
 COLORS = {
-    "bg": "#0b120f",          # Black Emerald
-    "bg_card": "#151e1b",     # Dark Slate Teal
-    "sidebar": "#0d1613",     # Side panel
-    "accent": "#10b981",      # Emerald Green
+    "bg": "#0b0f0d",          # Deep Onyx Emerald
+    "bg_card": "#121916",     # Dark Card Background
+    "sidebar": "#090d0b",     # Darker Sidebar
+    "accent": "#10b981",      # Pure Emerald
     "accent_hover": "#34d399", 
-    "accent_soft": "rgba(16, 185, 129, 0.1)",
-    "accent_glow": "rgba(16, 185, 129, 0.25)",
-    "text": "#f0fdf4",        # Minty White
-    "text_dark": "#94a3b8",   # Slate Grey
-    "border": "#1e2923",      # Dark border
+    "accent_soft": "rgba(16, 185, 129, 0.08)",
+    "accent_glow": "rgba(16, 185, 129, 0.2)",
+    "text": "#e2e8f0",        # Soft White
+    "text_dark": "#64748b",   # Slate Grey
+    "text_muted": "#475569",  # Muted Grey
+    "border": "#1e2923",      # Subtle Border
     "border_bright": "#2d3c35",
-    "danger": "#ef4444",      # Red
-    "success": "#10b981",     # Success Green
-    "warning": "#f59e0b",     # Gold/Amber
-    "item_bg": "#1a2521",     # Item row background
+    "danger": "#f43f5e",      # Rose Red
+    "success": "#10b981",     # Success Emerald
+    "warning": "#f59e0b",     # Amber
+    "item_bg": "#161f1b",     # Row background
+    "silver": "#94a3b8",      # Silver color
 }
 
 MAIN_STYLE = f"""
@@ -35,47 +37,51 @@ QMainWindow, QWidget {{
 
 /* KPI Cards */
 QFrame#kpiCard {{
-    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1a2521, stop:1 #151e1b);
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1a2521, stop:1 #121916);
     border: 1px solid {COLORS['border']};
-    border-radius: 20px;
-    padding: 5px; /* Internal content padding handled by layouts */
+    border-radius: 12px;
 }}
 
 QFrame#kpiCard:hover {{
-    border: 1px solid {COLORS['accent']};
-    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1e2923, stop:1 #1a2521);
+    border: 1px solid {COLORS['accent_glow']};
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1e2d27, stop:1 #151e1b);
+}}
+
+QFrame#kpiCard QLabel {{
+    background: transparent;
 }}
 
 QFrame#iconContainer {{
     background-color: {COLORS['accent_soft']};
-    border-radius: 14px;
-    min-width: 48px;
-    max-width: 48px;
-    min-height: 48px;
-    max-height: 48px;
+    border-radius: 8px;
+    min-width: 42px;
+    max-width: 42px;
+    min-height: 42px;
+    max-height: 42px;
 }}
 
 QLabel#kpiIcon {{
-    font-size: 22px;
+    font-size: 18px;
     background: transparent;
 }}
 
 QLabel#kpiTitle {{
     color: {COLORS['text_dark']};
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.8px;
+    letter-spacing: 1px;
 }}
 
 QLabel#kpiValue {{
     color: {COLORS['text']};
-    font-size: 28px;
+    font-size: 26px;
     font-weight: 800;
+    letter-spacing: -0.5px;
 }}
 
 QLabel#kpiSubtext {{
-    color: {COLORS['accent']};
+    color: {COLORS['text_muted']};
     font-size: 11px;
     font-weight: 500;
 }}
@@ -84,30 +90,38 @@ QLabel#kpiSubtext {{
 QFrame#summaryBox {{
     background-color: {COLORS['bg_card']};
     border: 1px solid {COLORS['border']};
-    border-radius: 16px;
-    padding: 20px;
+    border-radius: 12px;
+    padding: 10px;
+}}
+
+QFrame#summaryBox QLabel {{
+    background: transparent;
 }}
 
 QLabel#summaryTitle {{
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 800;
     color: {COLORS['text']};
     text-transform: uppercase;
-    letter-spacing: 1.5px;
-    padding-bottom: 5px;
+    letter-spacing: 1.2px;
+    padding-bottom: 2px;
 }}
 
 QFrame#hotItemRow {{
-    background-color: #1a2521;
+    background-color: {COLORS['bg']};
     border: 1px solid {COLORS['border']};
-    border-radius: 10px;
-    padding: 10px;
-    margin-bottom: 8px;
+    border-radius: 8px;
+    padding: 8px;
+    margin-bottom: 5px;
 }}
 
 QFrame#hotItemRow:hover {{
-    border-color: {COLORS['border_bright']};
-    background-color: #1e2923;
+    border-color: {COLORS['accent_soft']};
+    background-color: #1a2521;
+}}
+
+QFrame#hotItemRow QLabel {{
+    background: transparent;
 }}
 
 QLabel#hotItemName {{
@@ -176,20 +190,35 @@ QLabel#sidebarTitle {{
 QTableWidget {{
     background-color: {COLORS['bg_card']};
     border: 1px solid {COLORS['border']};
-    border-radius: 12px;
-    gridline-color: rgba(255, 255, 255, 0.03);
-    padding: 5px;
+    border-radius: 10px;
+    gridline-color: rgba(255, 255, 255, 0.02);
+    font-size: 13px;
+}}
+
+QTableWidget::item {{
+    padding: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.01);
+}}
+
+QTableWidget QLineEdit {{
+    background-color: {COLORS['bg_card']} !important;
+    border: 1px solid {COLORS['accent']};
+    border-radius: 4px;
+    padding: 2px 5px;
+    margin: 0px;
+    color: {COLORS['text']};
+    selection-background-color: {COLORS['accent_soft']};
 }}
 
 QHeaderView::section {{
     background-color: transparent;
     border: none;
-    padding: 12px;
+    padding: 10px;
     font-weight: 700;
     font-size: 11px;
     text-transform: uppercase;
     color: {COLORS['text_dark']};
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
 }}
 
 /* Заголовки */
@@ -216,17 +245,108 @@ QPushButton#primary {{
     font-weight: bold;
 }}
 
-QPushButton#primary:hover {{
-    background-color: {COLORS['accent_hover']};
+QPushButton#danger:hover {{
+    background-color: {COLORS['danger_hover'] if 'danger_hover' in COLORS else '#c52d2a'};
 }}
 
-QPushButton#danger {{
-    background-color: {COLORS['danger']};
-    color: white;
-    border: none;
-    border-radius: 6px;
+/* Global Components */
+QTabWidget::pane {{
+    border: 1px solid {COLORS['border']};
+    border-radius: 12px;
+    background-color: {COLORS['bg_card']};
+    margin-top: -1px;
+}}
+
+QTabBar::tab {{
+    background-color: {COLORS['bg']};
+    color: {COLORS['text_dark']};
     padding: 10px 20px;
-    font-weight: bold;
+    border: 1px solid {COLORS['border']};
+    border-bottom: none;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    margin-right: 4px;
+    font-weight: 500;
+}}
+
+QTabBar::tab:selected {{
+    background-color: {COLORS['bg_card']};
+    color: {COLORS['accent']};
+    font-weight: 700;
+    border-bottom: none;
+}}
+
+QTabBar::tab:hover:!selected {{
+    background-color: {COLORS['bg_card']};
+    color: {COLORS['text']};
+}}
+
+QGroupBox {{
+    background-color: transparent;
+    border: 1px solid {COLORS['border']};
+    border-radius: 10px;
+    margin-top: 25px;
+    padding-top: 20px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: {COLORS['text_dark']};
+    letter-spacing: 0.8px;
+    font-size: 11px;
+}}
+
+QGroupBox::title {{
+    subcontrol-origin: margin;
+    left: 15px;
+    padding: 0 5px;
+}}
+
+/* Inputs */
+QLineEdit, QSpinBox, QComboBox {{
+    background-color: {COLORS['bg']};
+    border: 1px solid {COLORS['border']};
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: {COLORS['text']};
+    font-size: 13px;
+}}
+
+QLineEdit:hover, QSpinBox:hover, QComboBox:hover {{
+    border-color: {COLORS['accent_soft']};
+}}
+
+QLineEdit:focus, QSpinBox:focus, QComboBox:focus {{
+    border-color: {COLORS['accent']};
+    background-color: rgba(0, 255, 157, 0.02);
+}}
+
+QComboBox::drop-down {{
+    border: none;
+    width: 30px;
+}}
+
+QComboBox::down-arrow {{
+    image: none;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 5px solid {COLORS['text_dark']};
+    margin-right: 10px;
+}}
+
+/* Progress Bar */
+QProgressBar {{
+    background-color: {COLORS['bg']};
+    border: 1px solid {COLORS['border']};
+    border-radius: 4px;
+    text-align: center;
+    color: {COLORS['text']};
+    font-weight: 600;
+    font-size: 11px;
+    height: 18px;
+}}
+
+QProgressBar::chunk {{
+    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 {COLORS['accent_soft']}, stop:1 {COLORS['accent']});
+    border-radius: 3px;
 }}
 """
 

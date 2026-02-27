@@ -61,7 +61,7 @@ class ItemsPanel(QWidget):
         
         # Заголовок
         header = QLabel("📚 База предметов")
-        header.setStyleSheet("font-size: 16px; font-weight: bold; color: #f0f6fc;")
+        header.setObjectName("summaryTitle")
         layout.addWidget(header)
         
         # Описание
@@ -91,19 +91,12 @@ class ItemsPanel(QWidget):
         
         # === Список базы ===
         self.db_list = QListWidget()
-        self.db_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)  # Множественный выбор
+        self.db_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
         self.db_list.setDragEnabled(True)
         self.db_list.setAcceptDrops(True)
         self.db_list.setDropIndicatorShown(True)
         self.db_list.setDragDropMode(QListWidget.DragDropMode.InternalMove)
         self.db_list.model().rowsMoved.connect(self._save_database_order)
-        
-        self.db_list.setStyleSheet("""
-            QListWidget { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; }
-            QListWidget::item { padding: 8px; color: #f0f6fc; }
-            QListWidget::item:selected { background: #1f6feb; }
-            QListWidget::item:hover { background: #161b22; }
-        """)
         layout.addWidget(self.db_list)
         return tab
 
@@ -121,17 +114,10 @@ class ItemsPanel(QWidget):
 
     def _create_tier_group(self, title, key):
         group = QGroupBox(title)
-        group.setStyleSheet("QGroupBox { font-weight: bold; color: #f0f6fc; border: 1px solid #30363d; margin-top: 6px; } QGroupBox::title { subcontrol-origin: margin; left: 10px; padding: 0 3px; }")
-        
         layout = QVBoxLayout(group)
         
         # Список
         list_widget = QListWidget()
-        list_widget.setStyleSheet("""
-            QListWidget { background: #0d1117; border: 1px solid #30363d; border-radius: 4px; }
-            QListWidget::item { padding: 4px; color: #f0f6fc; }
-            QListWidget::item:selected { background: #1f6feb; }
-        """)
         layout.addWidget(list_widget)
         self.exception_lists[key] = list_widget
         
