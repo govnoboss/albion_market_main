@@ -85,7 +85,7 @@ class BaseBot(QThread):
         
         move_mouse_human(target_x, target_y, check_pause_func=self._check_pause)
         
-        self._record_time("Мышь: Движение", (time.time() - start_time) * 1000)
+        self.logger.debug(f"Мышь: Движение заняло {(time.time() - start_time) * 1000:.1f} мс")
 
     def _human_click(self):
         """Быстрый клик"""
@@ -93,7 +93,7 @@ class BaseBot(QThread):
         self._check_pause()
         start_time = time.time()
         pyautogui.click()
-        self._record_time("Мышь: Клик", (time.time() - start_time) * 1000)
+        self.logger.debug(f"Мышь: Клик занял {(time.time() - start_time) * 1000:.1f} мс")
 
     def _human_dbl_click(self):
         """Двойной клик"""
@@ -101,7 +101,7 @@ class BaseBot(QThread):
         self._check_pause()
         start_time = time.time()
         pyautogui.doubleClick()
-        self._record_time("Мышь: Двойной клик", (time.time() - start_time) * 1000)
+        self.logger.debug(f"Мышь: Двойной клик занял {(time.time() - start_time) * 1000:.1f} мс")
 
     def _human_type(self, text: str, clear: bool = False):
         """Ввод текста (pynput)"""
@@ -127,7 +127,7 @@ class BaseBot(QThread):
             keyboard.type(char)
             time.sleep(random.uniform(0.01, 0.03))
         
-        self._record_time("Ввод текста", (time.time() - start_time) * 1000)
+        self.logger.debug(f"Ввод текста занял {(time.time() - start_time) * 1000:.1f} мс")
 
     # === Shared Helpers ===
     
@@ -139,7 +139,7 @@ class BaseBot(QThread):
         from .validator import ScreenValidator
         is_open, msg = ScreenValidator.check_market_open(area)
         
-        self._record_time("Валидация: Рынок", (time.time() - start_time) * 1000)
+        self.logger.debug(f"Валидация: Рынок заняла {(time.time() - start_time) * 1000:.1f} мс")
         
         if is_open:
             if "Market Closed" not in msg:
@@ -307,7 +307,7 @@ class BaseBot(QThread):
         
         city_text = read_screen_text_cached(area['x'], area['y'], area['w'], area['h'], lang='rus+eng')
         city_text = city_text.strip()
-        self._record_time("OCR: Город", (time.time() - start_time) * 1000)
+        self.logger.debug(f"OCR: Город заняло {(time.time() - start_time) * 1000:.1f} мс")
         
         matches = get_close_matches(city_text, VALID_CITIES, n=1, cutoff=0.6)
         

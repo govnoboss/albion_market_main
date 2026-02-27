@@ -8,8 +8,8 @@ import json
 
 from ..utils.config import get_config
 from ..utils.logger import get_logger
-from ..utils.items_db import DEFAULT_ITEMS
-from ..utils.default_exceptions import DEFAULT_TIER_EXCEPTIONS
+from ..utils.items_db import get_default_items
+from ..utils.default_exceptions import get_default_exceptions
 from ..utils.localization import get_text
 
 
@@ -41,9 +41,10 @@ class ItemsPanel(QWidget):
         if current_db:
             return
             
-        # Если база пуста — загружаем стандартный набор из 91 предмета
-        config.set_known_items(DEFAULT_ITEMS)
-        get_logger().info(f"База предметов инициализирована: {len(DEFAULT_ITEMS)} дефолтных записей")
+        # Если база пуста — загружаем стандартный набор для текущего языка
+        default_items = get_default_items()
+        config.set_known_items(default_items)
+        get_logger().info(f"База предметов инициализирована: {len(default_items)} дефолтных записей")
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
@@ -160,15 +161,15 @@ class ItemsPanel(QWidget):
     def _load_exceptions(self):
         """Загрузка исключений (с мержа дефолтных значений)"""
         current_data = get_config().get_tier_exceptions()
+        default_exceptions = get_default_exceptions()
         
         # Проверка и мерж дефолтных, если пусто
         updated = False
-        for key, default_items in DEFAULT_TIER_EXCEPTIONS.items():
+        for key, default_items in default_exceptions.items():
             if key not in current_data:
                 current_data[key] = []
             
             # Если список пуст, заполняем дефолтными (только один раз при инициализации)
-            # Или если пользователь хочет "сбросить", но пока просто добавим отсутствующие
             # Логика: Если в конфиге ПУСТО ДЛЯ ЭТОГО КЛЮЧА, то заливаем дефолт.
             if not current_data[key] and default_items:
                  current_data[key] = default_items

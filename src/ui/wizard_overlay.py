@@ -8,6 +8,7 @@ from ..core.coordinate_capture import get_capture_manager
 from ..utils.paths import get_app_root
 from ..utils.logger import get_logger
 from ..utils.config import get_config
+from ..utils.localization import get_text
 from .dim_overlay import DimOverlay
 from .resizable_panel import ResizablePanel
 
@@ -92,34 +93,42 @@ class WizardOverlay(QWidget):
         """Преобразует словарь категорий в плоский список шагов с сохранением группировки по разделам"""
         flat_steps = []
         
-        # Порядок категорий
-        cat_order = ["Основное меню рынка", "Окно меню предмета", "Black Market"]
+        # Порядок категорий (используем внутренние ключи)
+        cat_order = ["coord_cat_main", "coord_cat_item_menu", "coord_cat_bm"]
         
         # Добавляем известные категории в нужном порядке
-        for cat_name in cat_order:
-            if cat_name in categories:
-                items = categories[cat_name]
-                for i, (key, name, mode) in enumerate(items):
+        for cat_key in cat_order:
+            if cat_key in categories:
+                items = categories[cat_key]
+                total_in_cat = len(items)
+                cat_display_name = get_text(cat_key) # Локализованное имя для отображения
+                
+                for idx, (key, name, mode) in enumerate(items, 1):
                     flat_steps.append({
-                        "category": cat_name,
-                        "key": key,
-                        "name": name,
-                        "mode": mode,
-                        "local_index": i + 1, 
-                        "total_in_cat": len(items)
+                        'key': key,
+                        'name': name,
+                        'mode': mode,
+                        'category': cat_display_name, # Для UI
+                        'category_key': cat_key, # Для внутренней логики
+                        'local_index': idx,
+                        'total_in_cat': total_in_cat
                     })
                     
-        # Если есть какие-то другие категории
-        for cat_name, items in categories.items():
-            if cat_name not in cat_order:
-                for i, (key, name, mode) in enumerate(items):
+        # Если есть какие-то другие категории, добавляем их
+        for cat_key, items in categories.items():
+            if cat_key not in cat_order: # Проверяем, не обработана ли уже категория
+                total_in_cat = len(items)
+                cat_display_name = get_text(cat_key) # Локализованное имя для отображения
+                
+                for idx, (key, name, mode) in enumerate(items, 1):
                     flat_steps.append({
-                        "category": cat_name,
+                        "category": cat_display_name,
+                        "category_key": cat_key,
                         "key": key,
                         "name": name,
                         "mode": mode,
-                        "local_index": i + 1,
-                        "total_in_cat": len(items)
+                        "local_index": idx,
+                        "total_in_cat": total_in_cat
                     })
                     
         return flat_steps
@@ -162,12 +171,12 @@ class WizardOverlay(QWidget):
         self.info_layout = QVBoxLayout(self.info_content)
         
         # Заголовок панели
-        panel_title = QLabel("Справка (Можно двигать)")
+        panel_title = QLabel(get_text("wizard_help_title", "Справка (Можно двигать)"))
         panel_title.setStyleSheet("color: #8b949e; font-size: 14px; font-weight: bold;")
         self.info_layout.addWidget(panel_title)
 
         # Счетчик
-        self.counter_label = QLabel(f"Шаг 0 / 0")
+        self.counter_label = QLabel(f"Step 0 / 0")
         self.counter_label.setStyleSheet("color: #58a6ff; font-size: 16px;")
         self.info_layout.addWidget(self.counter_label)
         
@@ -180,7 +189,7 @@ class WizardOverlay(QWidget):
         self.info_layout.addWidget(self.image_label)
         
         # Кнопка пропуска
-        self.skip_label = QLabel("ESC - Отмена")
+        self.skip_label = QLabel(get_text("wizard_esc_cancel", "ESC - Отмена"))
         self.skip_label.setStyleSheet("color: #8b949e; font-size: 12px; margin-top: 10px;")
         self.skip_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self.info_layout.addWidget(self.skip_label)
@@ -196,7 +205,7 @@ class WizardOverlay(QWidget):
         center_layout = QVBoxLayout(self.center_widget)
         center_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        self.step_label = QLabel("КЛИКНИТЕ СЮДА")
+        self.step_label = QLabel(get_text("wizard_click_here", "КЛИКНИТЕ СЮДА"))
         self.step_label.setStyleSheet("""
             color: #ff4444;  /* RED TEXT */
             font-size: 42px; 
@@ -207,7 +216,7 @@ class WizardOverlay(QWidget):
         """)
         self.step_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        self.instruction_label = QLabel("Инструкция")
+        self.instruction_label = QLabel(get_text("wizard_instruction_default", "Инструкция"))
         self.instruction_label.setStyleSheet("""
             color: white; 
             font-size: 24px; 
@@ -265,7 +274,7 @@ class WizardOverlay(QWidget):
         dim_enabled = True
         dim_right_enabled = True
         
-        if step['category'] == "Black Market":
+        if step['category_key'] == "coord_cat_bm":
             # В разделе Black Market убираем затемнение справа для шагов из меню (1-6)
             if step['local_index'] < 7:
                 dim_right_enabled = False
@@ -280,45 +289,46 @@ class WizardOverlay(QWidget):
         self.dim_overlay.set_dim_state(dim_enabled, dim_right_enabled)
         
         # Обновляем UI с учетом номера шага внутри категории
-        step_text = f"Шаг {step['local_index']}: {step['name']}"
+        step_text = f"Step {step['local_index']}: {step['name']}"
         self.step_label.setText(step_text)
         
-        instruction_text = (
-            "Наведите курсор и нажмите 'F1' (если точка)\nили Выделите область (если OCR)"
-        )
+        instruction_text = get_text("wizard_instr_mixed", "Наведите курсор и нажмите 'F1' (если точка)\nили Выделите область (если OCR)")
         if step['mode'] == 'point':
-            instruction_text = "🎯 Наведите курсор на центр элемента и нажмите 'F1'"
+            instruction_text = get_text("wizard_instr_point", "🎯 Наведите курсор на центр элемента и нажмите 'F1'")
         elif step['mode'] == 'area':
-            instruction_text = "📐 Выделите прямоугольную область с зажатой ЛКМ"
+            instruction_text = get_text("wizard_instr_area", "📐 Выделите прямоугольную область с зажатой ЛКМ")
         
         # Особый текст для Шага 7 (Список Тиров) в BM
-        if step['category'] == "Black Market" and step['local_index'] == 7:
-             instruction_text = "👋 Входим в игру...\n\n👉 ОТКРОЙТЕ РЫНОК ДЛЯ ПРОДОЛЖЕНИЯ"
+        if step['category_key'] == "coord_cat_bm" and step['local_index'] == 7:
+             instruction_text = get_text("wizard_instr_bm_open_market", "👋 Входим в игру...\n\n👉 ОТКРОЙТЕ РЫНОК ДЛЯ ПРОДОЛЖЕНИЯ")
              
         self.instruction_label.setText(instruction_text)
         
         # Обновляем счетчик
-        self.counter_label.setText(f"Раздел: {step['category']} | Шаг {step['local_index']} из {step['total_in_cat']}")
+        counter_text = get_text("wizard_step_counter", "Раздел: {cat} | Шаг {n} из {total}").format(
+            cat=step['category'], n=step['local_index'], total=step['total_in_cat']
+        )
+        self.counter_label.setText(counter_text)
         
-        self._load_help_image(step['category'])
+        self._load_help_image(step['category_key']) # Pass category_key
 
         # --- AUTO CLICK BUTTON ---
         # Если перешли к разделу "Окно меню предмета" (первый шаг - item_expand), 
         # нужно кликнуть "Купить" (buy_button), чтобы открыть это меню.
-        if step['category'] == "Окно меню предмета" and step['local_index'] == 1:
+        if step['category_key'] == "coord_cat_item_menu" and step['local_index'] == 1:
             if "buy_button" in self.points:
-                self._auto_click_point(self.points["buy_button"], "Открытие меню предмета...")
+                self._auto_click_point(self.points["buy_button"], get_text("wizard_auto_open_menu", "Открытие меню предмета..."))
                 # Даем время на открытие меню, задержка перед захватом
                 QTimer.singleShot(800, lambda: self.capture_manager.start_capture(
                     step['key'], step['name'], step['mode']
                 ))
-                return 
+                return
 
         # Если перешли к "Black Market" (первый шаг), 
         # нужно кликнуть "Крестик" (menu_close), чтобы закрыть меню предмета.
-        if step['category'] == "Black Market" and step['local_index'] == 1:
+        if step['category_key'] == "coord_cat_bm" and step['local_index'] == 1:
             if "menu_close" in self.points:
-                self._auto_click_point(self.points["menu_close"], "Закрытие меню предмета...")
+                self._auto_click_point(self.points["menu_close"], get_text("wizard_auto_close_menu", "Закрытие меню предмета..."))
                 QTimer.singleShot(800, lambda: self.capture_manager.start_capture(
                     step['key'], step['name'], step['mode']
                 ))
@@ -328,21 +338,26 @@ class WizardOverlay(QWidget):
             step['key'], step['name'], step['mode']
         ))
 
-    def _load_help_image(self, category_name):
+    def _load_help_image(self, category_key):
         help_dir = get_app_root() / "resources" / "help"
         
-        # Determine image name based on category and step index
-        image_name = category_name # Default
+        # Mapping for help images (Always Russian file names as per user requirement)
+        help_name_map = {
+            "coord_cat_main": "Основное меню рынка",
+            "coord_cat_item_menu": "Окно меню предмета",
+            "coord_cat_bm": "Black Market"
+        }
         
+        image_name = help_name_map.get(category_key, "Unknown") # Default to category_key's mapped name
         step_idx = self.current_step['local_index']
         
-        if category_name == "Окно меню предмета":
+        if category_key == "coord_cat_item_menu":
             if step_idx == 1:
                 image_name = "Раскрытие меню предмета"
             else:
                 image_name = "Окно меню предмета"
                 
-        elif category_name == "Black Market":
+        elif category_key == "coord_cat_bm":
             if step_idx == 1:
                 image_name = "Вкладка продать"
             elif 2 <= step_idx <= 3:
@@ -351,7 +366,7 @@ class WizardOverlay(QWidget):
                  image_name = "Аватарки"
             elif step_idx >= 7:
                  image_name = "Тиры"
-
+        
         image_path = help_dir / f"{image_name}.png"
         
         self.logger.debug(f"Wizard: Loading help image '{image_name}' for step {step_idx}")
@@ -361,8 +376,10 @@ class WizardOverlay(QWidget):
             self.image_label.setPixmap(pixmap)
             self.image_label.show()
         else:
-            self.image_label.hide()
-            self.image_label.setPixmap(QPixmap()) 
+            self.logger.warning(f"Wizard: Help image not found: {image_path}")
+            self.image_label.setText(get_text("coord_help_img_not_found", "Картинка не найдена"))
+            self.image_label.setPixmap(QPixmap()) # Clear any previous pixmap
+            self.image_label.show() # Ensure it's visible to show text
             
     def _on_captured(self, key, x, y):
         self.points[key] = (x, y)
@@ -383,8 +400,8 @@ class WizardOverlay(QWidget):
             return
 
         # Если это первый шаг Окна меню предмета (обычно раскрытие меню)
-        if self.current_step['category'] == "Окно меню предмета" and self.current_step['local_index'] == 1:
-            self._auto_click_point((x, y), "Раскрытие меню (тест)...")
+        if self.current_step['category_key'] == "coord_cat_item_menu" and self.current_step['local_index'] == 1:
+            self._auto_click_point((x, y), get_text("wizard_auto_expand", "Раскрытие меню (тест)..."))
             QTimer.singleShot(1000, self._advance_step_delayed)
             return
 
@@ -400,7 +417,7 @@ class WizardOverlay(QWidget):
             self._advance_step_delayed()
             return
 
-        self.instruction_label.setText("⏳ Выполняется авто-выход...")
+        self.instruction_label.setText(get_text("wizard_auto_logout", "⏳ Выполняется авто-выход..."))
         
         # Connect signal securely
         try:
@@ -442,7 +459,7 @@ class WizardOverlay(QWidget):
         """Запуск таймера после клика"""
         # Start Countdown Timer on UI thread
         self._logout_timer_left = 10
-        self.instruction_label.setText(f"⏳ Ожидание выхода: {self._logout_timer_left} сек...")
+        self.instruction_label.setText(get_text("wizard_logout_wait", "⏳ Ожидание выхода: {n} сек...").format(n=self._logout_timer_left))
         
         self._logout_timer = QTimer(self)
         self._logout_timer.timeout.connect(self._update_logout_timer)
@@ -450,7 +467,7 @@ class WizardOverlay(QWidget):
 
     def _update_logout_timer(self):
         self._logout_timer_left -= 1
-        self.instruction_label.setText(f"⏳ Ожидание выхода: {self._logout_timer_left} сек...")
+        self.instruction_label.setText(get_text("wizard_logout_wait", "⏳ Ожидание выхода: {n} сек...").format(n=self._logout_timer_left))
         
         if self._logout_timer_left <= 0:
             self._logout_timer.stop()
@@ -465,7 +482,7 @@ class WizardOverlay(QWidget):
              self._advance_step_delayed()
              return
 
-        self.instruction_label.setText("🤖 Вход в игру...")
+        self.instruction_label.setText(get_text("wizard_auto_login", "🤖 Вход в игру..."))
         QApplication.processEvents()
         
         def _run_login():
@@ -514,7 +531,7 @@ class WizardOverlay(QWidget):
         self.logger.info(f"[Wizard] Captured Area {key}")
         
         if key == "market_name_area":
-            self.instruction_label.setText("🕵️ Проверка рынка (OCR)...")
+            self.instruction_label.setText(get_text("wizard_ocr_market_check", "🕵️ Проверка рынка (OCR)..."))
             QApplication.processEvents()
             
             from ..utils.ocr import read_screen_text
@@ -523,12 +540,12 @@ class WizardOverlay(QWidget):
             
             if "black" in text_lower or "черны" in text_lower or "ёрны" in text_lower:
                  self.logger.warning(f"Wizard: Detected Black Market ({text})!")
-                 self.instruction_label.setText("⛔ ОБНАРУЖЕН ЧЕРНЫЙ РЫНОК!")
-                 self.step_label.setText("ОШИБКА")
+                 self.instruction_label.setText(get_text("wizard_err_bm_detected", "⛔ ОБНАРУЖЕН ЧЕРНЫЙ РЫНОК!"))
+                 self.step_label.setText(get_text("wizard_status_error", "ОШИБКА"))
                  
                  msg = QMessageBox(None) # Fix transparency
-                 msg.setWindowTitle("Ошибка настройки")
-                 msg.setText("Настройка должна проводиться в ОБЫЧНОМ (Королевском) городе!\n\nПожалуйста, переместитесь в другой город и попробуйте снова.")
+                 msg.setWindowTitle(get_text("wizard_err_setup_title", "Ошибка настройки"))
+                 msg.setText(get_text("wizard_err_bm_msg", "Настройка должна проводиться в ОБЫЧНОМ (Королевском) городе!\n\nПожалуйста, переместитесь в другой город и попробуйте снова."))
                  msg.setIcon(QMessageBox.Icon.Critical)
                  msg.setWindowFlags(Qt.WindowType.WindowStaysOnTopHint) 
                  msg.exec()
@@ -626,7 +643,7 @@ class WizardOverlay(QWidget):
         self.update()
         
         dialog = QDialog(self)
-        dialog.setWindowTitle("📏 Калибровка Списка")
+        dialog.setWindowTitle(get_text("wizard_calib_title", "📏 Калибровка Списка"))
         dialog.setStyleSheet("""
             QDialog {
                 background-color: #0d1117;
@@ -656,7 +673,7 @@ class WizardOverlay(QWidget):
         
         layout = QVBoxLayout(dialog)
         
-        info = QLabel("Отрегулируйте параметры так, чтобы красные точки попадали в центры строк списка:")
+        info = QLabel(get_text("wizard_calib_info", "Отрегулируйте параметры так, чтобы красные точки попадали в центры строк списка:"))
         info.setWordWrap(True)
         layout.addWidget(info)
         
@@ -665,12 +682,12 @@ class WizardOverlay(QWidget):
         sb_height = QSpinBox()
         sb_height.setRange(10, 100)
         sb_height.setValue(int(current_height))
-        form.addRow("Высота строки (px):", sb_height)
+        form.addRow(get_text("wizard_calib_row_height", "Высота строки (px):"), sb_height)
         
         sb_offset = QSpinBox()
         sb_offset.setRange(0, 100)
         sb_offset.setValue(int(current_offset))
-        form.addRow("Смещение начала (px):", sb_offset)
+        form.addRow(get_text("wizard_calib_offset", "Смещение начала (px):"), sb_offset)
         
         # Live Update
         def update_params():
@@ -701,12 +718,11 @@ class WizardOverlay(QWidget):
             # Сохраняем
             config.set_dropdown_setting("row_height", sb_height.value())
             config.set_dropdown_setting("list_start_offset", sb_offset.value())
-            self.instruction_label.setText("✅ Параметры сохранены!")
+            self.instruction_label.setText(get_text("wizard_calib_success", "✅ Параметры сохранены!"))
             QApplication.processEvents()
             
-            # AFTER OK: Click dropdown again to CLOSE it
             if dropdown_pos:
-                self._auto_click_point(dropdown_pos, "Закрытие списка...")
+                self._auto_click_point(dropdown_pos, get_text("wizard_auto_close_list", "Закрытие списка..."))
             
         # Выключаем режим калибровки
         self._calibration_active = False
@@ -717,8 +733,6 @@ class WizardOverlay(QWidget):
     def _advance_step_delayed(self):
         self.current_step_index += 1
         
-        # Fix UI Glitch: Ensure geometry is correct before next step
-        # Force update geometry in case of resolution change or interaction
         self.setGeometry(QApplication.primaryScreen().geometry())
         if hasattr(self, 'dim_overlay'):
              self.dim_overlay.setGeometry(self.geometry())
@@ -726,7 +740,7 @@ class WizardOverlay(QWidget):
         QTimer.singleShot(300, self._next_step)
 
     def _auto_type_staff(self, x, y):
-        self.instruction_label.setText("🤖 Авто-настройка: Ввод 'Большой священный посох'...")
+        self.instruction_label.setText(get_text("wizard_verif_step1_instr", "🕵️ Тест 1: Распознавание текущего предмета..."))
         QApplication.processEvents()
         
         def _run_typing():
@@ -751,7 +765,11 @@ class WizardOverlay(QWidget):
                 kb_c.release(Key.backspace)
                 time.sleep(0.1)
                 
-                for char in "Большой священный посох":
+                from ..utils.config import get_config
+                game_lang = get_config().get_setting("game_language", "ru")
+                staff_name = "Great Holy Staff" if game_lang == "en" else "Большой священный посох"
+                
+                for char in staff_name:
                     kb_c.type(char)
                     time.sleep(0.05)
                 
@@ -771,8 +789,8 @@ class WizardOverlay(QWidget):
 
     def _finish_wizard(self):
         """Завершение мастера"""
-        self.instruction_label.setText("✅ Настройка завершена!")
-        self.step_label.setText("Готово")
+        self.instruction_label.setText(get_text("wizard_setup_done_instr", "✅ Настройка завершена!"))
+        self.step_label.setText(get_text("wizard_status_done", "Готово"))
         self.image_label.hide()
         
         self._success = True 
@@ -783,8 +801,8 @@ class WizardOverlay(QWidget):
 
     def _verify_item_name_area(self, x, y, w, h):
         """Автоматическая верификация области названия предмета (Посох -> Алебарда)"""
-        self.instruction_label.setText("🕵️ Верификация: Ожидание Посоха...")
-        self.step_label.setText("ТЕСТ 1")
+        self.instruction_label.setText(get_text("wizard_verif_wait_staff", "🕵️ Верификация: Ожидание Посоха..."))
+        self.step_label.setText(get_text("wizard_test_1", "ТЕСТ 1"))
         self._reposition_center_widget()
         QApplication.processEvents()
         
@@ -800,46 +818,54 @@ class WizardOverlay(QWidget):
             try:
                 search_pos = self.points.get("search_input")
                 if not search_pos:
-                    self.verification_error_signal.emit("Кнопка поиска не задана!")
+                    self.verification_error_signal.emit(get_text("wizard_err_search_not_set", "Кнопка поиска не задана!"))
                     return
 
                 # --- ТЕСТ 1: ТЕКУЩИЙ ПРЕДМЕТ (Должен быть Посох) ---
                 self.logger.info("Wizard: Verification Step 1 - Current Item (expecting Staff)")
-                QMetaObject.invokeMethod(self.instruction_label, "setText", Qt.ConnectionType.QueuedConnection, Q_ARG(str, "🕵️ Тест 1: Распознавание текущего предмета..."))
+                QMetaObject.invokeMethod(self.instruction_label, "setText", Qt.ConnectionType.QueuedConnection, Q_ARG(str, get_text("wizard_verif_step1_instr", "🕵️ Тест 1: Распознавание текущего предмета...")))
                 
                 # Даем короткую задержку на всякий случай для UI игры
                 time.sleep(0.5)
                 
-                text1 = read_screen_text(x, y, w, h, lang='rus')
+                from ..utils.config import get_config
+                game_lang = get_config().get_setting("game_language", "ru")
+                ocr_lang = 'eng' if game_lang == 'en' else 'rus'
+                
+                text1 = read_screen_text(x, y, w, h, lang=ocr_lang)
                 self.logger.info(f"Wizard: Step 1 OCR: '{text1}'")
                 t1_lower = text1.lower()
                 
-                staff_keywords = ["священ", "посох", "свеще", "осох", "больш"]
+                staff_keywords = ["священ", "посох", "свеще", "осох", "больш", "holy", "staff", "great"]
                 if not any(word in t1_lower for word in staff_keywords):
-                    self.verification_error_signal.emit(f"Ошибка OCR (Тест 1): Ожидался Посох, распознано: '{text1}'")
+                    err_msg = get_text("wizard_err_ocr_staff", "Ошибка OCR (Тест 1): Ожидался Посох, распознано: '{text}'").format(text=text1)
+                    self.verification_error_signal.emit(err_msg)
                     return
 
-                QMetaObject.invokeMethod(self.step_label, "setText", Qt.ConnectionType.QueuedConnection, Q_ARG(str, "ТЕСТ 1 OK"))
-                QMetaObject.invokeMethod(self.instruction_label, "setText", Qt.ConnectionType.QueuedConnection, Q_ARG(str, "✅ Посох распознан. Проверка смены названия..."))
+                QMetaObject.invokeMethod(self.step_label, "setText", Qt.ConnectionType.QueuedConnection, Q_ARG(str, get_text("wizard_test1_ok", "ТЕСТ 1 OK")))
+                QMetaObject.invokeMethod(self.instruction_label, "setText", Qt.ConnectionType.QueuedConnection, Q_ARG(str, get_text("wizard_verif_step1_success", "✅ Посох распознан. Проверка смены названия...")))
                 time.sleep(1.0)
 
                 # --- ТЕСТ 2: АЛЕБАРДА ---
                 self.logger.info("Wizard: Verification Step 2 - Switching to Halberd")
-                QMetaObject.invokeMethod(self.step_label, "setText", Qt.ConnectionType.QueuedConnection, Q_ARG(str, "ТЕСТ 2"))
-                QMetaObject.invokeMethod(self.instruction_label, "setText", Qt.ConnectionType.QueuedConnection, Q_ARG(str, "🤖 Тест 2: Ввод 'Алебарда'..."))
+                QMetaObject.invokeMethod(self.step_label, "setText", Qt.ConnectionType.QueuedConnection, Q_ARG(str, get_text("wizard_test_2", "ТЕСТ 2")))
+                QMetaObject.invokeMethod(self.instruction_label, "setText", Qt.ConnectionType.QueuedConnection, Q_ARG(str, get_text("wizard_verif_step2_instr", "🤖 Тест 2: Ввод 'Алебарда'...")))
                 
-                self._do_search(search_pos, "Алебарда", mouse_c, kb_c)
+                halberd_name = "Halberd" if game_lang == "en" else "Алебарда"
+                self._do_search(search_pos, halberd_name, mouse_c, kb_c)
                 time.sleep(1.5)
                 
-                text2 = read_screen_text(x, y, w, h, lang='rus')
+                text2 = read_screen_text(x, y, w, h, lang=ocr_lang)
                 self.logger.info(f"Wizard: Step 2 OCR: '{text2}'")
                 t2_lower = text2.lower()
                 
-                if not ("алебард" in t2_lower or "лебард" in t2_lower):
-                     self.verification_error_signal.emit(f"Ошибка OCR (Тест 2): Ожидалась Алебарда, получено: '{text2}'")
+                if not ("алебард" in t2_lower or "лебард" in t2_lower or "halberd" in t2_lower):
+                     err_msg = get_text("wizard_err_ocr_halberd", "Ошибка OCR (Тест 2): Ожидалась Алебарда, получено: '{text}'").format(text=text2)
+                     self.verification_error_signal.emit(err_msg)
                      return
                 
-                self.verification_success_signal.emit(f"✅ Успешно! Распознано: {text2}")
+                success_msg = get_text("wizard_verif_success", "✅ Успешно! Распознано: {text}").format(text=text2)
+                self.verification_success_signal.emit(success_msg)
                 
             except Exception as e:
                 self.logger.error(f"Verification sequence error: {e}")
@@ -877,17 +903,18 @@ class WizardOverlay(QWidget):
 
     def _on_verification_success(self, msg):
         self.instruction_label.setText(msg)
-        self.step_label.setText("УСПЕХ")
+        self.step_label.setText(get_text("wizard_status_success", "УСПЕХ"))
         QTimer.singleShot(1500, self._advance_step_delayed)
 
     def _show_verification_error(self, err_msg):
         self.logger.warning(f"Wizard: Verification failed: {err_msg}")
-        self.instruction_label.setText(f"❌ ПРОВЕРКА НЕ ПРОЙДЕНА!\n\n{err_msg}")
-        self.step_label.setText("ОШИБКА")
+        instr = get_text("wizard_verif_failed", "❌ ПРОВЕРКА НЕ ПРОЙДЕНА!\n\n{err_msg}").format(err_msg=err_msg)
+        self.instruction_label.setText(instr)
+        self.step_label.setText(get_text("wizard_status_error", "ОШИБКА"))
         
         msg = QMessageBox(None) # Fix transparency
-        msg.setWindowTitle("Ошибка верификации")
-        msg.setText(f"Область захвачена некорректно или OCR не смог прочитать текст.\n\nДетали: {err_msg}\n\nПожалуйста, попробуйте выделить область заново.")
+        msg.setWindowTitle(get_text("wizard_err_verif_title", "Ошибка верификации"))
+        msg.setText(get_text("wizard_err_verif_msg", "Область захвачена некорректно или OCR не смог прочитать текст.\n\nДетали: {err_msg}\n\nПожалуйста, попробуйте выделить область заново.").format(err_msg=err_msg))
         msg.setIcon(QMessageBox.Icon.Warning)
         msg.setWindowFlags(msg.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
         msg.exec()
@@ -899,7 +926,7 @@ class WizardOverlay(QWidget):
 
     def _verify_price_area(self, key, x, y, w, h):
         """Проверка области цены (должно быть число)"""
-        self.instruction_label.setText("🕵️ Верификация: Проверка цены (OCR)...")
+        self.instruction_label.setText(get_text("wizard_verif_price_instr", "🕵️ Верификация: Проверка цены (OCR)..."))
         QApplication.processEvents()
         
         from ..utils.ocr import read_price_at
@@ -911,10 +938,12 @@ class WizardOverlay(QWidget):
                 self.logger.info(f"Wizard: Price Verification for {key}: {price}")
                 
                 if price is None:
-                    self.verification_error_signal.emit("Не удалось распознать число в этой области.\n\nУбедитесь, что в область попадают только цифры цены.")
+                    err_msg = get_text("wizard_err_no_price", "Не удалось распознать число в этой области.\n\nУбедитесь, что в область попадают только цифры цены.")
+                    self.verification_error_signal.emit(err_msg)
                     return
                 
-                self.verification_success_signal.emit(f"✅ Цена распознана: {price}")
+                success_msg = get_text("wizard_verif_price_success", "✅ Цена распознана: {price}").format(price=price)
+                self.verification_success_signal.emit(success_msg)
                 
             except Exception as e:
                 self.verification_error_signal.emit(str(e))

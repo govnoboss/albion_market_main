@@ -25,8 +25,8 @@ class SettingsPanel(QScrollArea):
         # Оверлей калибровки
         self.overlay = CalibrationOverlay()
         
-        # Убираем рамки и ставим фон
-        self.setStyleSheet(PANEL_STYLE)
+        # Убираем рамки
+        self.setStyleSheet("QScrollArea { border: none; background-color: transparent; }")
         
         self.content_widget = QWidget()
         self.content_widget.setObjectName("settingsContent") # Для CSS если нужно
@@ -41,150 +41,40 @@ class SettingsPanel(QScrollArea):
         self._load_settings()
     
     def _setup_ui(self):
-        layout = QVBoxLayout(self.content_widget)
-        layout.setContentsMargins(15, 15, 15, 15)
-        layout.setSpacing(20)
+        main_layout = QHBoxLayout(self.content_widget)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(25)
         
+        # Left and Right Columns
+        left_col = QVBoxLayout()
+        left_col.setSpacing(20)
+        right_col = QVBoxLayout()
+        right_col.setSpacing(20)
         
-        # === Таймауты сканирования ===
-        timeouts_group = QGroupBox(get_text("settings_timeouts", "⏳ Таймауты сканирования"))
-        timeouts_layout = QFormLayout(timeouts_group)
-        timeouts_layout.setSpacing(15)
-
-        # Timeout
-        self.timeout_spin = QDoubleSpinBox()
-        self.timeout_spin.setRange(0.5, 60.0)
-        self.timeout_spin.setSuffix(" сек")
-        self.timeout_spin.setSingleStep(0.5)
-        self.timeout_spin.valueChanged.connect(self._on_timeout_changed)
+        main_layout.addLayout(left_col, stretch=1)
+        main_layout.addLayout(right_col, stretch=1)
         
-        timeout_lbl = QLabel(get_text("settings_wait_update", "Ожидание обновления цены:"))
-        timeout_lbl.setToolTip(get_text("settings_wait_update_tip", "Сколько секунд мы ждем перед тем как пропустить предмет, цена которого не обновилась."))
-        timeouts_layout.addRow(timeout_lbl, self.timeout_spin)
-
-        layout.addWidget(timeouts_group)
-
-
-        # === Калибровка меню ===
-        dropdown_group = QGroupBox(get_text("settings_calibration", "📏 Калибровка выпадающих меню"))
-        dropdown_layout = QFormLayout(dropdown_group)
-        dropdown_layout.setSpacing(15)
+        # Helper to style GroupBoxes
+        def style_groupbox(gb, title):
+            gb.setTitle(title.upper())
+            gb.setStyleSheet("QGroupBox { background-color: #121916; border: 1px solid #1e2923; border-radius: 12px; margin-top: 25px; padding-top: 20px; font-weight: 800; color: #10b981; letter-spacing: 1px; font-size: 13px; } QGroupBox::title { subcontrol-origin: margin; left: 15px; padding: 0 5px; }")
         
-        # Описание
-        info_label = QLabel(get_text("settings_calibration_info", "Настройка параметров для точного попадания по пунктам меню (Тир, Зачарование и т.д.)"))
-        info_label.setStyleSheet("color: #8b949e; font-size: 12px; margin-bottom: 10px;")
-        info_label.setWordWrap(True)
-        dropdown_layout.addRow(info_label)
+        # =======================================================
+        # LEFT COLUMN
+        # =======================================================
         
-        # Высота строки
-        self.row_height_spin = QSpinBox()
-        self.row_height_spin.setRange(10, 100)
-        self.row_height_spin.setSuffix(" px")
-        self.row_height_spin.valueChanged.connect(self._on_row_height_changed)
-        
-        row_height_lbl = QLabel(get_text("settings_row_height", "Высота строки:"))
-        row_height_lbl.setToolTip(get_text("settings_row_height_tip", "Точки которые помогают откалибровать клики по Тирам."))
-        dropdown_layout.addRow(row_height_lbl, self.row_height_spin)
-        
-        # Смещение первого элемента
-        self.offset_spin = QSpinBox()
-        self.offset_spin.setRange(0, 200)
-        self.offset_spin.setSuffix(" px")
-        self.offset_spin.valueChanged.connect(self._on_offset_changed)
-        
-        offset_lbl = QLabel(get_text("settings_offset", "Смещение списка:"))
-        offset_lbl.setToolTip(get_text("settings_offset_tip", "Точки которые помогают откалибровать клики по Тирам."))
-        dropdown_layout.addRow(offset_lbl, self.offset_spin)
-        
-        layout.addWidget(dropdown_group)
-        
-        # === Настройки мыши ===
-        mouse_group = QGroupBox(get_text("settings_mouse", "🐭 Настройки мыши"))
-        mouse_layout = QFormLayout(mouse_group)
-        mouse_layout.setSpacing(10)
-
-        
-
-        # Speed
-        self.mouse_speed_spin = QSpinBox()
-        self.mouse_speed_spin.setRange(500, 5000)
-        self.mouse_speed_spin.setSingleStep(100)
-        self.mouse_speed_spin.setSuffix(" px/sec")
-        self.mouse_speed_spin.valueChanged.connect(self._on_mouse_speed_changed)
-        
-        speed_lbl = QLabel(get_text("settings_mouse_speed", "Скорость:"))
-        speed_lbl.setToolTip(get_text("settings_mouse_speed_tip", "с какой скоростью двигается мышь."))
-        mouse_layout.addRow(speed_lbl, self.mouse_speed_spin)
-
-        # Min Duration
-        self.mouse_mindur_spin = QDoubleSpinBox()
-        self.mouse_mindur_spin.setRange(0.01, 1.0)
-        self.mouse_mindur_spin.setSingleStep(0.01)
-        self.mouse_mindur_spin.setSuffix(" сек")
-        self.mouse_mindur_spin.valueChanged.connect(self._on_mouse_mindur_changed)
-        
-        mindur_lbl = QLabel(get_text("settings_mouse_mindur", "Мин. время:"))
-        mindur_lbl.setToolTip(get_text("settings_mouse_mindur_tip", "Минимальное время за которое бот доводит мышь на координату."))
-        mouse_layout.addRow(mindur_lbl, self.mouse_mindur_spin)
-
-        # Curvature
-        self.mouse_curve_spin = QDoubleSpinBox()
-        self.mouse_curve_spin.setRange(0.0, 1.0)
-        self.mouse_curve_spin.setSingleStep(0.05)
-        self.mouse_curve_spin.valueChanged.connect(self._on_mouse_curve_changed)
-        
-        curve_lbl = QLabel(get_text("settings_mouse_curvature", "Кривизна:"))
-        curve_lbl.setToolTip(get_text("settings_mouse_curvature_tip", "Насколько сильно бот будет двигать мышь по кривой."))
-        mouse_layout.addRow(curve_lbl, self.mouse_curve_spin)
-
-        # Jitter
-        self.mouse_jitter_spin = QSpinBox()
-        self.mouse_jitter_spin.setRange(0, 50)
-        self.mouse_jitter_spin.setSuffix(" px")
-        self.mouse_jitter_spin.valueChanged.connect(self._on_mouse_jitter_changed)
-        
-        jitter_lbl = QLabel(get_text("settings_mouse_jitter", "Разброс:"))
-        jitter_lbl.setToolTip(get_text("settings_mouse_jitter_tip", "Радиус вокруг указанной координаты, куда бот будет случайно кликать."))
-        mouse_layout.addRow(jitter_lbl, self.mouse_jitter_spin)
-
-        layout.addWidget(mouse_group)
-
-        # === Черный рынок ===
-        bm_group = QGroupBox(get_text("settings_bm", "🖤 Черный рынок"))
-        bm_layout = QVBoxLayout(bm_group)
-        bm_layout.setSpacing(10)
-        
-        self.char_switch_check = QCheckBox(get_text("settings_char_switch", "Использовать смену персонажа (после 48 пред.)"))
-        self.char_switch_check.setToolTip(get_text("settings_char_switch_tip", "Если включено, бот попытается переключиться на второго персонажа при достижении лимита ЧР."))
-        self.char_switch_check.stateChanged.connect(self._on_char_switch_changed)
-        bm_layout.addWidget(self.char_switch_check)
-        
-        layout.addWidget(bm_group)
-
-        # === Отладка OCR ===
-        debug_group = QGroupBox(get_text("settings_ocr_debug", "🔬 Отладка OCR"))
-        debug_layout = QVBoxLayout(debug_group)
-        debug_layout.setSpacing(10)
-        
-        self.ocr_debug_check = QCheckBox(get_text("settings_save_ocr", "Сохранять скриншоты OCR при сканировании цен"))
-        self.ocr_debug_check.setToolTip(get_text("settings_save_ocr_tip", "При включении все изображения, которые видит OCR (цены, количество), сохраняются в папку data/debug_ocr/"))
-        self.ocr_debug_check.stateChanged.connect(self._on_ocr_debug_changed)
-        debug_layout.addWidget(self.ocr_debug_check)
-        
-        layout.addWidget(debug_group)
         # === Фильтры сканирования ===
-        filters_group = QGroupBox(get_text("settings_filters", "🔍 Фильтры предметов"))
-        filters_group.setToolTip(get_text("settings_filters_tip", "Выбор предметов для сканирования и закупки."))
+        filters_group = QGroupBox()
+        style_groupbox(filters_group, get_text("settings_filters", "🔍 Фильтры предметов"))
         filters_layout = QVBoxLayout(filters_group)
+        filters_layout.setContentsMargins(15, 15, 15, 15)
         filters_layout.setSpacing(15)
         
-        # Grid для колонок
-        grid_layout = QHBoxLayout()
-        grid_layout.setSpacing(20)  # Добавляем отступы между колонками
+        # Grid для колонок фильтров
+        grid_filters = QHBoxLayout()
         
         # Тиры
         tiers_layout = QVBoxLayout()
-        tiers_layout.setSpacing(10) # Отступы между чекбоксами
         tiers_layout.addWidget(QLabel(get_text("settings_tiers", "Тиры:")))
         self.tier_checks = {}
         for tier in range(4, 9):
@@ -194,11 +84,10 @@ class SettingsPanel(QScrollArea):
             self.tier_checks[tier] = chk
             tiers_layout.addWidget(chk)
         tiers_layout.addStretch()
-        grid_layout.addLayout(tiers_layout)
+        grid_filters.addLayout(tiers_layout)
         
         # Зачарования
         enchants_layout = QVBoxLayout()
-        enchants_layout.setSpacing(10)
         enchants_layout.addWidget(QLabel(get_text("settings_enchants", "Зачарования:")))
         self.enchant_checks = {}
         for enchant in range(5):
@@ -208,11 +97,10 @@ class SettingsPanel(QScrollArea):
             self.enchant_checks[enchant] = chk
             enchants_layout.addWidget(chk)
         enchants_layout.addStretch()
-        grid_layout.addLayout(enchants_layout)
+        grid_filters.addLayout(enchants_layout)
         
         # Качество
         qualities_layout = QVBoxLayout()
-        qualities_layout.setSpacing(10)
         qualities_layout.addWidget(QLabel(get_text("settings_qualities", "Качество:")))
         self.quality_checks = {}
         quality_names = {
@@ -229,27 +117,138 @@ class SettingsPanel(QScrollArea):
             self.quality_checks[q_id] = chk
             qualities_layout.addWidget(chk)
         qualities_layout.addStretch()
-        grid_layout.addLayout(qualities_layout)
+        grid_filters.addLayout(qualities_layout)
         
-        filters_layout.addLayout(grid_layout)
-        layout.addWidget(filters_group)
+        filters_layout.addLayout(grid_filters)
+        left_col.addWidget(filters_group)
+        
+        # === Настройки мыши ===
+        mouse_group = QGroupBox()
+        style_groupbox(mouse_group, get_text("settings_mouse", "🐭 Настройки мыши"))
+        mouse_layout = QFormLayout(mouse_group)
+        mouse_layout.setContentsMargins(15, 15, 15, 15)
+        mouse_layout.setSpacing(12)
 
-        # === Язык ===
-        lang_group = QGroupBox(get_text("settings_language", "🌐 Язык"))
-        lang_layout = QFormLayout(lang_group)
+        self.mouse_speed_spin = QSpinBox()
+        self.mouse_speed_spin.setRange(500, 5000)
+        self.mouse_speed_spin.setSingleStep(100)
+        self.mouse_speed_spin.setSuffix(" px/sec")
+        self.mouse_speed_spin.valueChanged.connect(self._on_mouse_speed_changed)
+        mouse_layout.addRow(QLabel(get_text("settings_mouse_speed", "Скорость:")), self.mouse_speed_spin)
+
+        self.mouse_mindur_spin = QDoubleSpinBox()
+        self.mouse_mindur_spin.setRange(0.01, 1.0)
+        self.mouse_mindur_spin.setSingleStep(0.01)
+        self.mouse_mindur_spin.setSuffix(" сек")
+        self.mouse_mindur_spin.valueChanged.connect(self._on_mouse_mindur_changed)
+        mouse_layout.addRow(QLabel(get_text("settings_mouse_mindur", "Мин. время:")), self.mouse_mindur_spin)
+
+        self.mouse_curve_spin = QDoubleSpinBox()
+        self.mouse_curve_spin.setRange(0.0, 1.0)
+        self.mouse_curve_spin.setSingleStep(0.05)
+        self.mouse_curve_spin.valueChanged.connect(self._on_mouse_curve_changed)
+        mouse_layout.addRow(QLabel(get_text("settings_mouse_curvature", "Кривизна:")), self.mouse_curve_spin)
+
+        self.mouse_jitter_spin = QSpinBox()
+        self.mouse_jitter_spin.setRange(0, 50)
+        self.mouse_jitter_spin.setSuffix(" px")
+        self.mouse_jitter_spin.valueChanged.connect(self._on_mouse_jitter_changed)
+        mouse_layout.addRow(QLabel(get_text("settings_mouse_jitter", "Разброс:")), self.mouse_jitter_spin)
+
+        left_col.addWidget(mouse_group)
+        
+        # === Черный рынок ===
+        bm_group = QGroupBox()
+        style_groupbox(bm_group, get_text("settings_bm", "🖤 Черный рынок"))
+        bm_layout = QVBoxLayout(bm_group)
+        bm_layout.setContentsMargins(15, 15, 15, 15)
+        
+        self.char_switch_check = QCheckBox(get_text("settings_char_switch", "Использовать смену персонажа (после 48 пред.)"))
+        self.char_switch_check.stateChanged.connect(self._on_char_switch_changed)
+        bm_layout.addWidget(self.char_switch_check)
+        left_col.addWidget(bm_group)
+        
+        left_col.addStretch()
+
+
+        # =======================================================
+        # RIGHT COLUMN
+        # =======================================================
+        
+        # === Языки ===
+        langs_group = QGroupBox()
+        style_groupbox(langs_group, get_text("settings_language", "🌐 Локализация"))
+        langs_layout = QFormLayout(langs_group)
+        langs_layout.setContentsMargins(15, 15, 15, 15)
+        langs_layout.setSpacing(12)
         
         self.lang_combo = QComboBox()
         self.lang_combo.addItem("English", "en")
         self.lang_combo.addItem("Русский", "ru")
         self.lang_combo.currentIndexChanged.connect(self._on_language_changed)
+        langs_layout.addRow(QLabel(get_text("settings_lang_label", "Интерфейс бота:")), self.lang_combo)
         
-        lang_lbl = QLabel(get_text("settings_lang_label", "Выберите язык:"))
-        lang_layout.addRow(lang_lbl, self.lang_combo)
+        self.game_lang_combo = QComboBox()
+        self.game_lang_combo.addItem("English", "en")
+        self.game_lang_combo.addItem("Русский", "ru")
+        self.game_lang_combo.currentIndexChanged.connect(self._on_game_language_changed)
+        langs_layout.addRow(QLabel(get_text("settings_game_lang_label", "Язык клиента игры:")), self.game_lang_combo)
         
-        layout.addWidget(lang_group)
+        right_col.addWidget(langs_group)
 
+        # === Таймауты сканирования ===
+        timeouts_group = QGroupBox()
+        style_groupbox(timeouts_group, get_text("settings_timeouts", "⏳ Время ожидания"))
+        timeouts_layout = QFormLayout(timeouts_group)
+        timeouts_layout.setContentsMargins(15, 15, 15, 15)
+
+        self.timeout_spin = QDoubleSpinBox()
+        self.timeout_spin.setRange(0.5, 60.0)
+        self.timeout_spin.setSuffix(" сек")
+        self.timeout_spin.setSingleStep(0.5)
+        self.timeout_spin.valueChanged.connect(self._on_timeout_changed)
+        timeouts_layout.addRow(QLabel(get_text("settings_wait_update", "Обновление цены:")), self.timeout_spin)
+        right_col.addWidget(timeouts_group)
+
+        # === Калибровка меню ===
+        dropdown_group = QGroupBox()
+        style_groupbox(dropdown_group, get_text("settings_calibration", "📏 Размеры выпадающих меню"))
+        dropdown_layout = QFormLayout(dropdown_group)
+        dropdown_layout.setContentsMargins(15, 15, 15, 15)
+        dropdown_layout.setSpacing(12)
         
-        layout.addStretch()
+        info_label = QLabel(get_text("settings_calibration_info", "Для попадания мышью в Тиры (тещируется через Координаты)"))
+        info_label.setStyleSheet("color: #64748b; font-size: 11px;")
+        info_label.setWordWrap(True)
+        dropdown_layout.addRow(info_label)
+        
+        self.row_height_spin = QSpinBox()
+        self.row_height_spin.setRange(10, 100)
+        self.row_height_spin.setSuffix(" px")
+        self.row_height_spin.valueChanged.connect(self._on_row_height_changed)
+        dropdown_layout.addRow(QLabel(get_text("settings_row_height", "Высота пункта меню:")), self.row_height_spin)
+        
+        self.offset_spin = QSpinBox()
+        self.offset_spin.setRange(0, 200)
+        self.offset_spin.setSuffix(" px")
+        self.offset_spin.valueChanged.connect(self._on_offset_changed)
+        dropdown_layout.addRow(QLabel(get_text("settings_offset", "Смещение списка вниз:")), self.offset_spin)
+        
+        right_col.addWidget(dropdown_group)
+        
+        # === Отладка OCR ===
+        debug_group = QGroupBox()
+        style_groupbox(debug_group, get_text("settings_ocr_debug", "🔬 Отладка модулей"))
+        debug_layout = QVBoxLayout(debug_group)
+        debug_layout.setContentsMargins(15, 15, 15, 15)
+        
+        self.ocr_debug_check = QCheckBox(get_text("settings_save_ocr", "Сохранять скриншоты OCR на диск (data/debug_ocr)"))
+        self.ocr_debug_check.stateChanged.connect(self._on_ocr_debug_changed)
+        debug_layout.addWidget(self.ocr_debug_check)
+        
+        right_col.addWidget(debug_group)
+
+        right_col.addStretch()
     
     def _load_settings(self):
         """Загрузить настройки из конфига"""
@@ -305,6 +304,14 @@ class SettingsPanel(QScrollArea):
         if idx >= 0:
             self.lang_combo.setCurrentIndex(idx)
         self.lang_combo.blockSignals(False)
+
+        # Game Language
+        self.game_lang_combo.blockSignals(True)
+        current_game_lang = config.get_setting("game_language", "ru")
+        game_idx = self.game_lang_combo.findData(current_game_lang)
+        if game_idx >= 0:
+            self.game_lang_combo.setCurrentIndex(game_idx)
+        self.game_lang_combo.blockSignals(False)
             
         self.blockSignals(False)
         
@@ -387,12 +394,91 @@ class SettingsPanel(QScrollArea):
         if lang_code != old_lang:
             config.set_setting("language", lang_code)
             
-            # Предлагаем перезапуск или уведомляем, что изменения вступят в силу после перезапуска
-            # Хотя мы можем сменить язык "на лету" для LocalizationManager, 
-            # но большинство виджетов уже созданы с конкретным текстом.
             QMessageBox.information(
                 self,
                 "Language Changed",
                 "Language preference saved. Please restart the application to apply changes fully.\n\n"
                 "Язык сохранен. Пожалуйста, перезапустите приложение для полного применения изменений."
             )
+
+    def _on_game_language_changed(self, index):
+        lang_code = self.game_lang_combo.itemData(index)
+        config = get_config()
+        old_lang = config.get_setting("game_language", "ru")
+        
+        if lang_code != old_lang:
+            config.set_setting("game_language", lang_code)
+            self._translate_items_database(lang_code)
+            self._translate_tier_exceptions(lang_code)
+            self._translate_wholesale_targets(lang_code)
+            
+            get_logger().info(f"Game language changed: {old_lang} -> {lang_code}")
+            
+            QMessageBox.information(
+                self,
+                get_text("settings_game_language", "🎮 Язык игры"),
+                get_text("settings_game_lang_restart", "Язык игры изменен. База предметов и исключения автоматически переведены.")
+            )
+
+    def _translate_items_database(self, to_lang: str):
+        """Автоматически перевести все предметы в базе"""
+        from ..utils.items_db import translate_items_list, get_default_items
+        config = get_config()
+        
+        current_items = config.get_known_items()
+        if not current_items:
+            # Если база пуста — загружаем дефолт для нового языка
+            config.set_known_items(get_default_items())
+            return
+        
+        translated = translate_items_list(current_items, to_lang)
+        config.set_known_items(translated)
+        get_logger().info(f"Items database translated to '{to_lang}': {len(translated)} items")
+
+    def _translate_tier_exceptions(self, to_lang: str):
+        """Автоматически перевести исключения тиров и добавить дефолтные для нового языка"""
+        from ..utils.items_db import translate_item
+        from ..utils.default_exceptions import get_default_exceptions
+        config = get_config()
+        
+        current_exc = config.get_tier_exceptions()
+        new_exc = {}
+        
+        # Получаем дефолтные исключения для целевого языка (config.game_language уже изменен)
+        default_exc = get_default_exceptions()
+        
+        for tier_key, items in current_exc.items():
+            translated = [translate_item(item, to_lang) for item in items]
+            
+            # Добавляем дефолтные предметы для этого тира в целевом языке
+            if tier_key in default_exc:
+                translated.extend(default_exc[tier_key])
+                
+            # Убираем дубликаты сохраняя порядок
+            dedup_translated = []
+            for item in translated:
+                if item not in dedup_translated:
+                    dedup_translated.append(item)
+                    
+            new_exc[tier_key] = dedup_translated
+        
+        config.set_tier_exceptions(new_exc)
+        get_logger().info(f"Tier exceptions translated and merged with defaults for '{to_lang}'")
+
+    def _translate_wholesale_targets(self, to_lang: str):
+        """Автоматически перевести ключи wholesale targets"""
+        from ..utils.items_db import translate_item
+        config = get_config()
+        
+        targets = config.get_wholesale_targets()
+        if not targets:
+            return
+        
+        new_targets = {}
+        for item_name, variants in targets.items():
+            translated_name = translate_item(item_name, to_lang)
+            new_targets[translated_name] = variants
+        
+        config._config["wholesale_targets"] = new_targets
+        config.save()
+        get_logger().info(f"Wholesale targets translated to '{to_lang}': {len(new_targets)} items")

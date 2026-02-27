@@ -6,13 +6,13 @@ import re
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
     QTableWidget, QTableWidgetItem, QHeaderView, 
-    QComboBox, QPushButton, QMessageBox, QAbstractItemView
+    QComboBox, QPushButton, QMessageBox, QAbstractItemView, QGroupBox
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from ..utils.price_storage import get_price_storage
 from ..utils.logger import get_logger
 from ..utils.localization import get_text
-from .styles import PROFITS_STYLE, PRICES_STYLE
+from .styles import MAIN_STYLE
 
 logger = get_logger()
 
@@ -110,50 +110,65 @@ class ProfitsTab(QWidget):
         
     def _setup_ui(self):
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
         
-        # === Controls ===
-        controls_layout = QHBoxLayout()
+        # === Header ===
+        header = QHBoxLayout()
+        title = QLabel(get_text("finance_title", "📈 Анализ профита"))
+        title.setObjectName("title")
+        header.addWidget(title)
+        header.addStretch()
+        layout.addLayout(header)
         
-        lbl_buy = QLabel(get_text("finance_header", "🏙️ Купить в:"))
-        lbl_buy.setStyleSheet(PROFITS_STYLE["label"])
+        # === Controls Group ===
+        ctrl_group = QGroupBox(get_text("finance_controls_group", "Параметры фильтрации"))
+        controls_layout = QHBoxLayout(ctrl_group)
+        controls_layout.setSpacing(15)
+        
+        lbl_buy = QLabel(get_text("finance_header", "Купить в:"))
         controls_layout.addWidget(lbl_buy)
         
         self.buy_city_combo = QComboBox()
-        self.buy_city_combo.setMinimumWidth(130)
-        self._style_combo(self.buy_city_combo)
+        self.buy_city_combo.setMinimumWidth(150)
         self.buy_city_combo.currentIndexChanged.connect(self.refresh_data)
         controls_layout.addWidget(self.buy_city_combo)
  
         lbl_sell = QLabel(get_text("finance_arrow", " ➡️ Продать в:"))
-        lbl_sell.setStyleSheet(PROFITS_STYLE["label"])
         controls_layout.addWidget(lbl_sell)
         
         self.sell_city_combo = QComboBox()
-        self.sell_city_combo.setMinimumWidth(130)
-        self._style_combo(self.sell_city_combo)
+        self.sell_city_combo.setMinimumWidth(150)
         self.sell_city_combo.currentIndexChanged.connect(self.refresh_data)
         controls_layout.addWidget(self.sell_city_combo)
         
-        self.refresh_btn = QPushButton(get_text("finance_refresh", "🔄 Обновить"))
-        self.refresh_btn.setStyleSheet(PROFITS_STYLE["refresh_btn"])
+        # Actions
+        controls_layout.addStretch()
+        
+        self.refresh_btn = QPushButton(get_text("finance_refresh", "🔄 ОБНОВИТЬ"))
+        self.refresh_btn.setObjectName("primary")
+        self.refresh_btn.setMinimumHeight(35)
+        self.refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.refresh_btn.clicked.connect(self.refresh_data)
         controls_layout.addWidget(self.refresh_btn)
         
-        self.clean_btn = QPushButton(get_text("finance_clean", "🗑️ Очистить старые"))
-        self.clean_btn.setToolTip(get_text("finance_clean_tip", "Удалить записи предыдущих сканирований (оставить только текущие)"))
-        self.clean_btn.setStyleSheet(PROFITS_STYLE["clean_btn"])
-        self.clean_btn.clicked.connect(self.request_clean_history)
-        controls_layout.addWidget(self.clean_btn)
-        
-        # Кнопка удаления выбранного
-        self.delete_btn = QPushButton(get_text("finance_delete", "🗑️ Удалить"))
-        self.delete_btn.setStyleSheet(PRICES_STYLE["btn_delete"])
+        self.delete_btn = QPushButton(get_text("finance_delete", "🗑️ УДАЛИТЬ"))
+        self.delete_btn.setObjectName("danger")
+        self.delete_btn.setMinimumHeight(35)
+        self.delete_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.delete_btn.setEnabled(False)
         self.delete_btn.clicked.connect(self.delete_selected_record)
         controls_layout.addWidget(self.delete_btn)
         
-        controls_layout.addStretch()
-        layout.addLayout(controls_layout)
+        self.clean_btn = QPushButton(get_text("finance_clean", "🧹 ОЧИСТИТЬ СТАРЫЕ"))
+        self.clean_btn.setObjectName("danger")
+        self.clean_btn.setMinimumHeight(35)
+        self.clean_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.clean_btn.setToolTip(get_text("finance_clean_tip", "Удалить записи предыдущих сканирований (оставить только текущие)"))
+        self.clean_btn.clicked.connect(self.request_clean_history)
+        controls_layout.addWidget(self.clean_btn)
+        
+        layout.addWidget(ctrl_group)
         
         # === Table ===
         self.table = QTableWidget()
@@ -177,9 +192,7 @@ class ProfitsTab(QWidget):
         # Настройка поведения выделения
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-        
-        # Стилизация таблицы и редактора
-        self.table.setStyleSheet(PROFITS_STYLE["table"])
+        self.table.setAlternatingRowColors(True)
 
         # Начальная настройка заголовков (без ResizeToContents для скорости инициализации)
         header = self.table.horizontalHeader()
@@ -190,10 +203,6 @@ class ProfitsTab(QWidget):
         # Initial Load Cities
         self._load_cities()
         
-    def _style_combo(self, combo):
-        """Apply dark theme to combo boxes"""
-        combo.setStyleSheet(PROFITS_STYLE["combo"])
-
     def _load_cities(self):
         """Initial city loading and refresh"""
         try:

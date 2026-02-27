@@ -375,7 +375,7 @@ class MarketBot(BaseBot):
                  is_modified = True
                  msg = msg_static
 
-        self._record_time("Валидация: Меню", (time.time() - start_time) * 1000)
+        self.logger.debug(f"Валидация меню заняла: {(time.time() - start_time) * 1000:.1f} мс")
 
         # Если все ОК -> выходим
         if not is_modified:

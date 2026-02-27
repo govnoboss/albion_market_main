@@ -236,17 +236,57 @@ QLabel#subtitle {{
 }}
 
 /* Кнопки */
+QPushButton {{
+    background-color: #1e293b;
+    color: {COLORS['text']};
+    border: 1px solid {COLORS['border']};
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-weight: 500;
+}}
+
+QPushButton:hover {{
+    background-color: #334155;
+    border: 1px solid #475569;
+}}
+
+QPushButton:pressed {{
+    background-color: #0f172a;
+}}
+
 QPushButton#primary {{
     background-color: {COLORS['accent']};
-    color: white;
+    color: #ffffff;
     border: none;
     border-radius: 6px;
-    padding: 10px 20px;
-    font-weight: bold;
+    padding: 6px 14px;
+    font-weight: 700;
+}}
+
+QPushButton#primary:hover {{
+    background-color: {COLORS['accent_hover']};
+}}
+
+QPushButton#primary:pressed {{
+    background-color: #059669;
+}}
+
+QPushButton#danger {{
+    background-color: rgba(244, 63, 94, 0.1);
+    color: {COLORS['danger']};
+    border: 1px solid rgba(244, 63, 94, 0.3);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-weight: 700;
 }}
 
 QPushButton#danger:hover {{
-    background-color: {COLORS['danger_hover'] if 'danger_hover' in COLORS else '#c52d2a'};
+    background-color: rgba(244, 63, 94, 0.2);
+    border: 1px solid {COLORS['danger']};
+}}
+
+QPushButton#danger:pressed {{
+    background-color: rgba(244, 63, 94, 0.3);
 }}
 
 /* Global Components */
@@ -332,6 +372,36 @@ QComboBox::down-arrow {{
     margin-right: 10px;
 }}
 
+/* Checkboxes */
+QCheckBox {{
+    color: {COLORS['text']};
+    font-size: 13px;
+    spacing: 8px;
+    font-weight: 500;
+}}
+
+QCheckBox::indicator {{
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 1px solid {COLORS['border']};
+    background-color: {COLORS['bg']};
+}}
+
+QCheckBox::indicator:hover {{
+    border-color: {COLORS['accent_soft']};
+}}
+
+QCheckBox::indicator:checked {{
+    background-color: {COLORS['accent']};
+    border: 1px solid {COLORS['accent']};
+    image: url(resources/icons/check.png); /* or simple pure color if image fail */
+}}
+
+QCheckBox::indicator:unchecked:hover {{
+    background-color: #1a2521;
+}}
+
 /* Progress Bar */
 QProgressBar {{
     background-color: {COLORS['bg']};
@@ -374,25 +444,7 @@ LOG_OVERLAY_STYLE = {
     "viewer": f"background: transparent; border: none; color: {COLORS['text']}; font-family: 'Consolas', monospace; font-size: 11px;",
 }
 
-# Вкладка Профита
-PROFITS_STYLE = {
-    "label": f"color: {COLORS['text_dark']}; font-weight: bold;",
-    "refresh_btn": f"background-color: {COLORS['accent']}; color: white; border-radius: 6px; padding: 8px 15px; font-weight: bold;",
-    "clean_btn": f"background-color: {COLORS['danger']}; color: white; border-radius: 6px; padding: 8px 15px; font-weight: bold;",
-    "table": MAIN_STYLE,
-    "combo": f"background-color: {COLORS['bg_card']}; border: 1px solid {COLORS['border']}; border-radius: 4px; padding: 5px; color: {COLORS['text']};",
-}
 
-# Вкладка Цен
-PRICES_STYLE = {
-    "header": f"color: {COLORS['accent']}; font-size: 18px; font-weight: bold;",
-    "search": f"background-color: {COLORS['bg_card']}; border: 1px solid {COLORS['border']}; border-radius: 6px; padding: 6px 10px; color: {COLORS['text']};",
-    "btn_delete": f"background-color: {COLORS['danger']}; color: white; border-radius: 6px; padding: 6px 12px;",
-    "btn_danger": f"background-color: {COLORS['danger']}; color: white; border-radius: 6px; padding: 6px 12px;",
-    "btn_normal": f"background-color: {COLORS['accent']}; color: white; border-radius: 6px; padding: 6px 12px;",
-    "dialog": f"background-color: {COLORS['bg']}; color: {COLORS['text']};",
-    "msgbox": f"background-color: {COLORS['bg_card']}; color: {COLORS['text']};",
-}
 
 # Помощь в координатах
 HELP_DIALOG_STYLE = f"""

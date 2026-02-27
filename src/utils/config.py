@@ -51,7 +51,8 @@ class ConfigManager:
                 "price_update_timeout": 5.0,
                 "use_character_switch": True,
                 "ocr_debug_mode": False,
-                "language": "en"
+                "language": "en",
+                "game_language": "ru"
             },
             "dropdowns": {
                 "row_height": 28,

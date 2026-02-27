@@ -1,4 +1,9 @@
-DEFAULT_TIER_EXCEPTIONS = {
+"""
+Исключения тиров по умолчанию (локализованные)
+"""
+
+# === РУССКИЕ ИСКЛЮЧЕНИЯ ===
+_EXCEPTIONS_RU = {
     "Tier_1": [
         "капюшон наемника (знаток)",
         "Капюшон наемника",
@@ -70,3 +75,63 @@ DEFAULT_TIER_EXCEPTIONS = {
         "молот (знаток)"
     ]
 }
+
+# === АНГЛИЙСКИЕ ИСКЛЮЧЕНИЯ ===
+_EXCEPTIONS_EN = {
+    "Tier_1": [
+        "Mercenary Hood",
+        "Mercenary Jacket",
+        "Mercenary Shoes",
+        "Broadsword"
+    ],
+
+    "Tier_2": [
+        "Bow",
+        "Scholar Robe",
+        "Soldier Armor",
+        "Bag",
+        "Cape",
+        "Scholar Cowl",
+        "Soldier Helmet",
+        "Fire Staff",
+        "Tome of Spells",
+        "Shield",
+        "Soldier Boots",
+        "Scholar Sandals"
+    ],
+    "Tier_3": [
+        "Crossbow",
+        "Hammer",
+        "Quarterstaff",
+        "Frost Staff",
+        "Brawler Gloves",
+        "Battle Staff",
+        "Wanderlust",
+        "Arcane Staff",
+        "Battleaxe",
+        "Cursed Staff",
+        "Dagger",
+        "Holy Staff",
+        "Mace",
+        "Nature Staff",
+        "Spear",
+        "Torch"
+    ]
+}
+
+
+def get_default_exceptions() -> dict:
+    """Возвращает исключения тиров по умолчанию для текущего языка ИГРЫ"""
+    try:
+        from .config import get_config
+        lang = get_config().get_setting("game_language", "ru")
+    except Exception:
+        lang = "ru"
+    
+    if lang == "en":
+        return {k: list(v) for k, v in _EXCEPTIONS_EN.items()}
+    return {k: list(v) for k, v in _EXCEPTIONS_RU.items()}
+
+
+# Обратная совместимость
+DEFAULT_TIER_EXCEPTIONS = _EXCEPTIONS_RU

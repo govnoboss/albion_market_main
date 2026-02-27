@@ -75,3 +75,7 @@ def get_text(key: str, default: Optional[str] = None) -> str:
 def set_language(lang_code: str):
     """Удобная обертка для смены языка"""
     _loc_manager.set_language(lang_code)
+
+def get_current_language() -> str:
+    """Получить текущий код языка"""
+    return _loc_manager.current_language

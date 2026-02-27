@@ -20,6 +20,7 @@ class CoordinatesTab(QWidget):
         self.config = get_config()
         self.logger = get_logger()
         self.capture = get_capture_manager()
+        self._wizard_offered = False
         
         self._setup_ui()
         self._refresh_profiles() # Load profiles
@@ -31,53 +32,56 @@ class CoordinatesTab(QWidget):
         super().showEvent(event)
         self._refresh_values()
         self._refresh_profiles()
+        self._check_first_run()
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
         
-        # Header
-        header = QLabel(get_text("coord_header", "Управление координатами"))
-        header.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 2px;")
-        layout.addWidget(header)
+        # === Header ===
+        header_layout = QHBoxLayout()
+        title = QLabel(get_text("coord_header", "📍 Управление координатами"))
+        title.setObjectName("title")
+        header_layout.addWidget(title)
+        
+        header_layout.addStretch()
+        
+        # Wizard Button (Moved to top right like Mini Mode)
+        wizard_btn = QPushButton(get_text("coord_wizard_btn", "🪄 ЗАПУСТИТЬ МАСТЕР НАСТРОЙКИ"))
+        wizard_btn.setObjectName("primary")
+        wizard_btn.setMinimumHeight(40)
+        wizard_btn.setMinimumWidth(250)
+        wizard_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        wizard_btn.clicked.connect(self._start_wizard)
+        header_layout.addWidget(wizard_btn)
+        
+        layout.addLayout(header_layout)
         
         instruction = QLabel(get_text("coord_instruction", "Для точечных координат: нажмите 'Задать', наведите курсор и нажмите F1..."))
-        instruction.setStyleSheet("color: #888; margin-bottom: 2px;")
+        instruction.setStyleSheet("color: #64748b; font-size: 13px; margin-bottom: 10px;") # text_dark
         instruction.setWordWrap(True)
         layout.addWidget(instruction)
- 
-        # Wizard Button
-        wizard_btn = QPushButton(get_text("coord_wizard_btn", "🪄 Запустить Мастер настройки"))
-        wizard_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #fca326; 
-                color: #0d1117;
-                font-weight: bold;
-                padding: 8px;
-                font-size: 14px;
-            }
-            QPushButton:hover { background-color: #e69d00; }
-        """)
-        wizard_btn.clicked.connect(self._start_wizard)
-        layout.addWidget(wizard_btn)
 
-        self._check_first_run()
-
-        self._setup_profiles_ui(layout) # Add profiles UI
+        # Profiles UI
+        self._setup_profiles_ui(layout)
         
         # Scroll Area
         scroll = QScrollArea()
+        scroll.setObjectName("coordScroll")
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setStyleSheet("background: transparent;")
+        scroll.setStyleSheet("QScrollArea#coordScroll { background: transparent; }")
         
         content = QWidget()
-        content.setStyleSheet("background: transparent;")
+        content.setObjectName("coordContent")
+        content.setStyleSheet("QWidget#coordContent { background: transparent; }")
         self.content_layout = QVBoxLayout(content)
         self.content_layout.setSpacing(10)
         
         # Define categories
         self.categories = {
-            get_text("coord_cat_main", "Основное меню рынка"): [
+            "coord_cat_main": [
                 ("search_input", get_text("coord_item_search_input", "Поле поиска"), "point"),
                 ("search_clear", get_text("coord_item_search_clear", "Очистка поиска"), "point"),
                 ("buy_button", get_text("coord_item_buy_btn", "Купить предмет"), "point"),
@@ -94,7 +98,7 @@ class CoordinatesTab(QWidget):
                 
                 ("best_price_area", get_text("coord_best_price_ocr", "Цена за 1шт предмета (OCR)"), "area"), 
             ],
-            get_text("coord_cat_item_menu", "Окно меню предмета"): [
+            "coord_cat_item_menu": [
                 # Основные кнопки
                 ("item_expand", get_text("coord_item_expand", "Раскрыть цену предмета"), "point"),
                 # Элементы ордера
@@ -107,7 +111,7 @@ class CoordinatesTab(QWidget):
                 ("buyer_top_lot_qty", get_text("coord_top_lot_qty", "Кол-во в топ лоте (OCR)"), "area"),
                 ("buyer_total_price", get_text("coord_total_price", "Итоговая стоимость (OCR)"), "area"),
             ],
-            get_text("coord_cat_bm", "Black Market"): [
+            "coord_cat_bm": [
                 ("bm_sell_tab", get_text("coord_bm_sell_tab", "Вкладка 'Продать'"), "point"),
                 ("bm_settings_btn", get_text("coord_bm_settings", "Кнопка Настройки"), "point"),
                 ("bm_logout_btn", get_text("coord_bm_logout", "Кнопка Выйти"), "point"),
@@ -123,39 +127,49 @@ class CoordinatesTab(QWidget):
         
         self.coord_widgets = {}  # key -> value_label
         
-        for category, items in self.categories.items():
-            group = QGroupBox() # Без заголовка, делаем свой
+        for category_key, items in self.categories.items():
+            group = QGroupBox()
             group_layout = QVBoxLayout(group)
+            group_layout.setContentsMargins(15, 15, 15, 15)
+            group_layout.setSpacing(8)
             
             # --- Заголовок Раздела ---
             header_layout = QHBoxLayout()
-            cat_label = QLabel(category)
-            cat_label.setStyleSheet("font-weight: bold; font-size: 13px; color: #58a6ff;")
+            cat_label = QLabel(get_text(category_key).upper())
+            cat_label.setStyleSheet("font-weight: 800; font-size: 14px; color: #10b981; letter-spacing: 1px;") # accent color
             
             # Кнопка помощи раздела
-            help_btn = QPushButton("?")
-            help_btn.setFixedSize(32, 32)
+            help_btn = QPushButton("❓")
+            help_btn.setFixedSize(28, 28)
             help_btn.setCursor(Qt.CursorShape.WhatsThisCursor)
-            help_btn.setToolTip(f"Показать справку для раздела '{category}'")
+            help_btn.setToolTip(f"Показать справку для раздела")
             help_btn.setStyleSheet("""
                 QPushButton {
-                    background-color: transparent;
-                    color: #58a6ff;
-                    border: none;
-                    border-radius: 16px;
-                    font-size: 18px;
+                    background-color: rgba(16, 185, 129, 0.1);
+                    color: #10b981;
+                    border: 1px solid rgba(16, 185, 129, 0.2);
+                    border-radius: 14px;
+                    font-size: 14px;
                     font-weight: bold;
                     padding: 0;
                     margin: 0;
-                    text-align: center;
                 }
                 QPushButton:hover {
-                    color: #79c0ff;
-                    background-color: rgba(88, 166, 255, 0.1);
+                    background-color: rgba(16, 185, 129, 0.2);
+                    border: 1px solid #10b981;
                 }
             """)
-            # Передаем category как key для поиска картинки
-            help_btn.clicked.connect(lambda checked, c=category: self._show_help_image(c, c)) # key=category name
+            
+            # Mapping category key to Russian name for help images
+            help_name_map = {
+                "coord_cat_main": "Основное меню рынка",
+                "coord_cat_item_menu": "Окно меню предмета",
+                "coord_cat_bm": "Black Market"
+            }
+            img_name = help_name_map.get(category_key, category_key)
+
+            # Передаем img_name для поиска картинки
+            help_btn.clicked.connect(lambda checked, k=img_name, n=get_text(category_key): self._show_help_image(k, n))
             
             header_layout.addWidget(cat_label)
             header_layout.addWidget(help_btn)
@@ -167,7 +181,7 @@ class CoordinatesTab(QWidget):
             line = QFrame()
             line.setFrameShape(QFrame.Shape.HLine)
             line.setFrameShadow(QFrame.Shadow.Sunken)
-            line.setStyleSheet("background-color: #30363d; margin-bottom: 2px;")
+            line.setStyleSheet("background-color: rgba(255, 255, 255, 0.05); margin-bottom: 5px;")
             group_layout.addWidget(line)
             
             # --- Элементы (с нумерацией) ---
@@ -184,18 +198,27 @@ class CoordinatesTab(QWidget):
 
     def _create_coord_row(self, key, name, mode, index):
         layout = QHBoxLayout()
+        layout.setContentsMargins(0, 4, 0, 4)
+        
+        # Container style
+        row_widget = QWidget()
+        row_widget.setLayout(layout)
+        row_widget.setObjectName("hotItemRow")
         
         # Нумерация: "1. Название"
         numbered_name = f"{index}. {name}"
         name_lbl = QLabel(numbered_name)
-        name_lbl.setMinimumWidth(150)
+        name_lbl.setMinimumWidth(250)
+        name_lbl.setStyleSheet("font-size: 13px; font-weight: 500; color: #e2e8f0;")
         
         val_lbl = QLabel(get_text("coord_not_set", "Не задано"))
-        val_lbl.setStyleSheet("color: #666;")
+        val_lbl.setStyleSheet("color: #64748b; font-family: monospace;")
         self.coord_widgets[key] = val_lbl
         
         set_btn = QPushButton(get_text("coord_btn_set", "Задать"))
         set_btn.setFixedWidth(80)
+        set_btn.setObjectName("primary")
+        set_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         set_btn.clicked.connect(lambda checked, k=key, n=name, m=mode: self._start_capture(k, n, m))
         
         layout.addWidget(name_lbl)
@@ -214,24 +237,26 @@ class CoordinatesTab(QWidget):
             test_btn = QPushButton(test_label)
             test_btn.setFixedWidth(90)
             test_btn.setStyleSheet("""
-                QPushButton { background-color: #238636; }
-                QPushButton:hover { background-color: #2ea043; }
+                QPushButton { background-color: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid #10b981; border-radius: 6px; padding: 6px;}
+                QPushButton:hover { background-color: rgba(16, 185, 129, 0.2); }
             """)
+            test_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             test_btn.clicked.connect(lambda checked, k=key: self._test_area(k))
             layout.addWidget(test_btn)
         
         clear_btn = QPushButton(get_text("coord_btn_reset", "Сброс"))
         clear_btn.setFixedWidth(70)
-        # Style for clear button
-        clear_btn.setStyleSheet("""
-            QPushButton { background-color: #4a3b3b; }
-            QPushButton:hover { background-color: #bd3b3b; }
-        """)
+        clear_btn.setObjectName("danger")
+        clear_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         clear_btn.clicked.connect(lambda checked, k=key: self._clear_coord(k))
         
         layout.addWidget(clear_btn)
         
-        return layout
+        # Return layout wrapped in dict, to maintain compatibility with adding layout directly
+        wrapper = QHBoxLayout()
+        wrapper.setContentsMargins(0,0,0,0)
+        wrapper.addWidget(row_widget)
+        return wrapper
 
     def _connect_signals(self):
         self.capture.coordinate_captured.connect(self._on_captured)
@@ -455,15 +480,12 @@ class CoordinatesTab(QWidget):
             from ..utils.image_utils import find_image_on_screens
             mean_diff = find_image_on_screens(ref_img, current_img)
             
-            # Разница для генерации debug изображения (визуализации)
             if ref_img.size != current_img.size:
                 current_img_resized = current_img.resize(ref_img.size)
                 diff = ImageChops.difference(ref_img, current_img_resized)
             else:
                  diff = ImageChops.difference(ref_img, current_img)
             
-            # Чем меньше mean_diff, тем больше похожесть
-            # E.g. 0 = копия. > 50 = сильно отличается.
             
             is_match = mean_diff < 15.0 # Порог
             
@@ -534,57 +556,34 @@ class CoordinatesTab(QWidget):
 
     def _setup_profiles_ui(self, parent_layout):
         """Создание секции управления профилями"""
-        group = QGroupBox(get_text("coord_profiles_group", "📁 Профили координат"))
-        group_layout = QVBoxLayout(group)
-        
-        # Row with controls
-        controls_layout = QHBoxLayout()
+        group = QGroupBox(get_text("coord_profiles_group", "📁 ПРОФИЛИ КООРДИНАТ"))
+        group_layout = QHBoxLayout(group)
+        group_layout.setContentsMargins(15, 20, 15, 15)
         
         self.profiles_combo = QComboBox()
         self.profiles_combo.setPlaceholderText(get_text("coord_profile_placeholder", "Выберите профиль..."))
-        self.profiles_combo.setMinimumWidth(150)
-        self.profiles_combo.setStyleSheet("""
-            QComboBox {
-                background-color: #161b22;
-                color: #f0f6fc;
-                border: 1px solid #30363d;
-                border-radius: 6px;
-                padding: 5px 10px;
-            }
-            QComboBox:hover {
-                border-color: #58a6ff;
-            }
-            QComboBox::drop-down {
-                border: none;
-                width: 20px;
-            }
-            QComboBox QAbstractItemView {
-                background-color: #161b22;
-                color: #f0f6fc;
-                border: 1px solid #30363d;
-                selection-background-color: #30363d;
-            }
-        """)
+        self.profiles_combo.setMinimumWidth(200)
         
-        load_btn = QPushButton(get_text("coord_btn_load", "Загрузить"))
+        load_btn = QPushButton(get_text("coord_btn_load", "ЗАГРУЗИТЬ"))
+        load_btn.setObjectName("primary")
+        load_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         load_btn.clicked.connect(self._on_load_profile)
         
-        save_btn = QPushButton(get_text("coord_btn_save", "Сохранить..."))
+        save_btn = QPushButton(get_text("coord_btn_save", "СОХРАНИТЬ..."))
+        save_btn.setObjectName("primary")
+        save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         save_btn.clicked.connect(self._on_save_profile)
         
-        del_btn = QPushButton(get_text("coord_btn_delete", "Удалить"))
-        del_btn.setStyleSheet("""
-            QPushButton { background-color: #4a3b3b; }
-            QPushButton:hover { background-color: #bd3b3b; }
-        """)
+        del_btn = QPushButton(get_text("coord_btn_delete", "УДАЛИТЬ"))
+        del_btn.setObjectName("danger")
+        del_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         del_btn.clicked.connect(self._on_delete_profile)
         
-        controls_layout.addWidget(self.profiles_combo, stretch=1)
-        controls_layout.addWidget(load_btn)
-        controls_layout.addWidget(save_btn)
-        controls_layout.addWidget(del_btn)
+        group_layout.addWidget(self.profiles_combo, stretch=1)
+        group_layout.addWidget(load_btn)
+        group_layout.addWidget(save_btn)
+        group_layout.addWidget(del_btn)
         
-        group_layout.addLayout(controls_layout)
         parent_layout.addWidget(group)
 
     def _refresh_profiles(self):
@@ -706,9 +705,19 @@ class CoordinatesTab(QWidget):
 
     def _check_first_run(self):
         """Проверка на первый запуск (пустой конфиг)"""
-        # Если координат нет - предлагаем запустить мастер
-        if not self.config.get_all_coordinates():
-             QTimer.singleShot(500, self._start_wizard)
+        # Если координат нет и мы еще не предлагали в этой сессии - предлагаем через попап
+        if not self._wizard_offered and not self.config.get_all_coordinates():
+             self._wizard_offered = True
+             
+             reply = QMessageBox.question(
+                 self, 
+                 get_text("coord_wizard_title", "Мастер настройки"),
+                 get_text("coord_wizard_offer", "Координаты еще не заданы. Хотите запустить мастер настройки?"),
+                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+             )
+             
+             if reply == QMessageBox.StandardButton.Yes:
+                 self._start_wizard()
 
     def _start_wizard(self):
         from .wizard_overlay import WizardOverlay

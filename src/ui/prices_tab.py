@@ -5,13 +5,13 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QTabWidget, QTableWidget, 
     QTableWidgetItem, QHeaderView, QLabel, QPushButton, QHBoxLayout,
-    QLineEdit, QMessageBox, QInputDialog
+    QLineEdit, QMessageBox, QInputDialog,QGroupBox
 )
 from PyQt6.QtCore import Qt, QTimer
 
 from ..utils.price_storage import get_price_storage
 from ..utils.localization import get_text
-from .styles import PRICES_STYLE
+from .styles import MAIN_STYLE
 
 
 class PricesTab(QWidget):
@@ -22,43 +22,55 @@ class PricesTab(QWidget):
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
         
-        # Заголовок и кнопки
-        top_layout = QHBoxLayout()
-        header = QLabel(get_text("prices_header", "💰 Цены по городам"))
-        header.setStyleSheet(PRICES_STYLE["header"])
-        top_layout.addWidget(header)
+        # === Header ===
+        header = QHBoxLayout()
+        title = QLabel(get_text("prices_header", "💰 База цен"))
+        title.setObjectName("title")
+        header.addWidget(title)
+        header.addStretch()
+        layout.addLayout(header)
         
-        top_layout.addStretch()
+        # === Controls Group ===
+        ctrl_group = QGroupBox(get_text("prices_controls_group", "Управление базой данных"))
+        controls_layout = QHBoxLayout(ctrl_group)
+        controls_layout.setSpacing(15)
         
         # Поиск
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText(get_text("prices_search_placeholder", "🔍 Поиск предмета..."))
-        self.search_input.setFixedWidth(200)
-        self.search_input.setStyleSheet(PRICES_STYLE["search"])
+        self.search_input.setMinimumWidth(250)
         self.search_input.textChanged.connect(self.filter_table)
-        top_layout.addWidget(self.search_input)
+        controls_layout.addWidget(self.search_input)
         
-        # Кнопка удаления
-        self.delete_btn = QPushButton(get_text("prices_btn_delete", "🗑️ Удалить запись"))
-        self.delete_btn.setStyleSheet(PRICES_STYLE["btn_delete"])
+        controls_layout.addStretch()
+        
+        refresh_btn = QPushButton(get_text("prices_btn_refresh", "🔄 ОБНОВИТЬ"))
+        refresh_btn.setObjectName("primary")
+        refresh_btn.setMinimumHeight(35)
+        refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        refresh_btn.clicked.connect(self.refresh_data)
+        controls_layout.addWidget(refresh_btn)
+        
+        self.delete_btn = QPushButton(get_text("prices_btn_delete", "🗑️ УДАЛИТЬ ЗАПИСЬ"))
+        self.delete_btn.setObjectName("danger")
+        self.delete_btn.setMinimumHeight(35)
+        self.delete_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.delete_btn.setEnabled(False)
         self.delete_btn.clicked.connect(self.delete_selected_record)
-        top_layout.addWidget(self.delete_btn)
+        controls_layout.addWidget(self.delete_btn)
         
-        # Кнопка очистки старых
-        clean_old_btn = QPushButton(get_text("prices_btn_clean", "🧹 Очистить старые"))
+        clean_old_btn = QPushButton(get_text("prices_btn_clean", "🧹 ОЧИСТИТЬ СТАРЫЕ"))
+        clean_old_btn.setObjectName("danger")
+        clean_old_btn.setMinimumHeight(35)
+        clean_old_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         clean_old_btn.setToolTip(get_text("prices_btn_clean_tip", "Удалить цены, которым больше X часов"))
-        clean_old_btn.setStyleSheet(PRICES_STYLE["btn_danger"])
         clean_old_btn.clicked.connect(self.clean_old_records)
-        top_layout.addWidget(clean_old_btn)
+        controls_layout.addWidget(clean_old_btn)
         
-        refresh_btn = QPushButton(get_text("prices_btn_refresh", "Обновить"))
-        refresh_btn.setStyleSheet(PRICES_STYLE["btn_normal"])
-        refresh_btn.clicked.connect(self.refresh_data)
-        top_layout.addWidget(refresh_btn)
-        
-        layout.addLayout(top_layout)
+        layout.addWidget(ctrl_group)
         
         # Вкладки городов
         self.city_tabs = QTabWidget()
@@ -117,6 +129,7 @@ class PricesTab(QWidget):
         table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        table.setAlternatingRowColors(True)
         
         # Настройка заголовков
         header = table.horizontalHeader()
@@ -234,7 +247,6 @@ class PricesTab(QWidget):
         dialog.setLabelText(get_text("prices_clean_dialog_label", "Удалить цены старше (часов):"))
         dialog.setIntValue(3)
         dialog.setIntRange(1, 168)
-        dialog.setStyleSheet(PRICES_STYLE["dialog"])
         
         if dialog.exec():
             hours = dialog.intValue()
@@ -242,7 +254,6 @@ class PricesTab(QWidget):
             
             # Создаем кастомный QMessageBox с темной темой
             msg = QMessageBox(self)
-            msg.setStyleSheet(PRICES_STYLE["msgbox"])
             msg.setIcon(QMessageBox.Icon.Information)
             
             if count > 0:
