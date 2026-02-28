@@ -285,5 +285,11 @@
     "wizard_err_no_price": "Could not recognize number in this area.\n\nMake sure only price digits are in the area.",
     "wizard_verif_price_success": "✅ Price recognized: {price}",
     "wizard_setup_done_instr": "✅ Setup completed!",
-    "wizard_status_done": "Done"
+    "wizard_status_done": "Done",
+    "mini_btn_start": "▶ Start (F5)",
+    "mini_btn_pause": "❚❚ Pause (F6)",
+    "mini_btn_resume": "▶ Resume (F6)",
+    "mini_btn_stop": "■ Stop (F5)",
+    "mini_tooltip_restore": "Restore",
+    "mini_progress_waiting": "Waiting for start..."
 }

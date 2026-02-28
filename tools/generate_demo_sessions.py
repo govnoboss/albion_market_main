@@ -70,14 +70,6 @@ ITEMS = [
     ("Mercenary Jacket", 6, 0),
     ("Hunter Hood", 5, 1),
     ("Stalker Hood", 6, 0),
-    # Ресурсы / крафт
-    ("Royal Sigil", 5, 0),
-    ("Tome of Insight", 4, 0),
-    ("Cape of Storms", 5, 0),
-    ("Undead Cape", 6, 0),
-    ("Demon Cape", 7, 0),
-    ("Martlock Cape", 5, 0),
-    ("Fort Sterling Cape", 5, 0),
 ]
 
 

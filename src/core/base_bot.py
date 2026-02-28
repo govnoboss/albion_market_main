@@ -330,7 +330,7 @@ class BaseBot(QThread):
         # NOTE: Implementation copied from MarketBot, essential for Buyer too
         from difflib import SequenceMatcher
         import re
-        from ..utils.ocr import read_screen_text_cached
+        from ..utils.ocr import read_screen_text_cached, read_screen_text
         from ..utils.text_utils import normalize_text
         
         item_name_area = self.config.get_coordinate_area("item_name_area")
@@ -340,6 +340,28 @@ class BaseBot(QThread):
         
         if not item_name_area:
             return True
+        
+        # Determine OCR language from game_language setting
+        game_lang = self.config.get_setting("game_language", "ru")
+        ocr_lang = 'eng' if game_lang == 'en' else 'rus'
+        
+        # English tier prefixes to strip from OCR result
+        EN_TIER_PREFIXES = ["Grandmaster's ", "Master's ", "Expert's ", "Adept's ", "Elder's "]
+        
+        def _strip_tier_prefix(text: str) -> str:
+            """Strip tier prefix from OCR text based on game language."""
+            # Russian: tier info in parentheses, e.g. 'Большой посох (T4)'
+            result = re.sub(r'\s*\(.*', '', text).strip()
+            # English: tier prefix at start, e.g. "Adept's Halberd"
+            for prefix in EN_TIER_PREFIXES:
+                if result.startswith(prefix):
+                    result = result[len(prefix):].strip()
+                    break
+                # Case-insensitive check
+                if result.lower().startswith(prefix.lower()):
+                    result = result[len(prefix):].strip()
+                    break
+            return result
         
         expected_clean = expected_name.strip().lower()
         
@@ -351,9 +373,9 @@ class BaseBot(QThread):
             ocr_name = read_screen_text_cached(
                 item_name_area['x'], item_name_area['y'],
                 item_name_area['w'], item_name_area['h'],
-                lang='rus'
+                lang=ocr_lang
             )
-            ocr_name_clean = re.sub(r'\s*\(.*', '', ocr_name).strip()
+            ocr_name_clean = _strip_tier_prefix(ocr_name)
             ocr_clean = ocr_name_clean.lower()
             
             if not ocr_clean:
@@ -364,11 +386,11 @@ class BaseBot(QThread):
                     ocr_name_retry = read_screen_text(
                         item_name_area['x'], item_name_area['y'],
                         item_name_area['w'], item_name_area['h'],
-                        lang='rus'
+                        lang=ocr_lang
                     )
                     if ocr_name_retry.strip():
                         ocr_name = ocr_name_retry
-                        ocr_name_clean = re.sub(r'\s*\(.*', '', ocr_name).strip()
+                        ocr_name_clean = _strip_tier_prefix(ocr_name)
                         ocr_clean = ocr_name_clean.lower()
                         text_found = True
                         break
@@ -384,10 +406,10 @@ class BaseBot(QThread):
             norm_similarity = SequenceMatcher(None, norm_expected, norm_ocr).ratio()
             
             if norm_similarity >= 0.90:
-                self.logger.info(f"✅ Имя совпало после нормализации: '{ocr_clean}' -> '{norm_ocr}' (Ratio: {norm_similarity:.2f})")
+                self.logger.info(f"Name matched after normalization: '{ocr_clean}' -> '{norm_ocr}' (Ratio: {norm_similarity:.2f})")
                 return True
             
-            self.logger.warning(f"⚠️ Имя не совпадает (Try {attempt+1}): {ocr_name_clean} vs {expected_name} (Norm: {norm_similarity:.2f})")
+            self.logger.warning(f"Name mismatch (Try {attempt+1}): '{ocr_name_clean}' vs '{expected_name}' (Norm: {norm_similarity:.2f})")
             
             if attempt == max_retries:
                 # Если попытки исчерпаны и разрешен Full Reset (use_buy_button=True), пробуем закрыть меню
@@ -398,7 +420,7 @@ class BaseBot(QThread):
                 return False
             
             # Retry logic
-            self.logger.info("� Пробуем найти через сортировку...")
+            self.logger.info("Retrying via sort button...")
             
             # 1. Close Menu (If Full Mode and likely open)
             if use_buy_button and menu_close:

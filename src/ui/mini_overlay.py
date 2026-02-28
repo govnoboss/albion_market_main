@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, pyqtSignal, QSize, QPoint
 from PyQt6.QtGui import QColor, QPalette
 from .styles import MINI_OVERLAY_STYLE
+from ..utils.localization import get_text
 
 class MiniOverlay(QWidget):
     """
@@ -106,7 +107,7 @@ class MiniOverlay(QWidget):
         top_layout.addStretch()
         
         self.restore_btn = QPushButton("↙")
-        self.restore_btn.setToolTip("Развернуть")
+        self.restore_btn.setToolTip(get_text("mini_tooltip_restore", "Развернуть"))
         self.restore_btn.setFixedSize(20, 20)
         self.restore_btn.setStyleSheet(MINI_OVERLAY_STYLE["restore_btn"])
         self.restore_btn.clicked.connect(self.restore_clicked.emit)
@@ -115,7 +116,7 @@ class MiniOverlay(QWidget):
         layout.addLayout(top_layout)
         
         # --- Строка прогресса ---
-        self.progress_label = QLabel("Ожидание запуска...")
+        self.progress_label = QLabel(get_text("mini_progress_waiting", "Ожидание запуска..."))
         self.progress_label.setStyleSheet("color: #f0f6fc; font-size: 11px; border: none; background: transparent;")
         layout.addWidget(self.progress_label)
         
@@ -123,21 +124,21 @@ class MiniOverlay(QWidget):
         btn_layout = QHBoxLayout()
         
         # Кнопка Старт (видна когда бот не работает)
-        self.start_btn = QPushButton("▶ Старт (F5)")
+        self.start_btn = QPushButton(get_text("mini_btn_start", "▶ Старт (F5)"))
         self.start_btn.setFixedHeight(30)
         self.start_btn.setStyleSheet(MINI_OVERLAY_STYLE["start_btn"])
         self.start_btn.clicked.connect(self.start_clicked.emit)
         btn_layout.addWidget(self.start_btn)
         
         # Кнопки Пауза и Стоп (видны когда бот работает)
-        self.pause_btn = QPushButton("❚❚ Пауза (F6)")
+        self.pause_btn = QPushButton(get_text("mini_btn_pause", "❚❚ Пауза (F6)"))
         self.pause_btn.setFixedHeight(30)
         self.pause_btn.setStyleSheet(MINI_OVERLAY_STYLE["pause_btn"])
         self.pause_btn.clicked.connect(self.pause_clicked.emit)
         self.pause_btn.hide()  # Скрыта по умолчанию
         btn_layout.addWidget(self.pause_btn)
         
-        self.stop_btn = QPushButton("■ Стоп (F5)")
+        self.stop_btn = QPushButton(get_text("mini_btn_stop", "■ Стоп (F5)"))
         self.stop_btn.setFixedHeight(30)
         self.stop_btn.setStyleSheet(MINI_OVERLAY_STYLE["stop_btn"])
         self.stop_btn.clicked.connect(self.stop_clicked.emit)
@@ -165,7 +166,7 @@ class MiniOverlay(QWidget):
             self.start_btn.hide()
             self.pause_btn.show()
             self.stop_btn.show()
-            self.pause_btn.setText("▶ Продолжить (F6)")
+            self.pause_btn.setText(get_text("mini_btn_resume", "▶ Продолжить (F6)"))
             self.pause_btn.setStyleSheet(MINI_OVERLAY_STYLE["resume_btn"])
             
         else:
@@ -176,7 +177,7 @@ class MiniOverlay(QWidget):
             self.start_btn.hide()
             self.pause_btn.show()
             self.stop_btn.show()
-            self.pause_btn.setText("❚❚ Пауза (F6)")
+            self.pause_btn.setText(get_text("mini_btn_pause", "❚❚ Пауза (F6)"))
             self.pause_btn.setStyleSheet(MINI_OVERLAY_STYLE["pause_btn"])
 
     def update_progress(self, current: int, total: int, item_name: str):

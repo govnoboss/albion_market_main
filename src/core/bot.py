@@ -212,7 +212,7 @@ class MarketBot(BaseBot):
         # 3. Varify Name (Immediately)
         # allow_recovery_clicks -> use_buy_button=False (Разрешаем Sort, запрещаем Buy)
         if not self._verify_item_name_with_retry(name, max_retries=2, use_buy_button=False):
-            self.logger.warning(f"⚠️ Предмет '{name}' не найден или имя не совпало!")
+            self.logger.warning(f"Item '{name}' not found or name mismatch!")
             return
 
         # 4. Filters already reset at step 1.1
@@ -422,7 +422,7 @@ class MarketBot(BaseBot):
         
         # 4. Проверяем имя предмета (критично!)
         if not self._verify_item_name_with_retry(self._current_item_name, max_retries=1):
-             self.logger.warning("⚠️ Имя предмета не совпало даже после 'Купить'. Запускаю ПОЛНЫЙ СБРОС ПОИСКА...")
+             self.logger.warning("Item name mismatch even after 'Buy' click. Starting FULL SEARCH RESET...")
              
              # --- FULL SEARCH RESET ---
              # 4.1. Очистка поиска

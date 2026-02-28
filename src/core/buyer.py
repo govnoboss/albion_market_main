@@ -458,7 +458,7 @@ class BuyerBot(BaseBot):
             
             # 2. Верификация имени (item_name_area)
             if not self._verify_item_name_with_retry(item_name, use_buy_button=False):
-                 self.logger.warning(f"❌ Имя предмета не совпадает! Ожидалось: {item_name}")
+                 self.logger.warning(f"Item name mismatch! Expected: {item_name}")
                  break
             
             # 3. Анализ цены (OCR)

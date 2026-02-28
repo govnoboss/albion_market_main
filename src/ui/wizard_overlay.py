@@ -800,7 +800,7 @@ class WizardOverlay(QWidget):
         self.close()
 
     def _verify_item_name_area(self, x, y, w, h):
-        """Автоматическая верификация области названия предмета (Посох -> Алебарда)"""
+        """Автоматическая верификация области названия предмета (Adept's Great Holy Staff)"""
         self.instruction_label.setText(get_text("wizard_verif_wait_staff", "🕵️ Верификация: Ожидание Посоха..."))
         self.step_label.setText(get_text("wizard_test_1", "ТЕСТ 1"))
         self._reposition_center_widget()
@@ -810,19 +810,10 @@ class WizardOverlay(QWidget):
         
         def _run_verification():
             import time
-            from pynput.mouse import Button, Controller as MouseController
-            from pynput.keyboard import Key, Controller as KeyboardController
-            mouse_c = MouseController()
-            kb_c = KeyboardController()
             
             try:
-                search_pos = self.points.get("search_input")
-                if not search_pos:
-                    self.verification_error_signal.emit(get_text("wizard_err_search_not_set", "Кнопка поиска не задана!"))
-                    return
-
                 # --- ТЕСТ 1: ТЕКУЩИЙ ПРЕДМЕТ (Должен быть Посох) ---
-                self.logger.info("Wizard: Verification Step 1 - Current Item (expecting Staff)")
+                self.logger.info("Wizard: Verification - Current Item (expecting Staff)")
                 QMetaObject.invokeMethod(self.instruction_label, "setText", Qt.ConnectionType.QueuedConnection, Q_ARG(str, get_text("wizard_verif_step1_instr", "🕵️ Тест 1: Распознавание текущего предмета...")))
                 
                 # Даем короткую задержку на всякий случай для UI игры
@@ -833,7 +824,7 @@ class WizardOverlay(QWidget):
                 ocr_lang = 'eng' if game_lang == 'en' else 'rus'
                 
                 text1 = read_screen_text(x, y, w, h, lang=ocr_lang)
-                self.logger.info(f"Wizard: Step 1 OCR: '{text1}'")
+                self.logger.info(f"Wizard: OCR result: '{text1}'")
                 t1_lower = text1.lower()
                 
                 staff_keywords = ["священ", "посох", "свеще", "осох", "больш", "holy", "staff", "great"]
@@ -842,29 +833,7 @@ class WizardOverlay(QWidget):
                     self.verification_error_signal.emit(err_msg)
                     return
 
-                QMetaObject.invokeMethod(self.step_label, "setText", Qt.ConnectionType.QueuedConnection, Q_ARG(str, get_text("wizard_test1_ok", "ТЕСТ 1 OK")))
-                QMetaObject.invokeMethod(self.instruction_label, "setText", Qt.ConnectionType.QueuedConnection, Q_ARG(str, get_text("wizard_verif_step1_success", "✅ Посох распознан. Проверка смены названия...")))
-                time.sleep(1.0)
-
-                # --- ТЕСТ 2: АЛЕБАРДА ---
-                self.logger.info("Wizard: Verification Step 2 - Switching to Halberd")
-                QMetaObject.invokeMethod(self.step_label, "setText", Qt.ConnectionType.QueuedConnection, Q_ARG(str, get_text("wizard_test_2", "ТЕСТ 2")))
-                QMetaObject.invokeMethod(self.instruction_label, "setText", Qt.ConnectionType.QueuedConnection, Q_ARG(str, get_text("wizard_verif_step2_instr", "🤖 Тест 2: Ввод 'Алебарда'...")))
-                
-                halberd_name = "Halberd" if game_lang == "en" else "Алебарда"
-                self._do_search(search_pos, halberd_name, mouse_c, kb_c)
-                time.sleep(1.5)
-                
-                text2 = read_screen_text(x, y, w, h, lang=ocr_lang)
-                self.logger.info(f"Wizard: Step 2 OCR: '{text2}'")
-                t2_lower = text2.lower()
-                
-                if not ("алебард" in t2_lower or "лебард" in t2_lower or "halberd" in t2_lower):
-                     err_msg = get_text("wizard_err_ocr_halberd", "Ошибка OCR (Тест 2): Ожидалась Алебарда, получено: '{text}'").format(text=text2)
-                     self.verification_error_signal.emit(err_msg)
-                     return
-                
-                success_msg = get_text("wizard_verif_success", "✅ Успешно! Распознано: {text}").format(text=text2)
+                success_msg = get_text("wizard_verif_success", "✅ Успешно! Распознано: {text}").format(text=text1)
                 self.verification_success_signal.emit(success_msg)
                 
             except Exception as e:
@@ -875,31 +844,7 @@ class WizardOverlay(QWidget):
         t = Thread(target=_run_verification)
         t.start()
 
-    def _do_search(self, pos, text, mouse_c, kb_c):
-        """Вспомогательный метод для ввода текста в поиск"""
-        import time
-        from pynput.mouse import Button
-        from pynput.keyboard import Key
-        
-        mouse_c.position = pos
-        time.sleep(0.1)
-        mouse_c.click(Button.left)
-        time.sleep(0.3)
-        
-        with kb_c.pressed(Key.ctrl):
-            kb_c.press('a')
-        kb_c.release('a')
-        time.sleep(0.1)
-        kb_c.press(Key.backspace)
-        kb_c.release(Key.backspace)
-        time.sleep(0.2)
-        
-        for char in text:
-            kb_c.type(char)
-            time.sleep(0.04)
-        time.sleep(0.3)
-        kb_c.press(Key.enter)
-        kb_c.release(Key.enter)
+
 
     def _on_verification_success(self, msg):
         self.instruction_label.setText(msg)

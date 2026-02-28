@@ -285,5 +285,11 @@
     "wizard_err_no_price": "Не удалось распознать число в этой области.\n\nУбедитесь, что в область попадают только цифры цены.",
     "wizard_verif_price_success": "✅ Цена распознана: {price}",
     "wizard_setup_done_instr": "✅ Настройка завершена!",
-    "wizard_status_done": "Готово"
+    "wizard_status_done": "Готово",
+    "mini_btn_start": "▶ Старт (F5)",
+    "mini_btn_pause": "❚❚ Пауза (F6)",
+    "mini_btn_resume": "▶ Продолжить (F6)",
+    "mini_btn_stop": "■ Стоп (F5)",
+    "mini_tooltip_restore": "Развернуть",
+    "mini_progress_waiting": "Ожидание запуска..."
 }
