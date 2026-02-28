@@ -28,7 +28,7 @@ class SidebarItem(QPushButton):
         self.setObjectName("sidebarItem")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setCheckable(True)
-        self.setFixedHeight(40)
+        self.setFixedHeight(45)
 
 class Sidebar(QFrame):
     """Боковая панель навигации"""
@@ -63,7 +63,7 @@ class Sidebar(QFrame):
         self._add_nav_item(get_text("sidebar_prices", "🏷️ Prices"), 4)
         self._add_nav_item(get_text("sidebar_coordinates", "🎯 Coordinates"), 5)
         self._add_nav_item(get_text("sidebar_settings", "⚙️ Settings"), 6)
-        self._add_nav_item(get_text("sidebar_faq", "❓ Guide & FAQ"), 7)
+        # self._add_nav_item(get_text("sidebar_faq", "❓ Guide & FAQ"), 7)
         
         self.layout.addStretch()
         
@@ -471,10 +471,10 @@ class MainDashboard(QMainWindow):
         from .settings_panel import SettingsPanel
         _p.end("import_settings")
         
-        update_splash("Загрузка FAQ...", 90)
-        _p.start("import_faq")
-        from .faq_tab import FAQTab
-        _p.end("import_faq")
+        # update_splash("Загрузка FAQ...", 90)
+        # _p.start("import_faq")
+        # from .faq_tab import FAQTab
+        # _p.end("import_faq")
         
         # 0: Home / Statistics
         _p.start("init_home_page")
@@ -519,10 +519,10 @@ class MainDashboard(QMainWindow):
         _p.end("init_settings")
         
         # 7: FAQ
-        _p.start("init_faq")
-        self.faq_module = FAQTab()
-        self.content_stack.addWidget(self.faq_module)
-        _p.end("init_faq")
+        # _p.start("init_faq")
+        # self.faq_module = FAQTab()
+        # self.content_stack.addWidget(self.faq_module)
+        # _p.end("init_faq")
 
     def _create_home_page(self):
         from .components.kpi_card import KPICard

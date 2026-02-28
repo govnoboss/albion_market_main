@@ -35,6 +35,10 @@ QMainWindow, QWidget {{
     background-color: {COLORS['bg']};
 }}
 
+QLabel, QCheckBox {{
+    background: transparent;
+}}
+
 /* KPI Cards */
 QFrame#kpiCard {{
     background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1a2521, stop:1 #121916);
@@ -158,7 +162,7 @@ QPushButton#sidebarItem {{
     background-color: transparent;
     border: none;
     border-radius: 10px;
-    padding: 10px 16px;
+    padding: 8px 16px;
     text-align: left;
     font-size: 14px;
     font-weight: 500;

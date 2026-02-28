@@ -30,7 +30,21 @@ class LogViewer(QTextEdit):
         get_logger().connect_ui(self.add_log)
 
     def add_log(self, message: str, level: str):
-        """Callback для логгера"""
+        """Callback для логгера с фильтрацией технических сообщений"""
+        lvl_lower = level.lower()
+        
+        # 1. Всегда показываем ошибки, предупреждения и успех
+        is_important = lvl_lower in ["error", "warning", "critical", "success"]
+        
+        # 2. Показываем рыночные данные и прогресс по предметам
+        # Ищем эмодзи или характерные ключевые слова
+        market_keywords = ["💰", "📦", "📡", "🎯", "🏷️", "📈", "Цена:", "Price:", "Профит:", "Profit:", "Куплено", "Bought"]
+        is_market_data = any(x in message for x in market_keywords)
+        
+        # 3. Фильтруем техническую информацию (переводы базы, смены языка и т.д.)
+        if lvl_lower == "info" and not is_market_data:
+            return
+            
         self.append_styled(message, level)
 
     def append_styled(self, message: str, level: str = "info"):

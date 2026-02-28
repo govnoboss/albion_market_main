@@ -405,6 +405,19 @@ class CoordinatesTab(QWidget):
         self.config.clear_coordinate(key)
         self._refresh_values()
 
+    def _on_reset_all(self):
+        """Полный сброс координат с запуском мастера"""
+        title = get_text("coord_msg_confirm", "Подтверждение")
+        text = get_text("coord_reset_all_confirm", "Вы уверены, что хотите СБРОСИТЬ ВСЕ координаты?\nЭто действие нельзя отменить.")
+        
+        if self._show_question(title, text):
+            self.config.clear_all_coordinates()
+            self._refresh_values()
+            self._wizard_offered = False # Позволяем мастеру предложиться снова
+            
+            # Сразу запускаем мастер
+            self._start_wizard()
+
     def _test_area(self, key):
         """Тест OCR или Валидатора для заданной области"""
         area = self.config.get_coordinate_area(key)
@@ -418,11 +431,11 @@ class CoordinatesTab(QWidget):
             is_open, msg = ScreenValidator.check_market_open(area)
             
             if is_open:
-                QMessageBox.information(self, get_text("coord_ocr_test_success", "✅ Проверка успешна"), 
-                    f"Результат: OPEN\n\nПодробности: {msg}")
+                msg_text = f"{get_text('coord_test_result_open')}\n\n{get_text('coord_test_details')}: {msg}"
+                QMessageBox.information(self, get_text("coord_ocr_test_success"), msg_text)
             else:
-                QMessageBox.warning(self, get_text("coord_ocr_test_fail", "❌ Проверка провалена"), 
-                    f"Результат: CLOSED\n\nПодробности: {msg}")
+                msg_text = f"{get_text('coord_test_result_closed')}\n\n{get_text('coord_test_details')}: {msg}"
+                QMessageBox.warning(self, get_text("coord_ocr_test_fail"), msg_text)
             return
             
         # 2. Спец. проверка для Цены (Parser)
@@ -431,11 +444,10 @@ class CoordinatesTab(QWidget):
             
             price = read_price_at(area)
             if price is not None:
-                QMessageBox.information(self, get_text("coord_ocr_test_success", "✅ Цена распознана"), 
-                    f"Результат: {price}\n(Тип: {type(price)})")
+                msg_text = get_text("coord_test_price_res").format(price=price, type=type(price))
+                QMessageBox.information(self, get_text("coord_ocr_test_success"), msg_text)
             else:
-                QMessageBox.warning(self, get_text("coord_ocr_test_fail", "⚠️ Не удалось распознать"), 
-                    get_text("coord_msg_error", "Проверьте, что в зоне только цифры."))
+                QMessageBox.warning(self, get_text("coord_ocr_test_fail"), get_text("coord_test_price_tip"))
             return
 
         # 2.4 TEMPLATE MATCH TEST (BM Char)
@@ -452,11 +464,11 @@ class CoordinatesTab(QWidget):
             found = find_image_on_screen(ref_path, confidence=0.85)
             
             if found:
-                 QMessageBox.information(self, get_text("coord_ocr_test_success", "✅ Template Match"), 
-                     f"Изображение НАЙДЕНО!\n\nКоординаты центра: {found}\n(Поиск по всему экрану)")
+                 QMessageBox.information(self, get_text("coord_ocr_test_success"), 
+                     get_text("coord_test_tm_found").format(found=found))
             else:
-                 QMessageBox.warning(self, get_text("coord_ocr_test_fail", "❌ Template Match"), 
-                     "Изображение НЕ НАЙДЕНО на экране.\n\nПроверьте, что оно видимо и не перекрыто.")
+                 QMessageBox.warning(self, get_text("coord_ocr_test_fail"), 
+                     get_text("coord_test_tm_not_found"))
             return
 
         # 2.5. Спец. проверка для Проверки UI (Avatar Pixel Match - Fixed Area)
@@ -500,15 +512,15 @@ class CoordinatesTab(QWidget):
             except Exception as e:
                 get_logger().error(f"Debug save error: {e}")
 
-            status = "👁️ Аватар на месте (UI Visible)" if is_match else "🕶️ Аватар скрыт (UI Hidden) или изменен"
+            status = get_text("coord_test_avatar_visible") if is_match else get_text("coord_test_avatar_hidden")
             
             msg = (
-                f"Статус: {status}\n"
-                f"Различие (Mean Diff): {mean_diff:.2f}\n"
-                f"(Порог < 15.0 -> Match)\n\n"
-                f"Дебаг файлы сохранены в resources/:\n"
-                f"- debug_current_{key}.png (То что видим сейчас)\n"
-                f"- debug_diff_{key}.png (Разница с эталоном)"
+                f"{get_text('coord_test_pixel_status').format(status=status)}\n"
+                f"{get_text('coord_test_pixel_diff').format(diff=f'{mean_diff:.2f}')}\n"
+                f"({get_text('coord_test_pixel_threshold')})\n\n"
+                f"{get_text('coord_test_pixel_debug_saved')}:\n"
+                f"- debug_current_{key}.png ({get_text('coord_test_pixel_debug_curr')})\n"
+                f"- debug_diff_{key}.png ({get_text('coord_test_pixel_debug_diff')})"
             )
             
             QMessageBox.information(self, "Pixel Check", msg)
@@ -546,13 +558,10 @@ class CoordinatesTab(QWidget):
         
         try:
             text = read_screen_text(area['x'], area['y'], area['w'], area['h'])
-            QMessageBox.information(
-                self, 
-                get_text("coord_ocr_result", "Результат OCR"), 
-                f"Распознанный текст:\n\n'{text}'\n\n(Длина: {len(text)})"
-            )
+            msg_text = get_text("coord_test_ocr_res_simple").format(text=text, len=len(text))
+            QMessageBox.information(self, get_text("coord_ocr_result"), msg_text)
         except Exception as e:
-            QMessageBox.critical(self, f"{get_text('coord_msg_error', 'Ошибка')} OCR", str(e))
+            QMessageBox.critical(self, f"{get_text('coord_msg_error')} OCR", str(e))
 
     def _setup_profiles_ui(self, parent_layout):
         """Создание секции управления профилями"""
@@ -578,11 +587,18 @@ class CoordinatesTab(QWidget):
         del_btn.setObjectName("danger")
         del_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         del_btn.clicked.connect(self._on_delete_profile)
+
+        reset_all_btn = QPushButton(get_text("coord_btn_reset_all", "❌ СБРОСИТЬ ВСЁ"))
+        reset_all_btn.setObjectName("danger")
+        reset_all_btn.setMinimumHeight(35)
+        reset_all_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        reset_all_btn.clicked.connect(self._on_reset_all)
         
         group_layout.addWidget(self.profiles_combo, stretch=1)
         group_layout.addWidget(load_btn)
         group_layout.addWidget(save_btn)
         group_layout.addWidget(del_btn)
+        group_layout.addWidget(reset_all_btn)
         
         parent_layout.addWidget(group)
 

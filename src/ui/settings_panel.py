@@ -30,6 +30,7 @@ class SettingsPanel(QScrollArea):
         
         self.content_widget = QWidget()
         self.content_widget.setObjectName("settingsContent") # Для CSS если нужно
+        self.content_widget.setStyleSheet(PANEL_STYLE)
         self.setWidget(self.content_widget)
         
         self._setup_ui()

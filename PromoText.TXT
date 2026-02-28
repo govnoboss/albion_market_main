@@ -1,0 +1,48 @@
+Hi there! Do YOU want to make money in Albion? Well then, here’s a showcase of our new GBOT tool that can help you with that.
+
+So, what is this? GBOT is a helper that can scan prices and buy any kind of item on the market for you. It can be literally anything available on the market. All you need to do is decide what you want to buy and add it to the Items Database — the bot does all the rest for you.
+----- 1CHAPT------
+How does it work? Like I said, the bot currently has two main options: Scanning and Buying items.
+
+For the bot to work correctly, you need to set up the coordinates. Go to the Coordinates panel, the app will ask if you want to use the Setup Wizard. Click “Yes” and follow the instructions on your screen step by step. When you reach the Black Market section, if you have a second character, continue the setup. If you don’t have one, just press “ESC” — we’ll return to this later. After finishing the coordinates setup, go to the Scanner panel.
+----- 2CHAPT------
+First, we always scan the prices of the selected items. Open the Items Database. By default, there are 91 most popular items for the Black Market. If you want, you can add any other item — just type the name and click Add. To adjust which Tiers and Enchantments you want to scan, go to the Settings panel and open Item Filters.
+----- 3CHAPT------
+Then go back to the Scanner panel and click the START button. Press F6 to pause. You can move and resize the log panel as needed. Press F6 again to unpause the script. Check the first few items — are the prices in the market and in the log the same? If not, stop the script with F5, go to Coordinates, find the “Price per 1piece” coordinate, and set it again.
+Wait until scanning is complete, or stop it whenever you want.
+----- 4CHAPT------
+
+Good. Now you have a price database from the current city. Check the Prices panel — all collected data is displayed there. Now you can go to any other city and scan there as well.
+
+Next, let’s learn how to scan Black Market prices. If you’re not interested in this part, skip the video to the timecode shown on the screen.
+----- 5CHAPT------
+Go to the Black Market. You can’t just scan items from the search bar like in other cities. Here, you need to have the items in your inventory that you want to scan, so make sure you prepare them beforehand. It can be any tier, enchantment, or quality — it doesn’t matter.
+
+One character can hold up to 48 items before switching, so for efficient scanning, it’s recommended to use two characters. GBOT can automatically swap them when needed. Just position both characters right next to the Black Market NPC. Swapping can be disabled in Settings if you have 48 items or fewer in the Items Database.
+----- 6CHAPT------
+Now that both characters are standing next to the Market, complete the coordinate setup for the Black Market. Go to Coordinates, open the Help Image for Black Market, and set all required coordinates. Then open the Market and press the Scanner START button. Check that all buttons are set up correctly and wait until the scan is finished.
+----- 7CHAPT------
+Great! Now you have prices from the city where you want to buy items and from the Black Market where you want to sell them. You can check the Finance panel to see your potential profit and margins.
+
+Now comes the second part of GBOT — Buying items for profit. Go to the Buyer panel. There you’ll find the Purchase Plan. You can manually set the purchase amount and minimum profit for each type of item.
+----- 8CHAPT------
+The bot also has three operating modes:
+
+The first mode is set by default — the bot goes through the purchase list one by one without sorting.
+
+The second mode sorts all items from the Finance tab by net profit and processes them from the most profitable to the least.
+
+The third mode sorts by percentage profit instead.
+
+In my experience, sorting by net profit works better for buying expensive items in smaller quantities, while percentage sorting is better for bulk purchases of low-tier items.
+----- 9CHAPT------
+After that, set your budget limit if needed, select the Buy and Sell cities, open the Market, and click the START button. Press F6 to pause if needed. Disable the “Transfer to Inventory” button. Then go to your in-game Settings, open the General tab, and make sure the required option is enabled. Go back to the Market, press F6 to unpause, and wait until the process is finished.
+----- 10CHAPT------
+Don’t worry about losing money. The bot automatically scans the price of each item before buying and checks if it’s still profitable. If not, it skips the purchase. This also works for large quantities within a single offer. The bot automatically counts how many items have already been purchased and stops right before reaching the limit.
+----- 11CHAPT------
+After the buying session, go to the Home panel with the Dashboard. New statistics will appear there, allowing you to track your revenue and potential profit from purchases.
+
+That’s all for today. Contact us about GBOT using the link in the description. If you have any questions, we’ll be happy to answer them in the comments section.
+
+Good luck making your billions, and see you next time!
+----- 12CHAPT------

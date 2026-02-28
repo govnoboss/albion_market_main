@@ -148,6 +148,11 @@ class ConfigManager:
         if key in self._config.get("coordinates", {}):
             del self._config["coordinates"][key]
             self.save()
+            
+    def clear_all_coordinates(self) -> None:
+        """Очистить все координаты"""
+        self._config["coordinates"] = {}
+        self.save()
     
     # === Настройки ===
     
