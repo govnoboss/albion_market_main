@@ -22,11 +22,19 @@ class WizardOverlay(QWidget):
     verification_error_signal = pyqtSignal(str) # New signal for thread-safe UI
     verification_success_signal = pyqtSignal(str) # New signal for thread-safe success
     
-    def __init__(self, categories: dict):
+    def __init__(self, categories: dict, start_from_category: str = None):
         super().__init__()
         self.categories = categories
         self.steps = self._flatten_steps(categories)
         self.current_step_index = 0
+        
+        # If a starting category is specified, skip to the first step of that category
+        if start_from_category:
+            for i, step in enumerate(self.steps):
+                if step['category_key'] == start_from_category:
+                    self.current_step_index = i
+                    break
+        
         self.points = {} # Initialize points dictionary
         
         # Dimming flags (managed in DimOverlay)

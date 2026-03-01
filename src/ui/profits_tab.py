@@ -6,7 +6,8 @@ import re
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
     QTableWidget, QTableWidgetItem, QHeaderView, 
-    QComboBox, QPushButton, QMessageBox, QAbstractItemView, QGroupBox
+    QComboBox, QPushButton, QMessageBox, QAbstractItemView, QGroupBox,
+    QStyledItemDelegate
 )
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from ..utils.price_storage import get_price_storage
@@ -93,12 +94,40 @@ class NumericTableWidgetItem(QTableWidgetItem):
     """Item for proper numeric sorting"""
     def __lt__(self, other):
         try:
-            # Удаляем запятые и проценты для сортировки
             val1 = float(self.text().replace(',', '').replace('%', ''))
             val2 = float(other.text().replace(',', '').replace('%', ''))
             return val1 < val2
         except ValueError:
             return super().__lt__(other)
+
+class NoTextWhileEditingDelegate(QStyledItemDelegate):
+    """Скрывает текст ячейки, пока открыт редактор, чтобы старое значение не просвечивало"""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._editing_index = None
+
+    def createEditor(self, parent, option, index):
+        self._editing_index = index
+        # Перерисовать ячейку без текста
+        self.parent().viewport().update()
+        return super().createEditor(parent, option, index)
+
+    def destroyEditor(self, editor, index):
+        self._editing_index = None
+        super().destroyEditor(editor, index)
+        self.parent().viewport().update()
+
+    def paint(self, painter, option, index):
+        if self._editing_index and self._editing_index == index:
+            # Рисуем только фон, без текста
+            painter.save()
+            painter.fillRect(option.rect, option.palette.base())
+            painter.restore()
+            return
+        super().paint(painter, option, index)
+
+    def updateEditorGeometry(self, editor, option, index):
+        editor.setGeometry(option.rect)
 
 class ProfitsTab(QWidget):
     def __init__(self):
@@ -199,6 +228,11 @@ class ProfitsTab(QWidget):
         header.setStretchLastSection(True)
         
         layout.addWidget(self.table)
+        
+        # Делегат для скрытия текста во время редактирования
+        edit_delegate = NoTextWhileEditingDelegate(self.table)
+        self.table.setItemDelegateForColumn(2, edit_delegate)
+        self.table.setItemDelegateForColumn(3, edit_delegate)
         
         # Initial Load Cities
         self._load_cities()

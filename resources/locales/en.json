@@ -291,5 +291,10 @@
     "mini_btn_resume": "▶ Resume (F6)",
     "mini_btn_stop": "■ Stop (F5)",
     "mini_tooltip_restore": "Restore",
-    "mini_progress_waiting": "Waiting for start..."
+    "mini_progress_waiting": "Waiting for start...",
+    "coord_wizard_from_section": "🪄 Run Wizard from this section",
+    "coord_wizard_from_section_confirm": "Run Setup Wizard starting from section '{name}'?",
+    "buyer_bought_progress": "Bought",
+    "buyer_bought_qty": "Bought {qty} pcs!",
+    "buyer_hotkeys_hint": "⌨ F5 — Start/Stop  |  F6 — Pause  |  F7 — Skip item"
 }

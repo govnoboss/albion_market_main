@@ -291,5 +291,10 @@
     "mini_btn_resume": "▶ Продолжить (F6)",
     "mini_btn_stop": "■ Стоп (F5)",
     "mini_tooltip_restore": "Развернуть",
-    "mini_progress_waiting": "Ожидание запуска..."
+    "mini_progress_waiting": "Ожидание запуска...",
+    "coord_wizard_from_section": "🪄 Запустить мастер с этого раздела",
+    "coord_wizard_from_section_confirm": "Запустить мастер настройки начиная с раздела '{name}'?",
+    "buyer_bought_progress": "Куплено",
+    "buyer_bought_qty": "Куплено {qty} шт.!",
+    "buyer_hotkeys_hint": "⌨ F5 — Старт/Стоп  |  F6 — Пауза  |  F7 — Пропустить предмет"
 }

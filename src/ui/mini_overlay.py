@@ -106,13 +106,6 @@ class MiniOverlay(QWidget):
         
         top_layout.addStretch()
         
-        self.restore_btn = QPushButton("↙")
-        self.restore_btn.setToolTip(get_text("mini_tooltip_restore", "Развернуть"))
-        self.restore_btn.setFixedSize(20, 20)
-        self.restore_btn.setStyleSheet(MINI_OVERLAY_STYLE["restore_btn"])
-        self.restore_btn.clicked.connect(self.restore_clicked.emit)
-        top_layout.addWidget(self.restore_btn)
-        
         layout.addLayout(top_layout)
         
         # --- Строка прогресса ---

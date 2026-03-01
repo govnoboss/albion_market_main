@@ -208,7 +208,7 @@ QTableWidget QLineEdit {{
     background-color: {COLORS['bg_card']} !important;
     border: 1px solid {COLORS['accent']};
     border-radius: 4px;
-    padding: 2px 5px;
+    padding: 8px 10px;
     margin: 0px;
     color: {COLORS['text']};
     selection-background-color: {COLORS['accent_soft']};
@@ -427,7 +427,7 @@ QProgressBar::chunk {{
 # Мини-оверлей
 MINI_OVERLAY_STYLE = {
     "container_ready": f"background-color: {COLORS['bg_card']}; border: 1px solid {COLORS['border']}; border-radius: 10px;",
-    "container_running": f"background-color: {COLORS['bg_card']}; border: 1px solid {COLORS['accent']}; border-radius: 10px;",
+    "container_running": f"background-color: {COLORS['bg_card']}; border: 1px solid {COLORS['border']}; border-radius: 10px;",
     "container_paused": f"background-color: {COLORS['bg_card']}; border: 1px solid {COLORS['warning']}; border-radius: 10px;",
     "status_ready": f"color: {COLORS['text_dark']}; font-weight: bold; font-size: 12px;",
     "status_running": f"color: {COLORS['accent']}; font-weight: bold; font-size: 12px;",

@@ -47,6 +47,18 @@ class PurchaseSession(Base):
     client_ip = Column(String, nullable=True)
 
 
+class PurchaseItem(Base):
+    """Per-item breakdown within a purchase session"""
+    __tablename__ = "purchase_items"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(String, index=True)        # FK → purchase_sessions.session_id
+    item_name = Column(String, index=True)
+    qty = Column(Integer, default=0)
+    total_spent = Column(Integer, default=0)
+    profit_est = Column(Integer, default=0)
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
     
