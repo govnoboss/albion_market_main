@@ -19,7 +19,7 @@ from ..core.updater import UpdateCheckWorker, UpdateDownloadWorker, install_upda
 from ..core.license import license_manager
 from ..utils.startup_profiler import get_startup_profiler
 from ..utils.localization import get_text
-import keyboard
+from ..utils.hotkeys import HotkeyManager
 
 class SidebarItem(QPushButton):
     """Элемент бокового меню"""
@@ -49,7 +49,7 @@ class Sidebar(QFrame):
         self.layout.setSpacing(0)
         
         # Заголовок
-        self.title = QLabel("ALBION BOT")
+        self.title = QLabel("ALBION GBOT")
         self.title.setObjectName("sidebarTitle")
         self.title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.title)
@@ -214,6 +214,36 @@ class Sidebar(QFrame):
             btn.style().polish(btn)
         self.nav_changed.emit(index)
 
+    def update_license_display(self, expires_str):
+        """Обновляет отображение лицензии в сайдбаре"""
+        if not expires_str:
+            self.license_label.setText(get_text("sidebar_license_unknown", "Лицензия: Неизвестно"))
+            self.license_label.setStyleSheet("color: #8b949e; font-size: 10px; font-weight: 600;")
+            return
+        try:
+            from datetime import datetime
+            clean = expires_str.split('.')[0]  # Убираем микросекунды
+            expires_at = datetime.fromisoformat(clean)
+            now = datetime.now()
+            days_left = (expires_at - now).days
+            date_display = expires_at.strftime("%d.%m.%Y")
+
+            if days_left < 0:
+                text = get_text("sidebar_license_expired", "ЛИЦЕНЗИЯ ИСТЕКЛА ({date})").format(date=date_display)
+                color = "#da3633"
+            elif days_left < 3:
+                text = get_text("sidebar_license_expiring", "Лицензия: {date} ({days} дн.) ⚠️").format(date=date_display, days=days_left)
+                color = "#d29922"
+            else:
+                text = get_text("sidebar_license_active", "Лицензия: {date} ({days} дн.)").format(date=date_display, days=days_left)
+                color = "#3fb950"
+
+            self.license_label.setText(text)
+            self.license_label.setStyleSheet(f"color: {color}; font-size: 10px; font-weight: 600;")
+        except Exception:
+            self.license_label.setText(f"Лицензия: {expires_str}")
+            self.license_label.setStyleSheet("color: #3fb950; font-size: 10px; font-weight: 600;")
+
 
 class MainDashboard(QMainWindow):
     """Главное окно приложения (Dashboard)"""
@@ -221,10 +251,11 @@ class MainDashboard(QMainWindow):
     # Сигнал для потокобезопасной обработки хоткеев
     hotkey_signal = pyqtSignal(str) # "f5", "f6", "f7"
     
-    def __init__(self, splash=None):
+    def __init__(self, splash=None, license_expires=None):
         super().__init__()
         _p = get_startup_profiler()
         self.splash = splash
+        self._license_expires = license_expires
         self.setWindowTitle("Albion Market Bot - Dashboard")
         self.setMinimumSize(1200, 800)
         self.setStyleSheet(MAIN_STYLE)
@@ -233,6 +264,9 @@ class MainDashboard(QMainWindow):
         icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "assets", "icon.png")
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
+
+        # Не перехватываем клавиатуру — пусть OBS и другие приложения получают все нажатия
+        self.setAttribute(Qt.WidgetAttribute.WA_KeyCompression, False)
 
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -358,11 +392,12 @@ class MainDashboard(QMainWindow):
         logger.connect_ui(unified_log_filter)
 
     def _setup_hotkeys(self):
-        """Регистрация глобальных хоткеев"""
+        """Регистрация глобальных хоткеев через Windows API (не блокирует OBS и другие приложения)"""
         try:
-            keyboard.add_hotkey("F5", lambda: self.hotkey_signal.emit("f5"))
-            keyboard.add_hotkey("F6", lambda: self.hotkey_signal.emit("f6"))
-            keyboard.add_hotkey("F7", lambda: self.hotkey_signal.emit("f7"))
+            self._hotkey_mgr = HotkeyManager(self)
+            self._hotkey_mgr.register("F5", lambda: self.hotkey_signal.emit("f5"))
+            self._hotkey_mgr.register("F6", lambda: self.hotkey_signal.emit("f6"))
+            self._hotkey_mgr.register("F7", lambda: self.hotkey_signal.emit("f7"))
         except Exception as e:
             get_logger().error(f"Failed to register global hotkeys: {e}")
 
@@ -425,7 +460,8 @@ class MainDashboard(QMainWindow):
     def closeEvent(self, event):
         """Очистка при закрытии"""
         try:
-            keyboard.unhook_all()
+            if hasattr(self, '_hotkey_mgr'):
+                self._hotkey_mgr.unregister_all()
         except:
             pass
         super().closeEvent(event)
@@ -535,18 +571,33 @@ class MainDashboard(QMainWindow):
         main_v_layout.setSpacing(30)
         
         # --- HEADER ---
-        header = QVBoxLayout()
-        header.setSpacing(5)
+        header_row = QHBoxLayout()
+        header_row.setSpacing(0)
+        
+        header_left = QVBoxLayout()
+        header_left.setSpacing(5)
         
         welcome_label = QLabel(get_text("home_welcome", "Welcome back, Trader"))
         welcome_label.setObjectName("subtitle")
-        header.addWidget(welcome_label)
+        header_left.addWidget(welcome_label)
         
         title = QLabel(get_text("home_title", "Market Dashboard"))
         title.setObjectName("title")
-        header.addWidget(title)
+        header_left.addWidget(title)
         
-        main_v_layout.addLayout(header)
+        header_row.addLayout(header_left)
+        header_row.addStretch()
+        
+        # Лицензия (правый верхний угол)
+        self.license_label = QLabel(get_text("sidebar_license_unknown", "Лицензия: Неизвестно"))
+        self.license_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
+        self.license_label.setStyleSheet("color: #8b949e; font-size: 12px; font-weight: 600;")
+        header_row.addWidget(self.license_label)
+        
+        if self._license_expires:
+            self._update_license_label(self._license_expires)
+        
+        main_v_layout.addLayout(header_row)
         
         # --- KPI ROW ---
         kpi_row = QHBoxLayout()
@@ -668,10 +719,10 @@ class MainDashboard(QMainWindow):
         
         period_txt = self.period_combo.currentText()
         days_map = {
-            "1 день": 1,
-            "1 неделя": 7,
-            "1 месяц": 30,
-            "Всё время": None
+            get_text("home_period_1d", "1 день"): 1,
+            get_text("home_period_1w", "1 неделя"): 7,
+            get_text("home_period_1m", "1 месяц"): 30,
+            get_text("home_period_all", "Всё время"): None
         }
         days = days_map.get(period_txt)
         
@@ -728,18 +779,61 @@ class MainDashboard(QMainWindow):
         # Обновление Hot Items
         hot_items = finance_manager.get_hot_items_for_period(days, limit=5)
         hot_list = []
+        silver_suffix = get_text("home_hot_item_silver", "с.")
         for item in hot_items:
-            # Формат: Название предмета Тир.Энчант Кол-во, Сколько профита
-            profit_str = f"{item['total_profit']:,}".replace(',', ' ')
-            hot_list.append(
-                f"• {item['item_name']} T{item['tier']}.{item['enchant']} "
-                f"{item['total_qty']} шт, {profit_str} с."
-            )
+            profit_str = f"{item['total_profit']:,}".replace(',', ' ') + f" {silver_suffix}"
+            hot_list.append({
+                "name": f"{item['item_name']} T{item['tier']}.{item['enchant']}",
+                "qty": item['total_qty'],
+                "profit": profit_str
+            })
         
         if not hot_list:
-            hot_list = ["• Нет данных за период"]
+            hot_list = [get_text("home_no_data", "• Нет данных за период")]
             
         self.hot_items_box.update_items(hot_list)
+
+    def _update_license_label(self, expires_str):
+        """Обновляет отображение лицензии в хедере Home"""
+        if not expires_str:
+            return
+        try:
+            from datetime import datetime
+            clean = expires_str.split('.')[0]
+            expires_at = datetime.fromisoformat(clean)
+            now = datetime.now()
+            days_left = (expires_at - now).days
+            date_display = expires_at.strftime("%d.%m.%Y")
+
+            if days_left < 0:
+                text = get_text("sidebar_license_expired", "ЛИЦЕНЗИЯ ИСТЕКЛА ({date})").format(date=date_display)
+                color = "#da3633"
+            elif days_left < 3:
+                text = get_text("sidebar_license_expiring", "Лицензия: {date} ({days} дн.) ⚠️").format(date=date_display, days=days_left)
+                color = "#d29922"
+            else:
+                text = get_text("sidebar_license_active", "Лицензия: {date} ({days} дн.)").format(date=date_display, days=days_left)
+                color = "#3fb950"
+
+            self.license_label.setText(text)
+            self.license_label.setStyleSheet(f"color: {color}; font-size: 12px; font-weight: 600;")
+        except Exception:
+            self.license_label.setText(f"License: {expires_str}")
+            self.license_label.setStyleSheet("color: #3fb950; font-size: 12px; font-weight: 600;")
+
+    def keyPressEvent(self, event):
+        """Пропускаем все F-клавиши в систему (для OBS и других приложений)"""
+        if Qt.Key.Key_F1 <= event.key() <= Qt.Key.Key_F12:
+            event.ignore()
+            return
+        super().keyPressEvent(event)
+
+    def keyReleaseEvent(self, event):
+        """Пропускаем все F-клавиши в систему"""
+        if Qt.Key.Key_F1 <= event.key() <= Qt.Key.Key_F12:
+            event.ignore()
+            return
+        super().keyReleaseEvent(event)
 
     def _on_nav_changed(self, index):
         self.content_stack.setCurrentIndex(index)

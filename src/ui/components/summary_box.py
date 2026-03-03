@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import QFrame, QVBoxLayout, QLabel, QWidget, QHBoxLayout
 from PyQt6.QtCore import Qt
+from ...utils.localization import get_text
 
 class SummaryBox(QFrame):
     """Блок сводки со стилизованными строками элементов"""
@@ -32,31 +33,28 @@ class SummaryBox(QFrame):
         self.update_items(items)
             
     def update_items(self, items):
-        """Динамическое обновление списка элементов с использованием стилизованных строк"""
+        """Динамическое обновление списка элементов.
+        
+        items: список dict {name, qty, profit} или строк (для фолбэка).
+        """
         # Очистка
         while self.layout_content.count():
             child = self.layout_content.takeAt(0)
             if child.widget():
                 child.widget().deleteLater()
         
+        qty_label = get_text("home_hot_item_qty_label", "Количество")
+        qty_suffix = get_text("home_hot_item_qty", "шт")
+        
         # Наполнение
-        for text in items:
-            # Парсим текст (Ожидаемый формат: "• Название T.E Кол-во, Профит")
-            try:
-                if text.startswith("• "):
-                    clean_text = text[2:]
-                    parts = clean_text.split(" шт, ")
-                    name_part = parts[0] # "Name T.E 10"
-                    profit_part = parts[1] if len(parts) > 1 else "" # "100 000 с."
-                    
-                    # Split name and quantity
-                    name_words = name_part.split(" ")
-                    qty = name_words[-1]
-                    name = " ".join(name_words[:-1])
-                else:
-                    name, qty, profit_part = text, "", ""
-            except:
-                name, qty, profit_part = text, "", ""
+        for entry in items:
+            # Поддержка структурированных данных (dict) и простых строк
+            if isinstance(entry, dict):
+                name = entry.get("name", "")
+                qty = str(entry.get("qty", ""))
+                profit_part = entry.get("profit", "")
+            else:
+                name, qty, profit_part = str(entry), "", ""
 
             row = QFrame()
             row.setObjectName("hotItemRow")
@@ -71,7 +69,7 @@ class SummaryBox(QFrame):
             info_v_layout.addWidget(name_lbl)
             
             if qty:
-                stats_lbl = QLabel(f"Количество: {qty} шт.")
+                stats_lbl = QLabel(f"{qty_label}: {qty} {qty_suffix}")
                 stats_lbl.setObjectName("hotItemStats")
                 info_v_layout.addWidget(stats_lbl)
             

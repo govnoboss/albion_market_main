@@ -5,7 +5,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import secrets
 import os
 import json # Added for JSON serialization
@@ -24,7 +24,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-from database import SessionLocal, License, PurchaseSession, init_db
+from database import SessionLocal, License, PurchaseSession, PurchaseItem, init_db
 
 # Get the directory where this file is located
 BASE_DIR = Path(__file__).resolve().parent
@@ -290,6 +290,12 @@ class HeartbeatRequest(BaseModel):
     key: str
     hwid: str
 
+class SessionItemDetail(BaseModel):
+    name: str
+    qty: int = 0
+    spent: int = 0
+    profit: int = 0
+
 class SessionReportRequest(BaseModel):
     key: str
     hwid: str
@@ -299,6 +305,7 @@ class SessionReportRequest(BaseModel):
     total_spent: int = 0
     total_profit_est: int = 0
     duration_seconds: int = 0
+    items_detail: List[SessionItemDetail] = []
 
 # NEW Response Model with Signature
 class SignedResponse(BaseModel):
@@ -524,9 +531,21 @@ def report_session(request: Request, req: SessionReportRequest, db: Session = De
         client_ip=client_ip
     )
     db.add(session)
+    
+    # Save per-item breakdown (up to 20 items)
+    for item_data in req.items_detail[:20]:
+        pi = PurchaseItem(
+            session_id=req.session_id,
+            item_name=item_data.name,
+            qty=item_data.qty,
+            total_spent=item_data.spent,
+            profit_est=item_data.profit
+        )
+        db.add(pi)
+    
     db.commit()
     
-    logger.info(f"{client_ip} | REPORT | {req.city} | {req.items_bought} items | {req.total_spent} silver | profit {req.total_profit_est}")
+    logger.info(f"{client_ip} | REPORT | {req.city} | {req.items_bought} items | {req.total_spent} silver | profit {req.total_profit_est} | {len(req.items_detail)} item types")
     
     return {"status": "ok", "message": "Session recorded"}
 
@@ -701,6 +720,32 @@ def admin_stats(request: Request, days: int = 30, db: Session = Depends(get_db))
         s.revenue = s.total_spent + s.total_profit_est  # Expected revenue
         s.margin = round((s.total_profit_est / s.total_spent * 100), 1) if s.total_spent > 0 else 0
     
+    # Top 5 most bought items for period
+    session_ids_in_period = db.query(PurchaseSession.session_id).filter(
+        PurchaseSession.timestamp >= period_start
+    ).subquery()
+    
+    top_items_raw = db.query(
+        PurchaseItem.item_name,
+        func.sum(PurchaseItem.qty).label('total_qty'),
+        func.sum(PurchaseItem.total_spent).label('total_spent'),
+        func.sum(PurchaseItem.profit_est).label('total_profit')
+    ).filter(
+        PurchaseItem.session_id.in_(session_ids_in_period)
+    ).group_by(PurchaseItem.item_name).order_by(
+        func.sum(PurchaseItem.qty).desc()
+    ).limit(5).all()
+    
+    top_items = []
+    for item in top_items_raw:
+        top_items.append({
+            "name": item.item_name,
+            "qty": item.total_qty,
+            "spent": item.total_spent,
+            "profit": item.total_profit,
+            "margin": round((item.total_profit / item.total_spent * 100), 1) if item.total_spent > 0 else 0
+        })
+    
     return templates.TemplateResponse("stats.html", {
         "request": request,
         "session_active": True,
@@ -726,6 +771,8 @@ def admin_stats(request: Request, days: int = 30, db: Session = Depends(get_db))
         "online_users": online_users,
         # Sessions table
         "sessions": sessions,
+        # Top 5 items
+        "top_items": top_items,
     })
 
 @app.get("/admin/licenses", response_class=HTMLResponse)
@@ -824,6 +871,49 @@ def admin_delete_key(key: str, request: Request, db: Session = Depends(get_db)):
         db.commit()
     
     return RedirectResponse("/admin/licenses", status_code=302)
+
+# === SESSION DETAIL & DELETE ===
+
+@app.get("/admin/session/{session_id}", response_class=HTMLResponse)
+def admin_session_detail(session_id: str, request: Request, db: Session = Depends(get_db)):
+    """View details of a single purchase session"""
+    if not verify_admin_session(request):
+        return RedirectResponse("/admin/login", status_code=302)
+    
+    session_obj = db.query(PurchaseSession).filter(PurchaseSession.session_id == session_id).first()
+    if not session_obj:
+        return RedirectResponse("/admin/stats", status_code=302)
+    
+    # Compute derived fields
+    session_obj.revenue = session_obj.total_spent + session_obj.total_profit_est
+    session_obj.margin = round((session_obj.total_profit_est / session_obj.total_spent * 100), 1) if session_obj.total_spent > 0 else 0
+    
+    # Get per-item breakdown
+    items = db.query(PurchaseItem).filter(PurchaseItem.session_id == session_id).order_by(PurchaseItem.qty.desc()).all()
+    
+    for item in items:
+        item.margin = round((item.profit_est / item.total_spent * 100), 1) if item.total_spent > 0 else 0
+    
+    return templates.TemplateResponse("session_detail.html", {
+        "request": request,
+        "session_active": True,
+        "s": session_obj,
+        "items": items,
+    })
+
+@app.post("/admin/session/{session_id}/delete")
+def admin_delete_session(session_id: str, request: Request, db: Session = Depends(get_db)):
+    """Delete a purchase session and its items"""
+    if not verify_admin_session(request):
+        return RedirectResponse("/admin/login", status_code=302)
+    
+    # Delete items first
+    db.query(PurchaseItem).filter(PurchaseItem.session_id == session_id).delete()
+    # Delete session
+    db.query(PurchaseSession).filter(PurchaseSession.session_id == session_id).delete()
+    db.commit()
+    
+    return RedirectResponse("/admin/stats", status_code=302)
 
 if __name__ == "__main__":
     import uvicorn

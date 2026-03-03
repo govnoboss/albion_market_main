@@ -55,12 +55,6 @@ class BuyerWidget(QWidget):
         
         header.addStretch()
         
-        self.mini_btn = QPushButton(get_text("ui_mini_mode", "↘ Mini Mode"))
-        self.mini_btn.setObjectName("sidebarItem")
-        self.mini_btn.setFixedWidth(120)
-        self.mini_btn.clicked.connect(self._switch_to_mini)
-        header.addWidget(self.mini_btn)
-        
         layout.addLayout(header)
 
         # Content Tabs (Custom style removed, uses global)
@@ -98,9 +92,6 @@ class BuyerWidget(QWidget):
         smart_layout.addWidget(self.smart_mode_check)
         
         self.sort_by_percent_check = QCheckBox(get_text("buyer_sort_percent", " Сортировать по % профита"))
-        self.sort_by_percent_check.setStyleSheet(f"color: {COLORS['text_dark']}; margin-left: 20px;")
-        self.sort_by_percent_check.setVisible(False)
-        self.smart_mode_check.toggled.connect(self.sort_by_percent_check.setVisible)
         smart_layout.addWidget(self.sort_by_percent_check)
         ctrl_layout.addLayout(smart_layout)
         
@@ -112,7 +103,7 @@ class BuyerWidget(QWidget):
         self.start_btn.clicked.connect(self._on_start_clicked)
         ctrl_layout.addWidget(self.start_btn)
         
-        self.stop_btn = QPushButton(get_text("ctrl_stop_btn", "🛑 ОСТАНОВИТЬ"))
+        self.stop_btn = QPushButton(get_text("ctrl_stop_btn", "🛑 ОСТАНОВИТЬ (F5)"))
         self.stop_btn.setObjectName("danger")
         self.stop_btn.setMinimumHeight(45)
         self.stop_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -120,11 +111,18 @@ class BuyerWidget(QWidget):
         self.stop_btn.clicked.connect(self._on_stop_clicked)
         ctrl_layout.addWidget(self.stop_btn)
         
+        # Подсказка по горячим клавишам
+        hotkeys_hint = QLabel(get_text("buyer_hotkeys_hint", "⌨ F5 — Старт/Стоп  |  F6 — Пауза  |  F7 — Пропустить предмет"))
+        hotkeys_hint.setStyleSheet("color: #64748b; font-size: 12px; margin-top: 5px;")
+        hotkeys_hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        ctrl_layout.addWidget(hotkeys_hint)
+        
         mgmt_layout.addWidget(ctrl_group)
+        mgmt_layout.addStretch()  # Пустое пространство вместо логов
         
         self.log_panel = LogPanel()
         self.log_panel.connect_logger()
-        mgmt_layout.addWidget(self.log_panel, stretch=1)
+        self.log_panel.hide()
         
         self.tabs.addTab(mgmt_tab, get_text("ui_mgmt_tab", "🎮 Управление"))
         

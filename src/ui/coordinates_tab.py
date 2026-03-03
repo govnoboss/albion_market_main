@@ -168,8 +168,8 @@ class CoordinatesTab(QWidget):
             }
             img_name = help_name_map.get(category_key, category_key)
 
-            # Передаем img_name для поиска картинки
-            help_btn.clicked.connect(lambda checked, k=img_name, n=get_text(category_key): self._show_help_image(k, n))
+            # Передаем img_name для поиска картинки + category_key для запуска мастера
+            help_btn.clicked.connect(lambda checked, k=img_name, n=get_text(category_key), ck=category_key: self._show_help_image(k, n, ck))
             
             header_layout.addWidget(cat_label)
             header_layout.addWidget(help_btn)
@@ -262,7 +262,7 @@ class CoordinatesTab(QWidget):
         self.capture.coordinate_captured.connect(self._on_captured)
         self.capture.area_captured.connect(self._on_area_captured)
 
-    def _show_help_image(self, key, name):
+    def _show_help_image(self, key, name, category_key=None):
         """Показать картинку-подсказку для координаты"""
         import os
         from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QMessageBox
@@ -285,13 +285,21 @@ class CoordinatesTab(QWidget):
                 self._start_help_capture(key, name)
             return
 
-        # Создаем диалог (сохраняем в self, чтобы не удалился сборщиком мусора)
+        # --- Сначала спрашиваем: использовать мастер настройки? ---
+        if category_key:
+            if self._show_question(
+                get_text("coord_wizard_title", "Мастер настройки"),
+                get_text("coord_wizard_from_section_confirm", "Запустить мастер настройки начиная с раздела '{name}'?").format(name=name)
+            ):
+                self._start_wizard(start_from_category=category_key)
+                return
+
+        # --- Если нажали "Нет" — показываем картинку как раньше ---
         if hasattr(self, '_help_dialog') and self._help_dialog:
             self._help_dialog.close()
             
         self._help_dialog = QDialog(self)
         self._help_dialog.setWindowTitle(f"📖 {name}")
-        # Ресайзабельное окно поверх остальных
         self._help_dialog.setWindowFlags(
             Qt.WindowType.Window | 
             Qt.WindowType.WindowStaysOnTopHint
@@ -302,15 +310,13 @@ class CoordinatesTab(QWidget):
         layout = QVBoxLayout(self._help_dialog)
         layout.setContentsMargins(5, 5, 5, 5)
         
-        # Картинка масштабируется вместе с окном
         img_label = QLabel()
         pixmap = QPixmap(str(image_path))
         img_label.setPixmap(pixmap)
-        img_label.setScaledContents(True)  # Картинка растягивается за лейблом
-        img_label.setMinimumSize(1, 1)     # Разрешаем сжимать меньше исходного размера
+        img_label.setScaledContents(True)
+        img_label.setMinimumSize(1, 1)
         layout.addWidget(img_label)
         
-        # Начальный размер — подогнать под картинку, но не больше 1000x700
         w = min(pixmap.width() + 10, 1000)
         h = min(pixmap.height() + 30, 700)
         self._help_dialog.resize(w, h)
@@ -735,7 +741,7 @@ class CoordinatesTab(QWidget):
              if reply == QMessageBox.StandardButton.Yes:
                  self._start_wizard()
 
-    def _start_wizard(self):
+    def _start_wizard(self, start_from_category=None):
         from .wizard_overlay import WizardOverlay
         
         # Если мастер уже запущен - не запускаем копию
@@ -746,7 +752,7 @@ class CoordinatesTab(QWidget):
         if self.window():
             self.window().hide()
             
-        self.wizard = WizardOverlay(self.categories)
+        self.wizard = WizardOverlay(self.categories, start_from_category=start_from_category)
         self.wizard.wizard_finished.connect(self._on_wizard_finished)
         self.wizard.showFullScreen()
         

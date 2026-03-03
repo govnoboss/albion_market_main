@@ -11,6 +11,7 @@ from .base_bot import BaseBot
 from .interaction import DropdownSelector
 from .finance import finance_manager
 from ..utils.price_storage import price_storage
+from ..utils.localization import get_text
 
 class BuyerBot(BaseBot):
     """
@@ -85,7 +86,7 @@ class BuyerBot(BaseBot):
                     from .finance import finance_manager
                     from .license import license_manager, SERVER_URL
                     
-                    # 1. Получаем данные сессии из БД напрямую
+                    # 1. Получаем агрегированные данные сессии
                     conn = sqlite3.connect(finance_manager.db_path)
                     cursor = conn.cursor()
                     cursor.execute('''
@@ -94,9 +95,9 @@ class BuyerBot(BaseBot):
                         WHERE session_id = ? AND is_simulation = 0
                     ''', (self.session_id,))
                     row = cursor.fetchone()
-                    conn.close()
                     
                     if not row or not row[0]:
+                        conn.close()
                         self.logger.debug("Нет покупок в сессии, отчет не отправлен.")
                         return
                     
@@ -105,7 +106,29 @@ class BuyerBot(BaseBot):
                     total_profit_est = int(row[2] or 0)
                     
                     if items_bought <= 0:
+                        conn.close()
                         return
+                    
+                    # Получаем детализацию по предметам (Топ 20 по количеству)
+                    cursor.execute('''
+                        SELECT item_name, SUM(qty) as q, SUM(total) as t, SUM(profit_est) as p
+                        FROM transactions
+                        WHERE session_id = ? AND is_simulation = 0
+                        GROUP BY item_name
+                        ORDER BY q DESC
+                        LIMIT 20
+                    ''', (self.session_id,))
+                    
+                    items_detail = []
+                    for item_row in cursor.fetchall():
+                        items_detail.append({
+                            "name": str(item_row[0]),
+                            "qty": int(item_row[1] or 0),
+                            "spent": int(item_row[2] or 0),
+                            "profit": int(item_row[3] or 0)
+                        })
+                        
+                    conn.close()
                         
                     # 2. Длительность сессии
                     duration_seconds = int(time.time() - getattr(self, "_session_start_time", time.time()))
@@ -124,7 +147,8 @@ class BuyerBot(BaseBot):
                         "items_bought": items_bought,
                         "total_spent": total_spent,
                         "total_profit_est": total_profit_est,
-                        "duration_seconds": duration_seconds
+                        "duration_seconds": duration_seconds,
+                        "items_detail": items_detail
                     }
                     
                     # 4. Отправка (POST /api/v1/report-session)
@@ -458,7 +482,7 @@ class BuyerBot(BaseBot):
             
             # 2. Верификация имени (item_name_area)
             if not self._verify_item_name_with_retry(item_name, use_buy_button=False):
-                 self.logger.warning(f"❌ Имя предмета не совпадает! Ожидалось: {item_name}")
+                 self.logger.warning(f"Item name mismatch! Expected: {item_name}")
                  break
             
             # 3. Анализ цены (OCR)
@@ -513,7 +537,7 @@ class BuyerBot(BaseBot):
             self.logger.info(f"🔎 Анализ: {current_price} vs Target {target_price} | Нужно еще: {remaining}")
             
             if prog_total > 0:
-                 self.progress_updated.emit(prog_curr, prog_total, f"{display_name} - {current_price}/{target_price} (Куплено: {items_bought}/{limit})")
+                 self.progress_updated.emit(prog_curr, prog_total, f"{display_name} - {current_price}/{target_price} ({get_text('buyer_bought_progress', 'Куплено')}: {items_bought}/{limit})")
                  
             if current_price > target_price:
                  self.logger.info(f"📉 Цена ({current_price}) выше целевой ({target_price}). Переход к следующему.")
@@ -585,7 +609,7 @@ class BuyerBot(BaseBot):
                      self._human_click()
                  # -----------------------------------------------------
                  
-                 self.logger.info(f"💰 Куплено {actual_qty} шт.!")
+                 self.logger.info(f"💰 {get_text('buyer_bought_qty', 'Куплено {qty} шт.!').format(qty=actual_qty)}")
                  
                  # Логируем транзакцию в БД финансов
                  finance_manager.log_transaction(

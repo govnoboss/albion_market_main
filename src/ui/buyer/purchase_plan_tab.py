@@ -66,8 +66,8 @@ class PurchasePlanTab(QWidget):
             get_text("pp_header_profit", "Мин. Профит %")
         ])
         self.tree.setColumnWidth(0, 300)
-        self.tree.setColumnWidth(1, 100)
-        self.tree.setColumnWidth(2, 100)
+        self.tree.setColumnWidth(1, 130)
+        self.tree.setColumnWidth(2, 130)
         self.tree.setAlternatingRowColors(True)
         self.tree.setAnimated(False) # Отключаем анимацию для скорости
         self.tree.setStyleSheet(f"""
@@ -207,7 +207,7 @@ class PurchasePlanTab(QWidget):
         spin_limit.setRange(0, 9999)
         spin_limit.setValue(limit)
         spin_limit.setSingleStep(10)
-        spin_limit.setFixedWidth(80)
+        spin_limit.setFixedWidth(110)
         spin_limit.setStyleSheet(f"background: {COLORS['bg']}; color: {COLORS['text']}; border: 1px solid {COLORS['border']};")
         spin_limit.valueChanged.connect(lambda val, i=item_name, t=tier, e=enchant: 
                                   self._on_limit_changed(i, t, e, val))
@@ -219,7 +219,7 @@ class PurchasePlanTab(QWidget):
         spin_profit.setRange(0, 1000)
         spin_profit.setValue(min_profit)
         spin_profit.setSuffix("%")
-        spin_profit.setFixedWidth(80)
+        spin_profit.setFixedWidth(110)
         spin_profit.setStyleSheet(f"background: {COLORS['bg']}; color: {COLORS['text']}; border: 1px solid {COLORS['border']};")
         spin_profit.valueChanged.connect(lambda val, i=item_name, t=tier, e=enchant: 
                                   self._on_min_profit_changed(i, t, e, val))

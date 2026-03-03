@@ -49,13 +49,6 @@ class ScannerWidget(QWidget):
         
         header.addStretch()
         
-        # Mini Mode
-        self.mini_btn = QPushButton(get_text("ui_mini_mode", "↘ Mini Mode"))
-        self.mini_btn.setObjectName("sidebarItem")
-        self.mini_btn.setFixedWidth(120)
-        self.mini_btn.clicked.connect(self._switch_to_mini)
-        header.addWidget(self.mini_btn)
-        
         layout.addLayout(header)
 
         # Content Tabs (Custom style removed, uses global)
@@ -73,7 +66,7 @@ class ScannerWidget(QWidget):
         
         self.log_panel = LogPanel()
         self.log_panel.connect_logger()
-        mgmt_layout.addWidget(self.log_panel, stretch=1)
+        self.log_panel.hide()  # Логи убраны из UI, пустое пространство
         
         self.tabs.addTab(mgmt_tab, get_text("ui_mgmt_tab", "🎮 Управление"))
         

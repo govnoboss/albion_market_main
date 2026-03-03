@@ -90,6 +90,46 @@
         </div>
     </div>
 
+    <!-- Top 5 Items -->
+    {% if top_items %}
+    <div class="stats-content">
+        <div class="sessions-section">
+            <h2>🏆 Top 5 Items ({{ days }} Days)</h2>
+            <div class="sessions-table-wrap">
+                <table class="sessions-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>ITEM</th>
+                            <th>QTY</th>
+                            <th>INVESTMENT</th>
+                            <th>PROFIT</th>
+                            <th>MARGIN</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in top_items %}
+                        <tr>
+                            <td class="td-time">{{ loop.index }}</td>
+                            <td class="td-city"><span class="city-badge">{{ item.name }}</span></td>
+                            <td class="td-items"><span class="accent-purple">{{ "{:,}".format(item.qty) }}</span></td>
+                            <td class="td-silver">{{ "{:,}".format(item.spent) }} Silver</td>
+                            <td class="td-profit accent-green">{{ "{:,}".format(item.profit) }} Silver</td>
+                            <td class="td-margin">
+                                <span
+                                    class="{% if item.margin >= 25 %}accent-green{% elif item.margin >= 15 %}accent-yellow{% else %}accent-red{% endif %}">
+                                    {{ item.margin }}%
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Sessions Table -->
     <div class="stats-content">
         <div class="sessions-section">
@@ -106,6 +146,7 @@
                             <th>PROFIT</th>
                             <th>MARGIN</th>
                             <th>IP</th>
+                            <th>ACTIONS</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -125,11 +166,19 @@
                                 </span>
                             </td>
                             <td class="td-ip">{{ s.client_ip or '—' }}</td>
+                            <td class="td-actions">
+                                <a href="/admin/session/{{ s.session_id }}" class="btn-action btn-view"
+                                    title="Просмотр">👁</a>
+                                <form method="post" action="/admin/session/{{ s.session_id }}/delete"
+                                    style="display:inline" onsubmit="return confirm('Удалить эту сессию?')">
+                                    <button type="submit" class="btn-action btn-delete" title="Удалить">🗑</button>
+                                </form>
+                            </td>
                         </tr>
                         {% endfor %}
                         {% if not sessions %}
                         <tr>
-                            <td colspan="8" class="empty-state">Нет данных за выбранный период</td>
+                            <td colspan="9" class="empty-state">Нет данных за выбранный период</td>
                         </tr>
                         {% endif %}
                     </tbody>
