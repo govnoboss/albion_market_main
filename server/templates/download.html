@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Download GBot{% endblock %}
+
+{% block content %}
+<div class="download-shell">
+    <section class="download-hero">
+        <div class="download-brand">
+            <div class="brand-left">
+                <div class="brand-mark">G</div>
+                <div>
+                    <div class="brand-title">GBot</div>
+                    <div class="brand-subtitle">Official download</div>
+                </div>
+            </div>
+            {% if release and release.tag %}
+                <span class="pill pill-accent">Latest release: <strong>{{ release.tag }}</strong></span>
+            {% else %}
+                <span class="pill">Latest release</span>
+            {% endif %}
+        </div>
+
+        <div class="download-hero-grid">
+            <div class="hero-copy">
+                <h1>Download GBot and start in a minute</h1>
+                <p>
+                    We keep the latest build available via GitHub Releases.
+                    Click “Download” to get the most recent version.
+                </p>
+
+                <div class="download-sections">
+                    <div class="section-card">
+                        <h3>What you get</h3>
+                        <div class="feature-list">
+                            <div class="feature-item">
+                                <div class="feature-dot">✓</div>
+                                <div>Official build from the latest release</div>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-dot">✓</div>
+                                <div>Portable format: extract and run</div>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-dot">✓</div>
+                                <div>In-app auto-update (when a new release is available)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-card">
+                        <h3>System requirements</h3>
+                        <div class="feature-list">
+                            <div class="feature-item">
+                                <div class="feature-dot">🪟</div>
+                                <div>Windows 10/11</div>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-dot">🧠</div>
+                                <div>8 GB RAM recommended</div>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-dot">📦</div>
+                                <div>ZIP extraction (7-Zip / WinRAR)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="download-card">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap: 1rem;">
+                    <div style="font-weight: 800; font-size: 1.05rem;">Download</div>
+                    {% if release and release.asset_name %}
+                        <span class="pill">{{ release.asset_name }}</span>
+                    {% endif %}
+                </div>
+
+                <div class="download-meta">
+                    <div class="meta-row">
+                        <div class="meta-label">Version</div>
+                        <div class="meta-value">{{ (release.tag if release and release.tag else "—") }}</div>
+                    </div>
+                    <div class="meta-row">
+                        <div class="meta-label">Size</div>
+                        <div class="meta-value">
+                            {% if release and release.asset_size %}
+                                {{ (release.asset_size / 1024 / 1024) | round(1) }} MB
+                            {% else %}
+                                —
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1rem;">
+                    <a href="/download/latest"
+                       class="btn btn-primary btn-cta"
+                       {% if not (release and release.download_url) %}aria-disabled="true"{% endif %}>
+                        ⬇️ Download
+                    </a>
+                    <div class="helper-note">
+                        {% if release and release.download_url %}
+                            If prompted by the browser, save the file, then extract the ZIP and run the app.
+                        {% else %}
+                            The build is currently unavailable. The button will redirect to the latest release page.
+                        {% endif %}
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </section>
+
+    {% if release and release.body %}
+        <section class="section-card" style="margin-top: 1rem;">
+            <h3>What’s new</h3>
+            <div class="changelog">{{ release.body }}</div>
+        </section>
+    {% endif %}
+</div>
+
+{% endblock %}
+

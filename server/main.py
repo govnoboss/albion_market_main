@@ -10,6 +10,9 @@ import secrets
 import os
 import json # Added for JSON serialization
 import base64 # Added for signature encoding
+import re
+import urllib.request
+import urllib.error
 from pathlib import Path
 
 # Cryptography Imports
@@ -179,6 +182,101 @@ def get_db():
     finally:
         db.close()
 
+# === Public download page (GitHub Releases) ===
+# Configurable via env vars so you can reuse this server for different repos/assets.
+DOWNLOAD_GITHUB_REPO = os.getenv("DOWNLOAD_GITHUB_REPO", "govnoboss/albion_market_main")
+DOWNLOAD_ASSET_NAME = os.getenv("DOWNLOAD_ASSET_NAME", "")  # e.g. "GBot.zip"
+DOWNLOAD_ASSET_REGEX = os.getenv("DOWNLOAD_ASSET_REGEX", r"\.zip$")
+DOWNLOAD_CACHE_TTL_SECONDS = int(os.getenv("DOWNLOAD_CACHE_TTL_SECONDS", "300"))  # 5 min default
+
+_latest_release_cache: dict = {"fetched_at": 0.0, "data": None}
+
+def _github_api_get_json(url: str, timeout_seconds: int = 10) -> dict:
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "gbot-license-server",
+        },
+        method="GET",
+    )
+    with urllib.request.urlopen(req, timeout=timeout_seconds) as resp:
+        raw = resp.read()
+    return json.loads(raw.decode("utf-8"))
+
+def _select_release_asset(release_data: dict) -> dict | None:
+    assets = release_data.get("assets") or []
+    if not assets:
+        return None
+
+    if DOWNLOAD_ASSET_NAME:
+        for a in assets:
+            if (a.get("name") or "") == DOWNLOAD_ASSET_NAME:
+                return a
+
+    try:
+        rx = re.compile(DOWNLOAD_ASSET_REGEX, re.IGNORECASE)
+    except re.error:
+        rx = re.compile(r"\.zip$", re.IGNORECASE)
+
+    for a in assets:
+        name = (a.get("name") or "")
+        if rx.search(name):
+            return a
+
+    return None
+
+def get_latest_release_info() -> dict | None:
+    """
+    Returns cached latest release info or fetches from GitHub.
+    Shape:
+      {
+        "repo": "...",
+        "tag": "v1.2.3",
+        "name": "...",
+        "html_url": "...",
+        "published_at": "...",
+        "body": "...",
+        "asset_name": "...",
+        "asset_size": 123,
+        "download_url": "https://.../asset.zip"
+      }
+    """
+    now_ts = time.time()
+    cached = _latest_release_cache.get("data")
+    fetched_at = float(_latest_release_cache.get("fetched_at") or 0.0)
+    if cached and (now_ts - fetched_at) < DOWNLOAD_CACHE_TTL_SECONDS:
+        return cached
+
+    try:
+        url = f"https://api.github.com/repos/{DOWNLOAD_GITHUB_REPO}/releases/latest"
+        data = _github_api_get_json(url)
+
+        asset = _select_release_asset(data)
+        download_url = asset.get("browser_download_url") if asset else None
+
+        info = {
+            "repo": DOWNLOAD_GITHUB_REPO,
+            "tag": data.get("tag_name") or "",
+            "name": data.get("name") or "",
+            "html_url": data.get("html_url") or f"https://github.com/{DOWNLOAD_GITHUB_REPO}/releases/latest",
+            "published_at": data.get("published_at") or "",
+            "body": data.get("body") or "",
+            "asset_name": (asset.get("name") if asset else "") or "",
+            "asset_size": int(asset.get("size") or 0) if asset else 0,
+            "download_url": download_url or "",
+        }
+
+        _latest_release_cache["data"] = info
+        _latest_release_cache["fetched_at"] = now_ts
+        return info
+    except urllib.error.HTTPError as e:
+        logger.warning(f"[DOWNLOAD] GitHub HTTP error: {e.code}")
+        return cached
+    except Exception as e:
+        logger.warning(f"[DOWNLOAD] Failed to fetch latest release: {e}")
+        return cached
+
 # --- Pydantic Models ---
 class LicenseCheckRequest(BaseModel):
     key: str
@@ -219,6 +317,29 @@ def on_startup():
     init_db()
 
 # --- Endpoints ---
+
+@app.get("/", include_in_schema=False)
+def root():
+    return RedirectResponse("/download", status_code=302)
+
+@app.get("/download", response_class=HTMLResponse, include_in_schema=False)
+def download_page(request: Request):
+    release = get_latest_release_info()
+    return templates.TemplateResponse("download.html", {
+        "request": request,
+        "session_active": False,
+        "release": release,
+        "github_repo": DOWNLOAD_GITHUB_REPO,
+    })
+
+@app.get("/download/latest", include_in_schema=False)
+def download_latest():
+    release = get_latest_release_info() or {}
+    url = (release.get("download_url") or "").strip()
+    if url:
+        # Redirect directly to the asset (GitHub serves the file)
+        return RedirectResponse(url, status_code=302)
+    return RedirectResponse(f"https://github.com/{DOWNLOAD_GITHUB_REPO}/releases/latest", status_code=302)
 
 @app.post("/api/v1/validate", response_model=SignedResponse)
 @limiter.limit("10/minute")
