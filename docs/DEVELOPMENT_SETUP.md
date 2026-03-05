@@ -5,7 +5,7 @@
 ---
 
 ## 1. Предварительные требования
-*   **Python 3.14** (или 3.11+). [Скачать Python](https://www.python.org/downloads/)
+*   **Python 3.13** (или 3.11+). [Скачать Python](https://www.python.org/downloads/)
     *   *Важно:* При установке поставьте галочку **"Add Python to PATH"**.
 *   **Git** для Windows. [Скачать Git](https://git-scm.com/download/win)
 *   **Tesseract OCR** (уже включен в проект в папке `assets/tesseract`).

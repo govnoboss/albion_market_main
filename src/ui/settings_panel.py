@@ -237,17 +237,6 @@ class SettingsPanel(QScrollArea):
         
         right_col.addWidget(dropdown_group)
         
-        # === Отладка OCR ===
-        debug_group = QGroupBox()
-        style_groupbox(debug_group, get_text("settings_ocr_debug", "🔬 Отладка модулей"))
-        debug_layout = QVBoxLayout(debug_group)
-        debug_layout.setContentsMargins(15, 15, 15, 15)
-        
-        self.ocr_debug_check = QCheckBox(get_text("settings_save_ocr", "Сохранять скриншоты OCR на диск (data/debug_ocr)"))
-        self.ocr_debug_check.stateChanged.connect(self._on_ocr_debug_changed)
-        debug_layout.addWidget(self.ocr_debug_check)
-        
-        right_col.addWidget(debug_group)
 
         right_col.addStretch()
     
@@ -292,11 +281,6 @@ class SettingsPanel(QScrollArea):
 
         # Character Switch
         self.char_switch_check.setChecked(config.get_setting("use_character_switch", True))
-
-        # OCR Debug (block signals to avoid save during load)
-        self.ocr_debug_check.blockSignals(True)
-        self.ocr_debug_check.setChecked(config.get_setting("ocr_debug_mode", False))
-        self.ocr_debug_check.blockSignals(False)
 
         # Language
         self.lang_combo.blockSignals(True)
@@ -383,9 +367,6 @@ class SettingsPanel(QScrollArea):
 
     def _on_char_switch_changed(self, state):
         get_config().set_setting("use_character_switch", state == Qt.CheckState.Checked.value)
-
-    def _on_ocr_debug_changed(self, state):
-        get_config().set_setting("ocr_debug_mode", state == Qt.CheckState.Checked.value)
 
     def _on_language_changed(self, index):
         lang_code = self.lang_combo.itemData(index)

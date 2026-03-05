@@ -38,10 +38,19 @@ class DropdownSelector:
             return None
             
         anchor_x, anchor_y = anchor
+        
+        # Получаем коэффициент масштабирования для этого якоря
+        _, scale_y = self.config.get_scaling_factor(anchor_key)
+        
         settings = self._get_dropdown_settings()
         
         row_height = settings.get("row_height", 28)
         start_offset = settings.get("list_start_offset", 30)
+        
+        # Масштабируем отступы, если разрешение изменилось
+        if scale_y != 1.0:
+            row_height = int(row_height * scale_y)
+            start_offset = int(start_offset * scale_y)
         
         # Расчет Y координаты: Якорь + Отступ до списка + (Индекс * Высота строки)
         target_y = anchor_y + start_offset + (item_index * row_height)

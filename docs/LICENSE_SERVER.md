@@ -72,6 +72,33 @@ Programmatically generate keys. **Requires Admin Password.**
     }
     ```
 
+### 4. Heartbeat
+Обновляет `last_seen` для отслеживания онлайн-пользователей.
+
+*   **Endpoint:** `POST /api/v1/heartbeat`
+*   **Rate Limit:** 20/minute
+*   **Request JSON:** `{"key": "...", "hwid": "..."}`
+*   **Response JSON:** `{"status": "ok"}`
+
+### 5. Report Session (Telemetry)
+Отправка агрегированных данных о сессии закупки.
+
+*   **Endpoint:** `POST /api/v1/report-session`
+*   **Rate Limit:** 10/minute
+*   **Request JSON:**
+    ```json
+    {
+      "key": "...", "hwid": "...",
+      "session_id": "unique-id",
+      "city": "Thetford",
+      "items_bought": 15,
+      "total_spent": 500000,
+      "total_profit_est": 75000,
+      "duration_seconds": 300,
+      "items_detail": [{"name": "T4_BAG", "qty": 5, "spent": 100000, "profit": 15000}]
+    }
+    ```
+
 ---
 
 ## 4. Admin Panel
@@ -90,6 +117,11 @@ A web-based interface for managing licenses.
         *   **Deactivate:** Temporarily ban a key.
         *   **Delete:** Permanently remove a key.
 *   **Generator:** UI to create bulk keys (e.g., "Generate 10 keys for 30 days").
+
+### Additional Admin Pages
+*   **Stats (`/admin/stats`):** Страница статистики закупок — KPI-карточки (общие траты, профит, кол-во предметов), таблица сессий и топ-5 предметов. Поддерживает фильтр по периоду (`?days=30`).
+*   **Session Detail (`/admin/stats/session/{id}`):** Детали конкретной сессии закупки с разбивкой по предметам.
+*   **Download (`/download`):** Публичная страница скачивания — показывает последний GitHub Release с кнопкой загрузки.
 
 ---
 

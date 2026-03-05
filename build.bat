@@ -101,7 +101,6 @@ python -m nuitka ^
     --nofollow-import-to=sqlite3 ^
     --nofollow-import-to=matplotlib ^
     --nofollow-import-to=scipy ^
-    --nofollow-import-to=pandas ^
     --product-name="Albion Market Scanner" ^
     --product-version=%APP_VERSION% ^
     --file-description="Albion Market Scanner & Buyer Bot" ^

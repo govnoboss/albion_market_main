@@ -6,8 +6,9 @@
 import json
 import os
 import threading
+import pyautogui
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 
 
 from .paths import get_app_root
@@ -29,6 +30,15 @@ class ConfigManager:
         # Убеждаемся, что папка существует
         self.config_path.parent.mkdir(exist_ok=True)
         self._config = self._load_config()
+        self._current_res = self._get_screen_size()
+    
+    def _get_screen_size(self) -> Tuple[int, int]:
+        """Получить текущее разрешение монитора"""
+        try:
+            return pyautogui.size()
+        except Exception as e:
+            logger.error(f"Ошибка получения размера экрана: {e}")
+            return (1920, 1080) # Дефолт
     
     def _load_config(self) -> dict:
         """Загрузка конфигурации из файла (thread-safe)"""
@@ -89,34 +99,98 @@ class ConfigManager:
     # === Координаты ===
     
     def get_coordinate(self, key: str) -> Optional[tuple]:
-        """Получить точку (x, y)"""
+        """Получить точку (x, y) с авто-масштабированием"""
         coord = self._config.get("coordinates", {}).get(key)
-        # Fix: Default type to 'point' for backward compatibility
-        if coord and isinstance(coord, dict) and coord.get("type", "point") == "point":
-            return (coord.get("x"), coord.get("y"))
-        return None
+        if not coord or not isinstance(coord, dict):
+            return None
+            
+        # 1. Проверяем тип
+        if coord.get("type", "point") != "point":
+            return None
+            
+        # 2. Логика масштабирования
+        x, y = coord.get("x"), coord.get("y")
+        
+        # Если есть данные о разрешении, при котором была снята координата
+        if "orig_res" in coord:
+            orig_w, orig_h = coord["orig_res"]
+            curr_w, curr_h = self._get_screen_size()
+            
+            if orig_w > 0 and orig_h > 0:
+                scale_x = curr_w / orig_w
+                scale_y = curr_h / orig_h
+                
+                # Масштабируем если разрешение отличается
+                if scale_x != 1.0 or scale_y != 1.0:
+                    x = int(x * scale_x)
+                    y = int(y * scale_y)
+                    
+        return (x, y)
         
     def get_coordinate_area(self, key: str) -> Optional[dict]:
-        """Получить область {x, y, w, h}"""
+        """Получить область {x, y, w, h} с авто-масштабированием"""
         coord = self._config.get("coordinates", {}).get(key)
-        if coord and isinstance(coord, dict) and coord.get("type") == "area":
-             return coord
-        return None
+        if not coord or not isinstance(coord, dict) or coord.get("type") != "area":
+            return None
+            
+        # Копия, чтобы не менять оригинал в конфиге (если мы будем его сохранять позже)
+        result = coord.copy()
+        
+        # Логика масштабирования
+        if "orig_res" in coord:
+            orig_w, orig_h = coord["orig_res"]
+            curr_w, curr_h = self._get_screen_size()
+            
+            if orig_w > 0 and orig_h > 0:
+                scale_x = curr_w / orig_w
+                scale_y = curr_h / orig_h
+                
+                if scale_x != 1.0 or scale_y != 1.0:
+                    result["x"] = int(coord["x"] * scale_x)
+                    result["y"] = int(coord["y"] * scale_y)
+                    result["w"] = int(coord["w"] * scale_x)
+                    result["h"] = int(coord["h"] * scale_y)
+                    
+        return result
+
+    def get_scaling_factor(self, key: str) -> Tuple[float, float]:
+        """Получить коэффициент масштабирования (scale_x, scale_y) для конкретной координаты"""
+        coord = self._config.get("coordinates", {}).get(key)
+        if coord and isinstance(coord, dict) and "orig_res" in coord:
+            orig_w, orig_h = coord["orig_res"]
+            curr_w, curr_h = self._get_screen_size()
+            if orig_w > 0 and orig_h > 0:
+                return (curr_w / orig_w, curr_h / orig_h)
+        return (1.0, 1.0)
     
     def set_coordinate(self, key: str, x: int, y: int) -> None:
-        """Установить координату (точку)"""
+        """Установить координату (точку) с сохранением разрешения"""
         if "coordinates" not in self._config:
             self._config["coordinates"] = {}
         
-        self._config["coordinates"][key] = {"x": x, "y": y, "type": "point"}
+        res = self._get_screen_size()
+        self._config["coordinates"][key] = {
+            "x": x, 
+            "y": y, 
+            "type": "point",
+            "orig_res": list(res)
+        }
         self.save()
 
     def set_coordinate_area(self, key: str, x: int, y: int, w: int, h: int) -> None:
-        """Установить координату (область)"""
+        """Установить координату (область) с сохранением разрешения"""
         if "coordinates" not in self._config:
             self._config["coordinates"] = {}
         
-        self._config["coordinates"][key] = {"x": x, "y": y, "w": w, "h": h, "type": "area"}
+        res = self._get_screen_size()
+        self._config["coordinates"][key] = {
+            "x": x, 
+            "y": y, 
+            "w": w, 
+            "h": h, 
+            "type": "area",
+            "orig_res": list(res)
+        }
         self.save()
 
     def get_coordinate_color(self, key: str) -> Optional[tuple]:

@@ -64,7 +64,11 @@ class TestConfigManager:
         # Test area
         config_mgr.set_coordinate_area("test_area", 10, 20, 30, 40)
         area = config_mgr.get_coordinate_area("test_area")
-        assert area == {"x": 10, "y": 20, "w": 30, "h": 40, "type": "area"}
+        assert area["x"] == 10
+        assert area["y"] == 20
+        assert area["w"] == 30
+        assert area["h"] == 40
+        assert area["type"] == "area"
 
     def test_items_management(self, config_mgr):
         """Test adding, updating, and removing items."""
@@ -207,6 +211,7 @@ class TestInteraction:
             
             # Setup default behavior
             config.get_coordinate.return_value = (100, 100) # Default anchor
+            config.get_scaling_factor.return_value = (1.0, 1.0) # No scaling
             config._config = {"dropdowns": {"row_height": 20, "list_start_offset": 10}}
             
             yield config

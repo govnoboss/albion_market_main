@@ -18,7 +18,7 @@ def convert_icon():
     print(f"Checking for icon at: {ICON_PNG}")
     
     if not ICON_PNG.exists():
-        print("⚠️  Warning: assets/icon.png not found. skipping icon conversion.")
+        print("[WARN] Warning: assets/icon.png not found. skipping icon conversion.")
         return
 
     try:
@@ -30,10 +30,10 @@ def convert_icon():
         print(f"Converting {ICON_PNG} -> {ICON_ICO}...")
         # Save as ICO with multiple sizes for best scaling in Windows
         img.save(ICON_ICO, format='ICO', sizes=[(256, 256), (128, 128), (64, 64), (48, 48), (32, 32), (16, 16)])
-        print(f"✅ Icon created successfully: {ICON_ICO}")
+        print(f"[OK] Icon created successfully: {ICON_ICO}")
         
     except Exception as e:
-        print(f"❌ Error converting icon: {e}")
+        print(f"[ERROR] Error converting icon: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@
 
 **Applies to:** `albion_market_main`
 **Type:** Automation Tool (Market Bot) for Albion Online
-**Tech Stack:** Python 3.14, PyQt6 (GUI), PyAutoGUI/Pynput (Input), OpenCV/Tesseract (OCR).
+**Tech Stack:** Python 3.13, PyQt6 (GUI), PyAutoGUI/Pynput (Input), OpenCV/Tesseract (OCR).
 
 ### Core Purpose
 A desktop application that automates market data collection (Scanner) and item purchasing (Buyer) in the Albion Online MMORPG. It uses Optical Character Recognition (OCR) and template matching to read the game state and emulates human input (mouse/keyboard) to interact with the game UI.
@@ -34,7 +34,7 @@ src/
 │   ├── buyer.py            # Buyer Mode logic (Wholesale/Smart, multi-city)
 │   ├── coordinate_capture.py # Захват координат по клику (pynput)
 │   ├── finance.py          # Менеджер финансов (SQLite транзакции, статистика)
-│   ├── interaction.py      # UI Element calculation (Dropdowns)
+│   ├── interaction.py      # UI Element calculation (Dropdowns) с автомасштабированием
 │   ├── license.py          # HWID generation, RSA verification, license validation
 │   ├── market_opener.py    # Поиск и открытие NPC Рынка через OCR тултипов
 │   ├── state_detector.py   # Обнаружение вылетов, дисконнектов, экрана переподключения
@@ -46,12 +46,8 @@ src/
 │   ├── dashboard.py        # ★ Главное окно Dashboard (сайдбар, KPI, навигация)
 │   ├── login_window.py     # Окно ввода лицензионного ключа
 │   ├── splash_screen.py    # Splash screen при загрузке
-│   ├── main_window.py      # Scanner Window: Tabs, Hotkeys (F5/F6)
-│   ├── buyer_window.py     # Buyer Window: управление закупкой
 │   ├── scanner_widget.py   # Виджет Scanner для Dashboard
 │   ├── buyer_widget.py     # Виджет Buyer для Dashboard
-│   ├── settings_window.py  # Окно настроек (Settings)
-│   ├── finance_window.py   # Окно финансовой статистики
 │   ├── buyer/              # Компоненты Buyer-окна
 │   │   ├── profit_preview_tab.py   # Превью прибыли
 │   │   └── purchase_plan_tab.py    # План закупок
@@ -66,17 +62,17 @@ src/
 │   ├── dim_overlay.py      # Затемнение экрана при калибровке (Cinema Scope)
 │   ├── resizable_panel.py  # Панель с изменяемым размером
 │   ├── calibration_overlay.py # Оверлей калибровки координат
-│   ├── faq_tab.py          # Вкладка FAQ/Гайд
+│   ├── faq_tab.py          # Вкладка FAQ/Гайд (временно отключена)
 │   ├── styles.py           # Стили и цветовая схема (MAIN_STYLE, COLORS)
-│   └── [tabs]              # Вкладки Scanner Window:
+│   └── [tabs]              # Вкладки:
 │       ├── control_panel.py       # Start/Stop controls
 │       ├── profits_tab.py         # Smart Buyer analysis view
 │       ├── prices_tab.py          # Database viewer
 │       ├── items_panel.py         # Item management
-│       ├── coordinates_tab.py     # UI calibration
+│       ├── coordinates_tab.py     # UI calibration (с индикацией масштабирования)
 │       └── settings_panel.py      # General config
 ├── utils/                  # Shared Utilities
-│   ├── config.py           # JSON Config Manager (Singleton)
+│   ├── config.py           # JSON Config Manager (Singleton) + относительные координаты
 │   ├── logger.py           # Thread-safe logging system
 │   ├── price_storage.py    # Price database (JSON)
 │   ├── image_utils.py      # Image comparison & search
@@ -85,7 +81,10 @@ src/
 │   ├── human_mouse.py      # Человекоподобное движение мыши (кривые Безье)
 │   ├── items_db.py         # База данных предметов
 │   ├── default_exceptions.py # Исключения по тирам (items без T1-T3)
-│   └── text_utils.py       # Утилиты обработки текста
+│   ├── text_utils.py       # Утилиты обработки текста
+│   ├── localization.py     # Система локализации (ru/en) — LocalizationManager
+│   ├── hotkeys.py          # Глобальные горячие клавиши (F5/F6)
+│   └── startup_profiler.py # Профилировщик запуска приложения
 server/                     # License Server (FastAPI) — ОБЯЗАТЕЛЕН для работы бота
 tools/                      # Утилиты разработчика
 │   ├── release_manager.py  # GUI для сборки, упаковки и публикации релизов
@@ -94,6 +93,7 @@ tools/                      # Утилиты разработчика
 │   ├── convert_icon.py     # Конвертация PNG → ICO для Windows-сборки
 │   ├── migrate_db.py       # Миграция БД сервера
 │   ├── migrate_db_ip.py    # Миграция БД (IP поля)
+│   ├── generate_demo_sessions.py # Генерация демо-данных для тестирования статистики
 │   └── deploy_server.ps1   # Деплой сервера на Fly.io
 ```
 
@@ -111,10 +111,10 @@ main.py → LauncherWindow
              │                     │    ├── Стр. "Главная"    → KPI, Sessions, Hot Items
              │                     │    ├── Стр. "Сканер"    → ScannerWidget
              │                     │    ├── Стр. "Закупщик"  → BuyerWidget
-             │                     │    └── Стр. "FAQ"       → FAQTab
-             │                     ├── Кнопка "СКАНЕР"    → MainWindow (Scanner)
-             │                     ├── Кнопка "ЗАКУПЩИК"  → BuyerWindow (Buyer)
-             │                     ├── Кнопка "НАСТРОЙКИ" → SettingsWindow
+             │                     │    └── Стр. "FAQ"       → FAQTab (disabled)
+             │                     ├── Кнопка "СКАНЕР"    → Scanner (Dashboard tab)
+             │                     ├── Кнопка "ЗАКУПЩИК"  → Buyer (Dashboard tab)
+             │                     ├── Кнопка "НАСТРОЙКИ" → SettingsPanel
              │                     └── Кнопка "ФИНАНСЫ"   → FinanceWindow
 ```
 
@@ -158,6 +158,7 @@ main.py → LauncherWindow
 ### Interaction (`src/core/interaction.py`)
 *   **Role:** UI Coordinate Logic.
 *   **DropdownSelector:** Calculates `(x, y)` for dynamic dropdowns (Tier, Enchant, Quality) handling specific offsets and row heights.
+*   **Автомасштабирование:** Использует `get_scaling_factor()` из ConfigManager для динамического пересчёта `row_height` и `list_start_offset` при изменении разрешения.
 *   **Tier Exceptions:** database of items that don't have specific tiers (e.g., T1 for some artifacts), adjusting dropdown clicks accordingly.
 
 ### CoordinateCapture (`src/core/coordinate_capture.py`)
@@ -234,22 +235,16 @@ GUI-приложение (PyQt6) для разработчика:
     *   Отображение срока лицензии в footer.
     *   Ежедневная ре-валидация лицензии с graceful shutdown.
 
-### MainWindow / Scanner Window (`src/ui/main_window.py`)
+### MainDashboard (`src/ui/dashboard.py`)
+*   **Role:** Основное окно приложения после лаунчера. Содержит сайдбар навигации, KPI-карточки, встроенные виджеты Scanner и Buyer.
 *   **Features:**
-    *   **Tabs:** Control, Profits, Prices, Items, Coordinates, Settings.
-    *   **Hotkeys:** Global `F5` (Start/Stop) and `F6` (Pause) using `pynput` listener.
-    *   **Mini Overlay Integration:** Automatically hides the main window and shows `MiniOverlay` on start.
+    *   Сайдбар с навигацией между страницами (Главная, Сканер, Закупщик).
+    *   KPI-блок: Revenue, Profit, Sessions, Hot Items.
+    *   Кнопки быстрого доступа: Настройки, Финансы.
+    *   Социальные кнопки (Discord, Telegram).
 
-### BuyerWindow (`src/ui/buyer_window.py`)
-*   **Role:** Отдельное окно для режима закупки.
-*   **Features:**
-    *   Управление Wholesale/Smart buyer, прогресс, логи.
-    *   **Multi-City:** Дропдауны «Откуда» (`buy_city_combo`) и «Куда» (`sell_city_combo`) для выбора маршрута.
-    *   **Budget Input:** Поле бюджета с placeholder «Безлимит» (кастомный `BudgetSpinBox`).
-    *   **Always on Top:** Чекбокс для закрепления окна поверх всех.
-    *   **Mini Overlay:** Интеграция с компактным оверлеем при запуске бота.
-    *   **Auto-Refresh:** Списки городов и План закупки обновляются автоматически при каждом показе окна (`showEvent`).
-    *   Вложенные табы: `buyer/profit_preview_tab.py` и `buyer/purchase_plan_tab.py`.
+### BuyerWidget (`src/ui/buyer_widget.py`)
+*   **Role:** Виджет для режима закупки, встроенный в Dashboard.
 
 ### MiniOverlay (`src/ui/mini_overlay.py`)
 *   **Role:** Compact widget showing Status, Progress Bar, and Last Log Message.
@@ -257,8 +252,17 @@ GUI-приложение (PyQt6) для разработчика:
 
 ### Tabs
 *   **ProfitsTab:** Displays calculated profit margins based on scanned data.
-*   **CoordinatesTab:** Interactive calibration tool. Allows users to "Set" coordinates by pressing Ctrl, auto-saving to config.
+*   **CoordinatesTab:** Interactive calibration tool. Allows users to "Set" coordinates by pressing **F1**, auto-saving to config. Отображает значок 📏 с коэффициентом масштабирования, если координата была пересчитана под другое разрешение.
 *   **PricesTab:** View and query the history of scanned prices.
+
+---
+
+## 6.5. Система локализации
+
+*   **Файл:** `src/utils/localization.py`.
+*   **Менеджер:** `LocalizationManager` — Singleton, загружает JSON-файлы из `resources/locales/`.
+*   **Языки:** `ru.json`, `en.json`.
+*   **Использование:** `get_text(key)` во всех UI-компонентах для перевода строк интерфейса.
 
 ---
 
@@ -268,6 +272,8 @@ GUI-приложение (PyQt6) для разработчика:
 *   **File:** `config/coordinates.json`.
 *   **Profiles:** Supports multiple coordinate profiles (e.g., for different screen resolutions or window positions).
 *   **Capabilities:** Load/Save coordinates, Settings (`tesseract_path`), Dropdown tweaks, and Item Lists.
+*   **Относительные координаты:** При сохранении координат записывается текущее разрешение экрана (`orig_res`). При получении координат автоматически пересчитывает пиксели, если текущее разрешение отличается от оригинального.
+*   **Методы масштабирования:** `get_scaling_factor(key)` — возвращает коэффициент `(scale_x, scale_y)` для конкретной координаты.
 
 ### PriceStorage (`src/utils/price_storage.py`)
 *   **File:** `data/prices.json` (JSON Database).
@@ -305,6 +311,6 @@ The project includes a standalone **License Server** (FastAPI) to manage access 
     *   Version is defined ONLY in `src/core/version.py`.
     *   To release: use `tools/release_manager.py` (GUI) or manually update version → build → package → GitHub Release.
 *   **Critical Constraints:**
-    *   **Coordinates:** The bot is blind without accurate coordinates. Any UI change in the Game requires recalibration.
+    *   **Coordinates:** The bot is blind without accurate coordinates. Any UI change in the Game requires recalibration. Координаты теперь автоматически масштабируются при изменении разрешения экрана (см. `config.py → get_coordinate()`).
     *   **OCR Reliability:** Always verify OCR output (`isdigit()`, `>0`) before critical actions (Buying).
     *   **Safety:** The `_check_safe_state()` in `bot.py` is the primary crash-prevention mechanism. Do not remove it.

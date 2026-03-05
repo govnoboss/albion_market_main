@@ -720,6 +720,12 @@ class CoordinatesTab(QWidget):
                     text = f"X: {data['x']}, Y: {data['y']} [W: {data['w']}, H: {data['h']}]"
                 else:
                     text = f"X: {data['x']}, Y: {data['y']}"
+                
+                # Проверка на масштабирование
+                scale_x, scale_y = self.config.get_scaling_factor(key)
+                if scale_x != 1.0 or scale_y != 1.0:
+                    text += f" 📏 (x{scale_x:.2f})"
+                
                 label.setText(text)
                 label.setStyleSheet("color: #0f0;") # Green for set
             else:

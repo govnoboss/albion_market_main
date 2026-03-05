@@ -26,9 +26,10 @@ requests>=2.31.0
 # --- Cryptography (License Verification, Key Management) ---
 cryptography>=41.0.0
 
-# --- Build Tools ---
+# --- Build & Test Tools ---
 nuitka>=2.0.0
 zstandard>=0.22.0
+pytest>=7.4.0
 
 # --- Server Dependencies (also in server/requirements.txt) ---
 # fastapi>=0.100.0
