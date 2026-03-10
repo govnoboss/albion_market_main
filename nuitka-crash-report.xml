@@ -1,0 +1,78 @@
+<?xml version='1.0' encoding='utf8'?>
+<nuitka-compilation-report nuitka_version="4.0" nuitka_commercial_version="not installed" mode="standalone" completion="error exit message (1)" exit_message="pyqt6: Plugin issue while working on 'plugin startup checks'. Please report the bug with the above traceback included.">
+  <performance>
+    <memory_usage name="after_launch" value="41762816" />
+  </performance>
+  <data_composer blob_size="None" />
+  <command_line>
+    <option value="--standalone" />
+    <option value="--jobs=4" />
+    <option value="--output-dir=dist" />
+    <option value="--output-filename=GBot.exe" />
+    <option value="--windows-icon-from-ico=assets/icon.ico" />
+    <option value="--enable-plugin=pyqt6" />
+    <option value="--include-package=src" />
+    <option value="--include-data-dir=resources=resources" />
+    <option value="--windows-console-mode=attach" />
+    <option value="--windows-uac-admin" />
+    <option value="--python-flag=no_docstrings" />
+    <option value="--python-flag=no_asserts" />
+    <option value="--nofollow-import-to=tkinter" />
+    <option value="--nofollow-import-to=unittest" />
+    <option value="--nofollow-import-to=test" />
+    <option value="--nofollow-import-to=setuptools" />
+    <option value="--nofollow-import-to=pip" />
+    <option value="--nofollow-import-to=distutils" />
+    <option value="--nofollow-import-to=pydoc" />
+    <option value="--nofollow-import-to=doctest" />
+    <option value="--nofollow-import-to=xmlrpc" />
+    <option value="--nofollow-import-to=sqlite3" />
+    <option value="--nofollow-import-to=matplotlib" />
+    <option value="--nofollow-import-to=scipy" />
+    <option value="--nofollow-import-to=pandas" />
+    <option value="--product-name=Albion Market Scanner" />
+    <option value="--product-version=0.0.0" />
+    <option value="--file-description=Albion Market Scanner &amp; Buyer Bot" />
+    <option value="--copyright=© 2026" />
+    <option value="--assume-yes-for-downloads" />
+    <option value="src\main.py" />
+  </command_line>
+  <plugins>
+    <plugin name="anti-bloat" user_enabled="no" />
+    <plugin name="data-files" user_enabled="no" />
+    <plugin name="delvewheel" user_enabled="no" />
+    <plugin name="dll-files" user_enabled="no" />
+    <plugin name="eventlet" user_enabled="no" />
+    <plugin name="gevent" user_enabled="no" />
+    <plugin name="gi" user_enabled="no" />
+    <plugin name="glfw" user_enabled="no" />
+    <plugin name="implicit-imports" user_enabled="no" />
+    <plugin name="kivy" user_enabled="no" />
+    <plugin name="matplotlib" user_enabled="no" />
+    <plugin name="multiprocessing" user_enabled="no" />
+    <plugin name="options-nanny" user_enabled="no" />
+    <plugin name="pbr-compat" user_enabled="no" />
+    <plugin name="pkg-resources" user_enabled="no" />
+    <plugin name="playwright" user_enabled="no" />
+    <plugin name="pyqt6" user_enabled="yes" />
+    <plugin name="pywebview" user_enabled="no" />
+    <plugin name="spacy" user_enabled="no" />
+    <plugin name="transformers" user_enabled="no" />
+  </plugins>
+  <distributions />
+  <python python_exe="${sys.prefix}\python.exe" python_flavor="CPython Official" python_version="3.13.0" os_name="Windows" os_release="11" arch_name="x86_64" filesystem_encoding="utf-8" gil="yes">
+    <search_path>
+      <path value="${cwd}" />
+      <path value="${cwd}\src" />
+      <path value="${sys.prefix}\DLLs" />
+      <path value="${sys.prefix}\Lib" />
+      <path value="${sys.prefix}" />
+      <path value="${sys.prefix}\Lib\site-packages" />
+      <path value="${sys.prefix}\Lib\site-packages\win32" />
+      <path value="${sys.prefix}\Lib\site-packages\win32\lib" />
+      <path value="${sys.prefix}\Lib\site-packages\Pythonwin" />
+      <path value="${sys.prefix}\Lib\site-packages\setuptools\_vendor" />
+    </search_path>
+  </python>
+  <output />
+</nuitka-compilation-report>
