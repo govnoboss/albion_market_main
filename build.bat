@@ -83,6 +83,7 @@ python -m nuitka ^
     --output-filename=%APP_NAME%.exe ^
     --windows-icon-from-ico=assets/icon.ico ^
     --enable-plugin=pyqt6 ^
+    --include-qt-plugins=sensible,platforms ^
     --include-package=src ^
     --include-data-dir=resources=resources ^
     --windows-console-mode=attach ^
@@ -98,7 +99,6 @@ python -m nuitka ^
     --nofollow-import-to=pydoc ^
     --nofollow-import-to=doctest ^
     --nofollow-import-to=xmlrpc ^
-    --nofollow-import-to=sqlite3 ^
     --nofollow-import-to=matplotlib ^
     --nofollow-import-to=scipy ^
     --product-name="Albion Market Scanner" ^

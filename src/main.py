@@ -10,6 +10,16 @@ import sys
 import os
 import ctypes
 
+# Очищаем системные переменные, чтобы избежать конфликта с другими Qt-программами на ПК пользователя
+os.environ.pop("QT_PLUGIN_PATH", None)
+os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH", None)
+
+if getattr(sys, 'frozen', False) or hasattr(sys, '__compiled__'):
+    app_dir = os.path.dirname(sys.executable)
+    qt_plugins_path = os.path.join(app_dir, "PyQt6", "Qt6", "plugins")
+    if os.path.exists(qt_plugins_path):
+        os.environ["QT_PLUGIN_PATH"] = qt_plugins_path
+
 # Fix for QFont point size error on HighDPI displays
 os.environ["QT_FONT_DPI"] = "96"
 
