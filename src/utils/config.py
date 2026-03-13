@@ -43,12 +43,14 @@ class ConfigManager:
     def _load_config(self) -> dict:
         """Загрузка конфигурации из файла (thread-safe)"""
         with self._lock:
-            if self.config_path.exists():
+            if self.config_path.exists() and self.config_path.stat().st_size > 0:
                 try:
                     with open(self.config_path, "r", encoding="utf-8") as f:
                         return json.load(f)
                 except (json.JSONDecodeError, IOError) as e:
-                    logger.error(f"Ошибка загрузки конфигурации: {e}")
+                    logger.error(f"Ошибка загрузки конфигурации: {e}. Создан новый файл по умолчанию.")
+                    # Мы не можем вызвать self.save() здесь из-за reentrant lock, но
+                    # мы можем просто вернуть default, и первая же операция записи его сохранит.
                     return self._default_config()
             return self._default_config()
     

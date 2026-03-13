@@ -55,35 +55,65 @@ class LicenseManager:
 
     def get_hwid(self) -> str:
         """
-        Generates a unique Hardware ID based on Motherboard Serial + CPU ID.
-        Works for Windows. Uses PowerShell (wmic is deprecated in Windows 11+).
+        Generates or retrieves a unique Hardware ID.
+        Checks for a cached ID first to ensure persistence across updates.
         """
-        try:
-            # 1. Motherboard Serial (via PowerShell)
-            cmd_mb = 'powershell -Command "Get-WmiObject Win32_BaseBoard | Select-Object -ExpandProperty SerialNumber"'
-            mb_serial = subprocess.check_output(cmd_mb, shell=True, stderr=subprocess.DEVNULL).decode().strip()
-            if not mb_serial or mb_serial == "None":
-                mb_serial = "UNKNOWN_MB"
+        # 1. Try to load from cache first for maximum persistence
+        cache_file = APP_DATA_DIR / '.hwid_cache'
+        if cache_file.exists():
+            try:
+                cached = cache_file.read_text().strip()
+                if len(cached) == 32:
+                    return cached
+            except Exception:
+                pass
 
-            # 2. CPU ID (via PowerShell)
-            cmd_cpu = 'powershell -Command "Get-WmiObject Win32_Processor | Select-Object -ExpandProperty ProcessorId"'
-            cpu_id = subprocess.check_output(cmd_cpu, shell=True, stderr=subprocess.DEVNULL).decode().strip()
-            if not cpu_id or cpu_id == "None":
-                cpu_id = "UNKNOWN_CPU"
+        try:
+            # 2. Generate HWID from system components
             
-            # 3. Windows Machine GUID (Registry) - Most reliable
-            import winreg
-            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Cryptography", 0, winreg.KEY_READ | winreg.KEY_WOW64_64KEY)
-            machine_guid, _ = winreg.QueryValueEx(key, "MachineGuid")
-            winreg.CloseKey(key)
+            # --- Motherboard Serial ---
+            mb_serial = "UNKNOWN_MB"
+            try:
+                cmd_mb = 'powershell -Command "Get-WmiObject Win32_BaseBoard | Select-Object -ExpandProperty SerialNumber"'
+                res = subprocess.check_output(cmd_mb, shell=True, stderr=subprocess.DEVNULL, timeout=5).decode().strip()
+                if res and res.lower() not in ["none", "to be filled by o.e.m.", ""]:
+                    mb_serial = res
+            except Exception:
+                pass
+
+            # --- CPU ID ---
+            cpu_id = "UNKNOWN_CPU"
+            try:
+                cmd_cpu = 'powershell -Command "Get-WmiObject Win32_Processor | Select-Object -ExpandProperty ProcessorId"'
+                res = subprocess.check_output(cmd_cpu, shell=True, stderr=subprocess.DEVNULL, timeout=5).decode().strip()
+                if res and res.lower() not in ["none", ""]:
+                    cpu_id = res
+            except Exception:
+                pass
+            
+            # --- Windows Machine GUID ---
+            machine_guid = "UNKNOWN_GUID"
+            try:
+                import winreg
+                key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Cryptography", 0, winreg.KEY_READ | winreg.KEY_WOW64_64KEY)
+                machine_guid, _ = winreg.QueryValueEx(key, "MachineGuid")
+                winreg.CloseKey(key)
+            except Exception:
+                pass
             
             raw_id = f"{mb_serial}_{cpu_id}_{machine_guid}"
-            # Hash it to make it look nicer and hide raw serials
-            return hashlib.sha256(raw_id.encode()).hexdigest().upper()[:32]
+            hwid = hashlib.sha256(raw_id.encode()).hexdigest().upper()[:32]
+            
+            # 3. Save to cache
+            try:
+                cache_file.write_text(hwid)
+            except Exception:
+                pass
+                
+            return hwid
             
         except Exception as e:
-            # Fallback: use persistent random ID stored locally
-            # This ensures the same HWID is used consistently on this machine
+            # 4. Final Fallback: use persistent random ID
             return self._get_fallback_hwid()
     
     def _get_fallback_hwid(self) -> str:

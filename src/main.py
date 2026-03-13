@@ -16,9 +16,20 @@ os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH", None)
 
 if getattr(sys, 'frozen', False) or hasattr(sys, '__compiled__'):
     app_dir = os.path.dirname(sys.executable)
-    qt_plugins_path = os.path.join(app_dir, "PyQt6", "Qt6", "plugins")
-    if os.path.exists(qt_plugins_path):
-        os.environ["QT_PLUGIN_PATH"] = qt_plugins_path
+
+    # Nuitka может класть Qt-плагины в разные места — ищем первый существующий
+    _candidate_plugin_dirs = [
+        os.path.join(app_dir, "PyQt6", "Qt6", "plugins"),
+        os.path.join(app_dir, "qt6_plugins"),
+        os.path.join(app_dir, "PyQt6", "plugins"),
+        os.path.join(app_dir, "plugins"),
+    ]
+    for _p in _candidate_plugin_dirs:
+        if os.path.isdir(_p) and os.path.isdir(os.path.join(_p, "platforms")):
+            os.environ["QT_PLUGIN_PATH"] = _p
+            # Дублируем на уровне конкретной платформы — наиболее надёжный вариант
+            os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = os.path.join(_p, "platforms")
+            break
 
 # Fix for QFont point size error on HighDPI displays
 os.environ["QT_FONT_DPI"] = "96"
@@ -76,7 +87,11 @@ def run_app():
         app = QApplication(sys.argv)
     except Exception as e:
         profiler.end("qapp_init")
+        _exe_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) or hasattr(sys, '__compiled__') else 'dev mode'
         sys.stderr.write(f"CRASH: QApplication init failed: {e}\n")
+        sys.stderr.write(f"  App dir:                    {_exe_dir}\n")
+        sys.stderr.write(f"  QT_PLUGIN_PATH:             {os.environ.get('QT_PLUGIN_PATH', 'NOT SET')}\n")
+        sys.stderr.write(f"  QT_QPA_PLATFORM_PLUGIN_PATH:{os.environ.get('QT_QPA_PLATFORM_PLUGIN_PATH', 'NOT SET')}\n")
         sys.stderr.flush()
         raise e
     profiler.end("qapp_init")
@@ -112,7 +127,11 @@ def run_app():
     profiler.end("total")
     profiler.report()
     
-    sys.exit(app.exec())
+    # Prevent app from quitting when Launcher closes before Dashboard is ready
+    app.setQuitOnLastWindowClosed(False)
+    
+    exit_code = app.exec()
+    sys.exit(exit_code)
 
 if __name__ == "__main__":
     try:

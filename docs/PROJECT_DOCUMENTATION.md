@@ -83,7 +83,7 @@ src/
 │   ├── default_exceptions.py # Исключения по тирам (items без T1-T3)
 │   ├── text_utils.py       # Утилиты обработки текста
 │   ├── localization.py     # Система локализации (ru/en) — LocalizationManager
-│   ├── hotkeys.py          # Глобальные горячие клавиши (F5/F6)
+│   ├── hotkeys.py          # Глобальные горячие клавиши (F5/F6/F7)
 │   └── startup_profiler.py # Профилировщик запуска приложения
 server/                     # License Server (FastAPI) — ОБЯЗАТЕЛЕН для работы бота
 tools/                      # Утилиты разработчика
@@ -103,19 +103,21 @@ tools/                      # Утилиты разработчика
 
 ```text
 main.py → LauncherWindow
-             ├── [Нет лицензии] → LoginWindow → (ввод ключа) → LauncherWindow
-             ├── [Лицензия ОК] → Splash Screen → LauncherWindow
-             │                     ├── Фоновая проверка обновлений (GitHub API)
-             │                     │    └── [Есть обновление] → Баннер "🔄 Обновить"
-             │                     ├── → MainDashboard (сайдбар + KPI + навигация)
-             │                     │    ├── Стр. "Главная"    → KPI, Sessions, Hot Items
-             │                     │    ├── Стр. "Сканер"    → ScannerWidget
-             │                     │    ├── Стр. "Закупщик"  → BuyerWidget
-             │                     │    └── Стр. "FAQ"       → FAQTab (disabled)
-             │                     ├── Кнопка "СКАНЕР"    → Scanner (Dashboard tab)
-             │                     ├── Кнопка "ЗАКУПЩИК"  → Buyer (Dashboard tab)
-             │                     ├── Кнопка "НАСТРОЙКИ" → SettingsPanel
-             │                     └── Кнопка "ФИНАНСЫ"   → FinanceWindow
+             ├── [Нет лицензии] → LoginWindow → (ввод ключа) → _show_dashboard()
+             ├── [Лицензия ОК] → Splash Screen → _show_dashboard()
+             │
+             └── MainDashboard (сайдбар + KPI + навигация)
+                  ├── Фоновая проверка обновлений (GitHub API)
+                  │    └── [Есть обновление] → Баннер "🔄 Обновить"
+                  ├── Сайдбар:
+                  │    ├── 📊 Home        → KPI-карточки, Sessions, Hot Items
+                  │    ├── 📡 Scanner     → ScannerWidget
+                  │    ├── 💰 Buyer       → BuyerWidget
+                  │    ├── 📈 Finance     → FinanceWindow
+                  │    ├── 🏷️ Prices      → PricesTab
+                  │    ├── 🎯 Coordinates → CoordinatesTab
+                  │    └── ⚙️ Settings    → SettingsPanel
+                  └── Горячие клавиши: F5 (Start), F6 (Pause), F7 (Stop)
 ```
 
 ---
@@ -182,7 +184,8 @@ main.py → LauncherWindow
 
 ### LicenseManager (`src/core/license.py`)
 *   **Role:** Security & Access Control.
-*   **Logic:** Generates a stable HWID (Motherboard + CPU + MachineGUID), encrypts/decrypts keys locally, and validates against a remote server. Verifies RSA-signed responses.
+*   **Logic:** Generates a stable HWID (Motherboard + CPU + MachineGUID) and **caches it** in `%LOCALAPPDATA%/.gbot/.hwid_cache` to ensure persistence across updates. Encrypts/decrypts keys locally, validates against a remote server. Verifies RSA-signed responses.
+*   **Heartbeat:** Background thread sends heartbeats every 3 minutes to the license server.
 
 ### FinanceManager (`src/core/finance.py`)
 *   **Role:** Финансовый менеджер — запись и анализ транзакций покупок.
@@ -228,18 +231,15 @@ GUI-приложение (PyQt6) для разработчика:
 
 ### LauncherWindow (`src/ui/launcher.py`) — ★ Entry Point
 *   **Features:**
-    *   Splash Screen при загрузке.
-    *   Проверка лицензии (silent → LoginWindow если нет ключа).
-    *   Выбор режима: **Сканер** или **Закупщик**.
-    *   Фоновая проверка обновлений с баннером.
-    *   Отображение срока лицензии в footer.
-    *   Ежедневная ре-валидация лицензии с graceful shutdown.
+*       Splash Screen при загрузке.
+*       Проверка лицензии (silent → LoginWindow если нет ключа).
+*       Автоматический переход в `MainDashboard` после валидации.
+*       Передача `license_expires` в Dashboard для отображения.
 
 ### MainDashboard (`src/ui/dashboard.py`)
 *   **Role:** Основное окно приложения после лаунчера. Содержит сайдбар навигации, KPI-карточки, встроенные виджеты Scanner и Buyer.
 *   **Features:**
     *   Сайдбар с навигацией между страницами (Главная, Сканер, Закупщик).
-    *   KPI-блок: Revenue, Profit, Sessions, Hot Items.
     *   Кнопки быстрого доступа: Настройки, Финансы.
     *   Социальные кнопки (Discord, Telegram).
 
@@ -303,7 +303,7 @@ The project includes a standalone **License Server** (FastAPI) to manage access 
 *   **Refactoring:**
     *   `base_bot.py` is the foundation. Changes here affect BOTH Scanner and Buyer.
     *   UI changes should be modular (create new Tab classes).
-    *   `launcher.py` is the actual entry point — NOT `main_window.py`.
+    *   `launcher.py` is the UI entry point — it validates the license and transitions to `MainDashboard`.
 *   **New Features:**
     *   **Logic:** Add to `src/core/` (inherit BaseBot).
     *   **UI:** Add to `src/ui/` and register in the appropriate Window.

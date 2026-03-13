@@ -101,6 +101,19 @@ python -m nuitka ^
     --nofollow-import-to=xmlrpc ^
     --nofollow-import-to=matplotlib ^
     --nofollow-import-to=scipy ^
+    --nofollow-import-to=sqlalchemy ^
+    --nofollow-import-to=fastapi ^
+    --nofollow-import-to=uvicorn ^
+    --nofollow-import-to=pydantic ^
+    --nofollow-import-to=pydantic_core ^
+    --nofollow-import-to=starlette ^
+    --nofollow-import-to=anyio ^
+    --nofollow-import-to=httptools ^
+    --nofollow-import-to=email_validator ^
+    --nofollow-import-to=pytest ^
+    --nofollow-import-to=pluggy ^
+    --nofollow-import-to=iniconfig ^
+    --nofollow-import-to=nuitka ^
     --product-name="Albion Market Scanner" ^
     --product-version=%APP_VERSION% ^
     --file-description="Albion Market Scanner & Buyer Bot" ^
@@ -138,15 +151,15 @@ set "TESS_DST=%OUTPUT_DIR%\%APP_NAME%.dist\tesseract"
 
 if exist "%TESS_SRC%" (
     echo    Копирование Tesseract OCR...
-    
+
     :: Копируем всё кроме tessdata
     robocopy "%TESS_SRC%" "%TESS_DST%" /E /XD tessdata /NFL /NDL /NJH /NJS >nul
-    
+
     :: Копируем только нужные языки из tessdata
     mkdir "%TESS_DST%\tessdata" 2>nul
     mkdir "%TESS_DST%\tessdata\configs" 2>nul
     mkdir "%TESS_DST%\tessdata\tessconfigs" 2>nul
-    
+
     if exist "%TESS_SRC%\tessdata\eng.traineddata" (
         copy /Y "%TESS_SRC%\tessdata\eng.traineddata" "%TESS_DST%\tessdata\" >nul
         echo    ✅ eng.traineddata
@@ -162,11 +175,11 @@ if exist "%TESS_SRC%" (
     if exist "%TESS_SRC%\tessdata\pdf.ttf" (
         copy /Y "%TESS_SRC%\tessdata\pdf.ttf" "%TESS_DST%\tessdata\" >nul
     )
-    
+
     :: Копируем конфиги tessdata
     robocopy "%TESS_SRC%\tessdata\configs" "%TESS_DST%\tessdata\configs" /E /NFL /NDL /NJH /NJS >nul 2>nul
     robocopy "%TESS_SRC%\tessdata\tessconfigs" "%TESS_DST%\tessdata\tessconfigs" /E /NFL /NDL /NJH /NJS >nul 2>nul
-    
+
     echo    ✅ Tesseract скопирован ^(eng + rus^)
 ) else (
     echo    ⚠️ Папка %TESS_SRC% не найдена — Tesseract не включён

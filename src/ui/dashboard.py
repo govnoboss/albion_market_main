@@ -116,6 +116,7 @@ class Sidebar(QFrame):
             }
         """)
         self.update_frame.hide()
+        
         update_v_layout = QVBoxLayout(self.update_frame)
         update_v_layout.setContentsMargins(5, 5, 5, 5)
         update_v_layout.setSpacing(5)
@@ -373,10 +374,12 @@ class MainDashboard(QMainWindow):
         get_logger().error(f"Update error: {error}")
 
     def _force_foreground(self):
-        flags = self.windowFlags()
-        self.setWindowFlags(flags | Qt.WindowType.WindowStaysOnTopHint)
+        """Принудительно вывести окно на передний план бел пересоздания окна (Windows)"""
         self.show()
-        QTimer.singleShot(500, lambda: self.setWindowFlags(flags) or self.show() or self.activateWindow())
+        self.raise_()
+        self.activateWindow()
+        # Небольшая задержка для уверенного фокуса
+        QTimer.singleShot(100, self.activateWindow)
 
     def _setup_logging(self):
         """Единая точка подключения логов к UI"""
@@ -440,6 +443,8 @@ class MainDashboard(QMainWindow):
         self.shutdown_dialog.setStandardButtons(QMessageBox.StandardButton.Ok)
         self.shutdown_dialog.button(QMessageBox.StandardButton.Ok).setText("Понятно")
         self.shutdown_dialog.show()
+        self.shutdown_dialog.raise_()
+        self.shutdown_dialog.activateWindow()
         
         self.shutdown_timer = QTimer(self)
         self.shutdown_timer.timeout.connect(self._shutdown_tick)

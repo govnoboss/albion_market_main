@@ -97,6 +97,12 @@ class LauncherWindow(QMainWindow):
             license_expires=self.license_expires
         )
         _profiler.end("dashboard_init")
-        self.dashboard.show()
         
-        self.close()
+        # Ensure dashboard is fully shown
+        self.dashboard.show()
+        self.dashboard.raise_()
+        self.dashboard.activateWindow()
+        
+        # Delay closing launcher to prevent QApplication from quitting 
+        # during transition (due to quitOnLastWindowClosed)
+        QTimer.singleShot(500, self.close)
