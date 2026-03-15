@@ -50,6 +50,7 @@
     <thead>
         <tr>
             <th>Ключ</th>
+            <th>Заметка</th>
             <th> HWID / IP</th>
             <th>Истекает</th>
             <th>Статус</th>
@@ -65,6 +66,13 @@
                 <button class="btn btn-sm btn-copy"
                     onclick="navigator.clipboard.writeText('{{ license.key }}'); this.textContent='✓'; setTimeout(() => this.textContent='📋', 1000)">📋</button>
             </td>
+            <td>
+                {% if license.note %}
+                <span class="text-muted" style="font-size: 0.9em;">{{ license.note }}</span>
+                {% else %}
+                <span class="text-muted">—</span>
+                {% endif %}
+            </td>
             <td class="hwid-cell">
                 {% if license.hwid %}
                 <div class="hwid-container">
@@ -77,7 +85,13 @@
                 <span class="text-muted">—</span>
                 {% endif %}
             </td>
-            <td>{{ license.expires_at.strftime('%d.%m.%Y %H:%M') }}</td>
+            <td>
+                {% if license.duration_days and not license.hwid %}
+                <span class="text-muted">После активации: {{ license.duration_days }} дн.</span>
+                {% else %}
+                {{ license.expires_at.strftime('%d.%m.%Y %H:%M') }}
+                {% endif %}
+            </td>
             <td>
                 {% if license.is_online %}
                 <span class="badge badge-online">🟢 Онлайн</span>
@@ -97,6 +111,12 @@
                 {% if license.is_active %}
                 <form method="POST" action="/admin/deactivate/{{ license.key }}" style="display:inline">
                     <button type="submit" class="btn btn-warning btn-sm" title="Отключить">⏸</button>
+                </form>
+                {% endif %}
+                {% if license.hwid %}
+                <form method="POST" action="/admin/unbind/{{ license.key }}" style="display:inline"
+                    onsubmit="return confirm('Отвязать HWID для ключа {{ license.key[:8] }}...?')">
+                    <button type="submit" class="btn btn-secondary btn-sm" title="Отвязать HWID">Отвязать</button>
                 </form>
                 {% endif %}
                 <form method="POST" action="/admin/delete/{{ license.key }}" style="display:inline"

@@ -24,6 +24,8 @@ class License(Base):
     # New fields
     last_seen = Column(DateTime, nullable=True)
     last_ip = Column(String, nullable=True)
+    duration_days = Column(Integer, nullable=True) # If set, timer hasn't started
+    note = Column(String, nullable=True) # Optional note for the key
 
     @staticmethod
     def generate_key():
@@ -78,5 +80,21 @@ def init_db():
             except:
                 print("Migrating: Adding last_ip column...")
                 conn.execute(text("ALTER TABLE licenses ADD COLUMN last_ip VARCHAR"))
+                
+            # Check duration_days
+            try:
+                conn.execute(text("SELECT duration_days FROM licenses LIMIT 1"))
+            except:
+                print("Migrating: Adding duration_days column...")
+                conn.execute(text("ALTER TABLE licenses ADD COLUMN duration_days INTEGER"))
+                
+            # Check note
+            try:
+                conn.execute(text("SELECT note FROM licenses LIMIT 1"))
+            except:
+                print("Migrating: Adding note column...")
+                conn.execute(text("ALTER TABLE licenses ADD COLUMN note VARCHAR"))
+            
+            conn.commit()
         except Exception as e:
             print(f"Migration check failed (maybe table empty or new): {e}")

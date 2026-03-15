@@ -317,6 +317,7 @@ class AdminGenerateRequest(BaseModel):
     admin_password: str
     days: int = 30
     count: int = 1
+    note: Optional[str] = None
 
 # --- Events ---
 @app.on_event("startup")
@@ -449,6 +450,12 @@ def activate_license(request: Request, req: LicenseActivateRequest, db: Session 
         license_obj.hwid = req.hwid
         license_obj.last_seen = datetime.utcnow() # Update last_seen
         license_obj.last_ip = get_real_ip(request)
+        
+        # Start timer if duration_days is set
+        if license_obj.duration_days is not None:
+            license_obj.expires_at = datetime.utcnow() + timedelta(days=license_obj.duration_days)
+            license_obj.duration_days = None
+            
         db.commit()
         response_data = {"status": "valid", "expires_at": str(license_obj.expires_at), "message": "Activation successful"}
 
@@ -481,13 +488,20 @@ def generate_keys(request: Request, req: AdminGenerateRequest, db: Session = Dep
     
     for _ in range(req.count):
         key_str = License.generate_key()
-        new_license = License(key=key_str, expires_at=expires)
+        # Initial long expiry date (year 2099ish) so it doesn't expire before activation
+        expires_placeholder = datetime.utcnow() + timedelta(days=36500)
+        new_license = License(
+            key=key_str,
+            expires_at=expires_placeholder,
+            duration_days=req.days,
+            note=req.note
+        )
         db.add(new_license)
         generated.append(key_str)
         
     db.commit()
     
-    return {"count": req.count, "keys": generated, "expires_at": str(expires)}
+    return {"count": req.count, "keys": generated, "days": req.days, "note": req.note}
 
 # === TELEMETRY ENDPOINT ===
 
@@ -795,10 +809,11 @@ def admin_licenses(request: Request, search: str = "", status: str = "", db: Ses
     five_min_ago = now - timedelta(minutes=5)
     
     for lic in licenses:
-        lic.is_expired = lic.expires_at <= now
+        # Note: if duration_days is set, it won't actually expire until activated.
+        lic.is_expired = lic.expires_at <= now and lic.duration_days is None
         # Check if online (seen in last 5 mins)
         lic.is_online = lic.last_seen and lic.last_seen >= five_min_ago
-    
+        
     # Status filter
     if status == "active":
         licenses = [l for l in licenses if l.is_active and l.hwid and not l.is_expired]
@@ -815,6 +830,19 @@ def admin_licenses(request: Request, search: str = "", status: str = "", db: Ses
         "status_filter": status
     })
 
+@app.post("/admin/unbind/{key}")
+def admin_unbind(request: Request, key: str, db: Session = Depends(get_db)):
+    """Unbinds a key from its HWID without resetting its expiration timer."""
+    if not verify_admin_session(request):
+        return RedirectResponse("/admin/login", status_code=302)
+        
+    license_obj = db.query(License).filter(License.key == key).first()
+    if license_obj:
+        license_obj.hwid = None
+        db.commit()
+        
+    return RedirectResponse("/admin/licenses", status_code=302)
+
 @app.get("/admin/generate", response_class=HTMLResponse)
 def admin_generate_page(request: Request):
     if not verify_admin_session(request):
@@ -825,16 +853,22 @@ def admin_generate_page(request: Request):
     })
 
 @app.post("/admin/generate", response_class=HTMLResponse)
-def admin_generate_keys(request: Request, count: int = Form(...), days: int = Form(...), db: Session = Depends(get_db)):
+def admin_generate_keys(request: Request, count: int = Form(...), days: int = Form(...), note: Optional[str] = Form(None), db: Session = Depends(get_db)):
     if not verify_admin_session(request):
         return RedirectResponse("/admin/login", status_code=302)
     
     generated = []
-    expires = datetime.utcnow() + timedelta(days=days)
+    # Initial long expiry date (year 2099ish) so it doesn't expire before activation
+    expires_placeholder = datetime.utcnow() + timedelta(days=36500)
     
     for _ in range(min(count, 100)):  # Max 100 at a time
         key_str = License.generate_key()
-        new_license = License(key=key_str, expires_at=expires)
+        new_license = License(
+            key=key_str,
+            expires_at=expires_placeholder,
+            duration_days=days,
+            note=note
+        )
         db.add(new_license)
         generated.append(key_str)
     
@@ -844,7 +878,7 @@ def admin_generate_keys(request: Request, count: int = Form(...), days: int = Fo
         "request": request,
         "session_active": True,
         "generated_keys": generated,
-        "expires_at": expires.strftime("%d.%m.%Y %H:%M")
+        "expires_at": expires_placeholder.strftime("%d.%m.%Y %H:%M")
     })
 
 @app.post("/admin/deactivate/{key}")
