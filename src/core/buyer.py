@@ -10,6 +10,8 @@ import pyautogui
 from .base_bot import BaseBot
 from .interaction import DropdownSelector
 from .finance import finance_manager
+from .network_listener import NetworkListener
+import threading
 from ..utils.price_storage import price_storage
 from ..utils.localization import get_text
 
@@ -43,6 +45,17 @@ class BuyerBot(BaseBot):
         self._current_enchant = None
         self._skip_item_requested = False
         
+        # Network Listener
+        self.network_listener = NetworkListener()
+        self.network_listener.market_data_received.connect(self._on_network_data)
+        self._last_network_data = None
+        self._network_event = threading.Event()
+
+    def _on_network_data(self, data):
+        """Коллбек при получении сетевых данных"""
+        self._last_network_data = data
+        self._network_event.set()
+        
     def run(self):
         """Основной цикл закупки"""
         self._is_running = True
@@ -59,6 +72,9 @@ class BuyerBot(BaseBot):
         self.logger.info("⏳ Задержка старта 1 сек...")
         time.sleep(1.0)
         
+        # Запуск сетевого слушателя
+        self.network_listener.start()
+        
         self._detect_current_city()
         
         if self.mode == "smart":
@@ -72,6 +88,7 @@ class BuyerBot(BaseBot):
             self._report_session_to_server()
             
         self._is_running = False
+        self.network_listener.stop()
         self.finished.emit()
 
     def _report_session_to_server(self):
@@ -480,31 +497,27 @@ class BuyerBot(BaseBot):
             remaining = limit - items_bought
             display_name = f"{item_name} T{tier}.{enchant}"
             
-            # 2. Верификация имени (item_name_area)
-            if not self._verify_item_name_with_retry(item_name, use_buy_button=False):
-                 self.logger.warning(f"Item name mismatch! Expected: {item_name}")
-                 break
+            # 2. Верификация имени и цены через Сеть
+            price = self._wait_for_network_update(timeout=3.0)
             
-            # 3. Анализ цены (OCR)
-            price_area = self.config.get_coordinate_area("best_price_area")
-            if not price_area:
-                 self.logger.error("❌ Не задана зона 'best_price_area'")
-                 break
-                 
-            current_price = read_price_at(price_area)
-            
-            if current_price is None or current_price <= 0:
-                if not self._check_market_is_open(): break
+            if price <= 0:
                 consecutive_fails += 1
-                if consecutive_fails >= 2: # Если дважды не увидели цену - возможно лоты кончились
-                    self.logger.info(f"🏁 Лоты для {display_name} закончились (или не распознаны).")
+                if consecutive_fails >= 2:
+                    self.logger.info(f"🏁 Лоты для {display_name} закончились.")
                     break
-                time.sleep(0.5)
                 continue
             
             consecutive_fails = 0
-                
-            # 3.1. ПРОВЕРКА БЮДЖЕТА
+            current_price = price
+            
+            # Извлекаем количество из последнего пакета
+            actual_qty = 1
+            if self._last_network_data and self._last_network_data.get("data"):
+                top_lot = self._last_network_data["data"][0]
+                actual_qty = top_lot.get("Amount", 1)
+                self.logger.info(f"🔢 Сеть: В лоте {actual_qty} шт.")
+
+            # 3. ПРОВЕРКА БЮДЖЕТА
             max_affordable = remaining
             if self.max_budget > 0:
                 remaining_budget = self.max_budget - self.spent_amount
@@ -517,10 +530,7 @@ class BuyerBot(BaseBot):
                     break
 
             # Target Price Validations
-            # Получаем актуальный лимит и города из конфига
             limit_val, enabled, min_profit_percent = self.config.get_wholesale_limit(item_name, tier, enchant)
-            
-            # Находим города (с поддержкой индивидуальных настроек)
             targets = self.config.get_wholesale_targets()
             variant_data = targets.get(item_name, {}).get(f"T{tier}.{enchant}", {})
             s_city = variant_data.get("sell_city", self.sell_city)
@@ -550,35 +560,25 @@ class BuyerBot(BaseBot):
             self._human_move_to(*buy_btn)
             self._human_click()
             time.sleep(0.5)
+
+            # 5. Установка лимита (Dialog)
+            # Применяем лимит и бюджет если нужно
+            target_qty = min(remaining, max_affordable)
             
-            # 5. Верификация количества и установка лимита (Dialog)
-            actual_qty = 1
-            qty_area = self.config.get_coordinate_area("buyer_top_lot_qty")
-            if qty_area:
-                q_val = read_qty_text(qty_area)
-                if q_val and q_val > 0:
-                    actual_qty = q_val
-                    self.logger.info(f"🔢 В лоте обнаружено: {actual_qty}")
+            if actual_qty > target_qty:
+                if target_qty <= 0: 
+                    self.logger.warning("⏩ Невозможно купить даже 1 шт (лимит/бюджет).")
+                    self._close_menu()
+                    break
                     
-                    # Применяем лимит и бюджет если нужно
-                    target_qty = min(remaining, max_affordable)
-                    
-                    if actual_qty > target_qty:
-                        if target_qty <= 0: # Маловероятно после проверки бюджета выше, но для безопасности
-                            self.logger.warning("⏩ Невозможно купить даже 1 шт (лимит/бюджет).")
-                            self._close_menu()
-                            break
-                            
-                        if max_affordable < remaining:
-                             self.logger.info(f"⚖️ Бюджетный ограничитель: {actual_qty} -> {target_qty} (Остаток бюджета)")
-                        else:
-                             self.logger.info(f"⚖️ Лимит-ограничитель: {actual_qty} > {target_qty}. Вводим нужное...")
-                             
-                        self._input_quantity(target_qty)
-                        actual_qty = target_qty
-                        time.sleep(0.3)
+                if max_affordable < remaining:
+                     self.logger.info(f"⚖️ Бюджетный ограничитель: {actual_qty} -> {target_qty} (Остаток бюджета)")
                 else:
-                    self.logger.warning("⚠️ Количеств не считано, считаем что 1.")
+                     self.logger.info(f"⚖️ Лимит-ограничитель: {actual_qty} > {target_qty}. Вводим нужное...")
+                     
+                self._input_quantity(target_qty)
+                actual_qty = target_qty
+                time.sleep(0.3)
             
             # 6. Верификация итоговой суммы
             total_price_area = self.config.get_coordinate_area("buyer_total_price")
@@ -738,44 +738,26 @@ class BuyerBot(BaseBot):
             self._current_enchant = enchant
 
     def _select_quality(self, quality):
-        """
-        Выбор качества с проверкой OCR.
-        Если уже стоит нужное -> пропускаем клик.
-        """
-        # 0. Имя качества для логов/проверки
-        quality_map = {
-            1: ["Обычное", "Normal"],
-            2: ["Хорошее", "Good"],
-            3: ["Выдающееся", "Outstanding"],
-            4: ["Отличное", "Excellent"],
-            5: ["Шедевр", "Masterpiece"]
-        }
-        expected_names = quality_map.get(quality, [])
-
-        # 1. Проверяем текущее состояние через OCR
-        from ..utils.ocr import read_screen_text_cached, is_ocr_available, fuzzy_match_quality
-        
-        if is_ocr_available():
-            area = self.config.get_coordinate_area("quality_text_region")
-            if area:
-                try:
-                    passive_text = read_screen_text_cached(area['x'], area['y'], area['w'], area['h'])
-                    # self.logger.debug(f"OCR Quality Check: '{passive_text}' vs {expected_names}")
-                    
-                    if fuzzy_match_quality(passive_text, expected_names):
-                        # self.logger.info(f"✅ Качество '{passive_text}' уже выбрано. Skip click.")
-                        return 
-                        
-                except Exception as e:
-                    pass # Fallback to click    
-
-        # 2. Если не совпало или нет OCR -> Кликаем как раньше
+        """Выбор качества (без OCR)"""
         coord = self.dropdowns.get_quality_click_point(quality)
         if coord:
             self.dropdowns.open_quality_menu(self)
             self._human_move_to(*coord)
             self._human_click()
             time.sleep(0.1)
+            self._current_quality = quality
+
+    def _wait_for_network_update(self, timeout: float = 5.0) -> int:
+        """Ожидает получения данных из сети"""
+        self._network_event.clear()
+        self._last_network_data = None
+        if not self._network_event.wait(timeout): return 0
+        data = self._last_network_data
+        if not data or data.get("type") != "search_results": return 0
+        lots = data.get("data", [])
+        if not lots: return 0
+        prices = [lot.get("UnitPriceSilver") for lot in lots if lot.get("UnitPriceSilver")]
+        return int(min(prices)) if prices else 0
 
     def _input_quantity(self, qty: int):
         """

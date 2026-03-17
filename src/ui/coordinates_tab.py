@@ -94,9 +94,9 @@ class CoordinatesTab(QWidget):
                 ("enchant_dropdown", get_text("coord_enchant_dropdown", "Выпадающий список Чары"), "point"),
                 ("quality_dropdown", get_text("coord_quality_dropdown", "Выпадающий список Качества"), "point"),
                 
-                ("item_name_area", get_text("coord_item_name_ocr", "Название предмета (OCR)"), "area"),
-                
-                ("best_price_area", get_text("coord_best_price_ocr", "Цена за 1шт предмета (OCR)"), "area"), 
+                # OCR (LEGACY - Removed from Bot logic)
+                # ("item_name_area", get_text("coord_item_name_ocr", "Название предмета (OCR)"), "area"),
+                # ("best_price_area", get_text("coord_best_price_ocr", "Цена за 1шт предмета (OCR)"), "area"), 
             ],
             "coord_cat_item_menu": [
                 # Основные кнопки
@@ -105,10 +105,10 @@ class CoordinatesTab(QWidget):
                 ("buyer_amount_input", get_text("coord_amount_input", "Кнопка Количество (Ввод)"), "point"),
                 ("buyer_create_order_confirm", get_text("coord_create_order_confirm", "Кнопка Заказать (confirm)"), "point"),
                 ("menu_close", get_text("coord_menu_close", "Крестик закрытия меню предмета"), "point"),
- 
-                # OCR зоны
+  
+                # OCR зоны (Check)
                 ("item_menu_check", get_text("coord_item_menu_check", "Надпись 'Заказы на продажу' (Check)"), "area"),
-                ("buyer_top_lot_qty", get_text("coord_top_lot_qty", "Кол-во в топ лоте (OCR)"), "area"),
+                # ("buyer_top_lot_qty", get_text("coord_top_lot_qty", "Кол-во в топ лоте (OCR)"), "area"),
                 ("buyer_total_price", get_text("coord_total_price", "Итоговая стоимость (OCR)"), "area"),
             ],
             "coord_cat_bm": [
@@ -121,7 +121,7 @@ class CoordinatesTab(QWidget):
                 # New Coordinates
                 ("bm_tier_dropdown", get_text("coord_bm_tier", "BM: Список Тиров"), "point"),
                 ("bm_enchant_dropdown", get_text("coord_bm_enchant", "BM: Список Чары"), "point"),
-                ("bm_price_area", get_text("coord_bm_price_ocr", "BM: Цена топ лота (OCR)"), "area"),
+                # ("bm_price_area", get_text("coord_bm_price_ocr", "BM: Цена топ лота (OCR)"), "area"),
             ],
         }
         

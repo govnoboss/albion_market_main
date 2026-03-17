@@ -7,6 +7,7 @@ PyQt6>=6.5.0
 
 # --- Screen Automation ---
 pyautogui>=0.9.54
+pydivert>=2.1.0
 
 # --- OCR (Optical Character Recognition) ---
 pytesseract>=0.3.10
