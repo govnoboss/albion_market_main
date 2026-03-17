@@ -95,6 +95,13 @@ tools/                      # Утилиты разработчика
 │   ├── migrate_db_ip.py    # Миграция БД (IP поля)
 │   ├── generate_demo_sessions.py # Генерация демо-данных для тестирования статистики
 │   └── deploy_server.ps1   # Деплой сервера на Fly.io
+sniffer/                    # ★ NEW: Сниффер (Network Layer)
+│   ├── sniffer_poc.py      # Точка входа: WinDivert захват + Photon Parser
+│   ├── market_decoder.py   # Логика: Декодирование рыночных OpCode (1)
+│   ├── items_lookup.py     # Локализация: Маппинг технических ID в названия (RU/EN)
+│   ├── market_db.py        # База данных: Сохранение результатов в SQLite
+│   ├── items.json          # Очищенная база предметов для локализации
+│   └── logs/                # Логи для режима DUMP_UNKNOWN
 ```
 
 ---
@@ -197,6 +204,15 @@ main.py → LauncherWindow
     *   `get_hot_items_for_period()` — топ предметов по количеству за период.
 *   **Integration:** Используется в `buyer.py` для автоматической записи покупок и в `finance_window.py` / `dashboard.py` для отображения.
 *   **Singleton:** Глобальный экземпляр `finance_manager`.
+
+### Market Sniffer (Network Layer) (`sniffer/`)
+*   **Role:** Альтернативный способ сбора данных через перехват трафика (Passive Sniffing).
+*   **Key Logic:**
+    *   **Packet Capture:** Использует драйвер `WinDivert` для чтения UDP-трафика на порту 5056.
+    *   **Protocol Decoding:** Десериализация Photon Core (Requests, Responses, Events).
+    *   **Market Decoding:** Парсинг OpCode 1 (Рынок), извлечение JSON-данных из параметров.
+    *   **Localization:** Модуль `items_lookup.py` переводит технические ID (например, `T4_ARMOR_LEVEL1@1`) в читаемые названия ("Необычная мантия ученого").
+*   **Advantages:** Не требует взаимодействия с UI игры, работает быстрее и тише OCR-сканера.
 
 ---
 
@@ -313,4 +329,5 @@ The project includes a standalone **License Server** (FastAPI) to manage access 
 *   **Critical Constraints:**
     *   **Coordinates:** The bot is blind without accurate coordinates. Any UI change in the Game requires recalibration. Координаты теперь автоматически масштабируются при изменении разрешения экрана (см. `config.py → get_coordinate()`).
     *   **OCR Reliability:** Always verify OCR output (`isdigit()`, `>0`) before critical actions (Buying).
+    *   **Network Capture:** Модуль `sniffer` является более стабильным источником цен, чем OCR. При возможности, используйте данные из `sniffer/market_db.py`.
     *   **Safety:** The `_check_safe_state()` in `bot.py` is the primary crash-prevention mechanism. Do not remove it.
