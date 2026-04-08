@@ -78,48 +78,36 @@ echo.
 
 python -m nuitka ^
     --standalone ^
+    --zig ^
     --jobs=%NUMBER_OF_PROCESSORS% ^
     --output-dir=%OUTPUT_DIR% ^
     --output-filename=%APP_NAME%.exe ^
     --windows-icon-from-ico=assets/icon.ico ^
+    --windows-disable-console ^
+    --windows-uac-admin ^
     --enable-plugin=pyqt6 ^
+    --enable-plugin=numpy ^
+    --enable-plugin=anti-bloat ^
     --include-qt-plugins=sensible,platforms ^
     --include-package=src ^
+    --include-package=photon_packet_parser ^
+    --include-distribution-metadata=photon_packet_parser ^
+    --include-distribution-metadata=cryptography ^
+    --include-distribution-metadata=requests ^
+    --include-distribution-metadata=pydivert ^
     --include-data-dir=resources=resources ^
-    --windows-console-mode=attach ^
-    --windows-uac-admin ^
     --python-flag=no_docstrings ^
     --python-flag=no_asserts ^
     --nofollow-import-to=tkinter ^
     --nofollow-import-to=unittest ^
-    --nofollow-import-to=test ^
-    --nofollow-import-to=setuptools ^
-    --nofollow-import-to=pip ^
-    --nofollow-import-to=distutils ^
-    --nofollow-import-to=pydoc ^
-    --nofollow-import-to=doctest ^
-    --nofollow-import-to=xmlrpc ^
-    --nofollow-import-to=matplotlib ^
-    --nofollow-import-to=scipy ^
-    --nofollow-import-to=sqlalchemy ^
-    --nofollow-import-to=fastapi ^
-    --nofollow-import-to=uvicorn ^
-    --nofollow-import-to=pydantic ^
-    --nofollow-import-to=pydantic_core ^
-    --nofollow-import-to=starlette ^
-    --nofollow-import-to=anyio ^
-    --nofollow-import-to=httptools ^
-    --nofollow-import-to=email_validator ^
     --nofollow-import-to=pytest ^
-    --nofollow-import-to=pluggy ^
-    --nofollow-import-to=iniconfig ^
     --nofollow-import-to=nuitka ^
     --product-name="Albion Market Scanner" ^
     --product-version=%APP_VERSION% ^
     --file-description="Albion Market Scanner & Buyer Bot" ^
     --copyright="© 2026" ^
     --assume-yes-for-downloads ^
-    %ENTRY_POINT%
+    "%ENTRY_POINT%"
 
 if errorlevel 1 (
     echo.

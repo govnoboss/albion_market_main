@@ -9,7 +9,36 @@ _t0 = time.perf_counter()  # Самый ранний момент
 import sys
 import os
 import ctypes
+def critical_error_handler(exc_type, exc_value, exc_traceback):
+    """Перехватчик всех необработанных исключений"""
+    # Не логируем прерывание клавиатурой (Ctrl+C)
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
 
+    error_msg = "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+    
+    # Формируем имя файла с датой
+    log_filename = f"crash_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+    
+    with open(log_filename, "w", encoding="utf-8") as f:
+        f.write("=== GBOT CRASH REPORT ===\n")
+        f.write(f"Time: {datetime.now()}\n")
+        f.write(f"Version: 1.2.0\n") # Можешь брать из своего version.py
+        f.write("-" * 30 + "\n")
+        f.write(error_msg)
+
+    # Если PyQt6 уже загружен, можно попробовать показать красивое окно
+    try:
+        from PyQt6.QtWidgets import QMessageBox, QApplication
+        if QApplication.instance():
+            QMessageBox.critical(None, "Критическая ошибка", 
+                               f"Программа завершила работу из-за ошибки.\nОтчет создан: {log_filename}")
+    except:
+        pass
+
+# Устанавливаем глобальный перехватчик
+sys.excepthook = critical_error_handler
 # Очищаем системные переменные, чтобы избежать конфликта с другими Qt-программами на ПК пользователя
 os.environ.pop("QT_PLUGIN_PATH", None)
 os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH", None)

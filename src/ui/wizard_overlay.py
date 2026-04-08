@@ -395,10 +395,7 @@ class WizardOverlay(QWidget):
         self.logger.info(f"[Wizard] Captured Point {key}: {x}, {y}")
         
         # --- AUTO ACTIONS ON CAPTURE ---
-        if key == "search_input":
-             self._auto_type_staff(x, y)
-             return 
-             
+
         if key == "tier_dropdown":
             self._prompt_dropdown_calibration()
             return

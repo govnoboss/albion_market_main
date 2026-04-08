@@ -14,10 +14,11 @@ sys.path.insert(0, str(SNIFFER_PATH))
 sys.path.insert(0, str(SNIFFER_PATH / "photon-packet-parser"))
 
 from photon_packet_parser import PhotonPacketParser
-from market_decoder import MarketDecoder
+from src.sniffer.market_decoder import MarketDecoder
 import pydivert
 
 class NetworkListener(QObject):
+
     """
     Фоновый слушатель сетевого трафика.
     Перехватывает пакеты Photon и декодирует рыночные данные.
